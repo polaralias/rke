@@ -1,0 +1,16 @@
+{
+  "repoType": "cli",
+  "license": "Apache-2.0",
+  "summary": "Repository knowledge engineering runtime for retrieval, structural analysis, documentation, and workflow evidence.",
+  "descriptionWip": true,
+  "enforcePrs": true,
+  "releaseProfile": "generic",
+  "codeOwners": [
+    "@polaralias"
+  ],
+  "rulesetName": "Protect default branch",
+  "requiredApprovals": 1,
+  "requireCodeOwnerReview": true,
+  "requireReviewThreadResolution": true,
+  "organizationAdminBypass": false
+}
