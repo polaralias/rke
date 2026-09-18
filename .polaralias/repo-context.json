@@ -12,11 +12,11 @@
         "tests/**/*.py"
       ],
       "verified": {
-        "verifiedAt": "2026-09-18T22:46:43.392951Z",
-        "evidence": "RKE 0.1.0 runtime, canonical EWF 3.0.0 skill, one shared CLI/MCP operation registry, machine-wide multi-repository MCP selection, QTK shared-understanding gate, RCC change explanation, 106 passing runtime tests, successful wheel build, conformant OKF knowledge graph, and fresh source bindings.",
+        "verifiedAt": "2026-09-18T22:59:15.454683Z",
+        "evidence": "PyYAML is now a declared runtime dependency; isolated suite remains 106 passing; this corrects clean-environment CI without changing the operation contract.",
         "sourceHashes": {
           "docs/knowledge/rke-architecture.md": "9aabb44cfa96eff44185beb1ae11ff2b7277169e4143f945a924eddb0779ff55",
-          "pyproject.toml": "28a9d3da3c7fb2e6b90a31273055e738b503156f168f1e09d9560d241326bcfd",
+          "pyproject.toml": "47c55f9d48ff223293c803a79972d75dffab1d581a5728ee117de8aed316eff7",
           "skills/engineering-workflow/agents/openai.yaml": "fcbeec5f4fbdfcb5ac9ec5bcf8cce5fa4076a6744dc917451c5cd6ba4c7a993c",
           "skills/engineering-workflow/references/continuity.md": "cf6f537d7c01a8cdb8fd9014a5a8963a0b2ff368fd22c3df5b92ce3cd03c9aa5",
           "skills/engineering-workflow/references/documentation-lifecycle.md": "c20acfce872490fe08c8b86a6d63f42feea8735282f3b97fc4087c7472496a11",
