@@ -265,17 +265,20 @@ def build_parser() -> argparse.ArgumentParser:
         "--direction", choices=("in", "out", "both"), default="in"
     )
     structure_trace_parser.add_argument("--depth", type=int, default=2)
+    structure_trace_parser.add_argument("--scope", action="append", default=[])
     structure_trace_parser.add_argument("--root", type=Path, default=Path.cwd())
     structure_map_parser = structure_subparsers.add_parser(
         "map", help="Return source clusters and dependency hubs without rendering."
     )
     structure_map_parser.add_argument("--limit", type=int, default=20)
+    structure_map_parser.add_argument("--scope", action="append", default=[])
     structure_map_parser.add_argument("--root", type=Path, default=Path.cwd())
     structure_impact_parser = structure_subparsers.add_parser(
         "impact", help="Trace callers affected by changed source files."
     )
     structure_impact_parser.add_argument("--changed", action="append", required=True)
     structure_impact_parser.add_argument("--depth", type=int, default=2)
+    structure_impact_parser.add_argument("--scope", action="append", default=[])
     structure_impact_parser.add_argument("--root", type=Path, default=Path.cwd())
     structure_benchmark_parser = structure_subparsers.add_parser(
         "benchmark", help="Measure structural recall and output size on a corpus."
@@ -287,6 +290,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     structure_search_parser.add_argument("pattern")
     structure_search_parser.add_argument("--limit", type=int, default=50)
+    structure_search_parser.add_argument("--scope", action="append", default=[])
     structure_search_parser.add_argument("--root", type=Path, default=Path.cwd())
     knowledge_parser = subparsers.add_parser(
         "knowledge", help="Validate and maintain canonical OKF knowledge."
@@ -548,17 +552,18 @@ def main() -> int:
                     "symbol": args.symbol,
                     "direction": args.direction,
                     "depth": args.depth,
+                    "scopes": args.scope,
                 },
             )
         elif args.command == "structure" and args.structure_command == "map":
             payload, exit_code = invoke_operation(
-                root, "repo_structure_map", {"limit": args.limit}
+                root, "repo_structure_map", {"limit": args.limit, "scopes": args.scope}
             )
         elif args.command == "structure" and args.structure_command == "impact":
             payload, exit_code = invoke_operation(
                 root,
                 "repo_change_impact",
-                {"changedPaths": args.changed, "depth": args.depth},
+                {"changedPaths": args.changed, "depth": args.depth, "scopes": args.scope},
             )
         elif args.command == "structure" and args.structure_command == "benchmark":
             payload, exit_code = invoke_operation(
@@ -568,7 +573,7 @@ def main() -> int:
             payload, exit_code = invoke_operation(
                 root,
                 "repo_find_all",
-                {"pattern": args.pattern, "limit": args.limit},
+                {"pattern": args.pattern, "limit": args.limit, "scopes": args.scope},
             )
         elif args.command == "knowledge" and args.knowledge_command == "check":
             payload, exit_code = invoke_operation(

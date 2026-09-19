@@ -396,31 +396,66 @@ def read_text(path: Path) -> str | None:
         return None
 
 
+Chunk = tuple[int, int, int, int, str | None, str]
+
+
+def _utf8_segments(line: str, maximum: int) -> list[tuple[int, int, str]]:
+    segments: list[tuple[int, int, str]] = []
+    start = 0
+    while start < len(line):
+        end = start
+        size = 0
+        while end < len(line):
+            width = len(line[end].encode("utf-8"))
+            if size and size + width > maximum:
+                break
+            size += width
+            end += 1
+        segments.append((start + 1, end + 1, line[start:end]))
+        start = end
+    return segments or [(1, 1, "")]
+
+
 def bounded_line_chunks(
     lines: list[str], start: int, end: int, label: str | None
-) -> list[tuple[int, int, str | None, str]]:
-    chunks: list[tuple[int, int, str | None, str]] = []
+) -> list[Chunk]:
+    chunks: list[Chunk] = []
     cursor = max(1, start)
     final = min(len(lines), max(cursor, end))
     while cursor <= final:
+        current_line = lines[cursor - 1]
+        if len(current_line.encode("utf-8")) > MAX_CHUNK_CHARACTERS:
+            for start_column, end_column, content in _utf8_segments(
+                current_line, MAX_CHUNK_CHARACTERS
+            ):
+                chunks.append(
+                    (cursor, cursor, start_column, end_column, label, content)
+                )
+            cursor += 1
+            continue
         chunk_end = cursor - 1
-        characters = 0
+        encoded_bytes = 0
         while chunk_end < final and chunk_end - cursor + 1 < MAX_CHUNK_LINES:
             next_line = lines[chunk_end]
-            if chunk_end >= cursor and characters + len(next_line) + 1 > MAX_CHUNK_CHARACTERS:
+            next_size = len(next_line.encode("utf-8")) + 1
+            if next_size > MAX_CHUNK_CHARACTERS:
                 break
-            characters += len(next_line) + 1
+            if chunk_end >= cursor and encoded_bytes + next_size > MAX_CHUNK_CHARACTERS:
+                break
+            encoded_bytes += next_size
             chunk_end += 1
         if chunk_end < cursor:
-            chunk_end = cursor
-        chunks.append((cursor, chunk_end, label, "\n".join(lines[cursor - 1 : chunk_end])))
+            continue
+        content = "\n".join(lines[cursor - 1 : chunk_end])
+        end_column = len(lines[chunk_end - 1]) + 1
+        chunks.append((cursor, chunk_end, 1, end_column, label, content))
         if chunk_end >= final:
             break
         cursor = max(cursor + 1, chunk_end - CHUNK_OVERLAP_LINES + 1)
     return chunks
 
 
-def markdown_chunks(text: str) -> list[tuple[int, int, str | None, str]]:
+def markdown_chunks(text: str) -> list[Chunk]:
     lines = text.splitlines()
     starts: list[tuple[int, int, str]] = []
     for line_number, line in enumerate(lines, start=1):
@@ -429,7 +464,7 @@ def markdown_chunks(text: str) -> list[tuple[int, int, str | None, str]]:
             starts.append((line_number, len(match.group(1)), match.group(2)))
     if not starts:
         return bounded_line_chunks(lines or [""], 1, max(1, len(lines)), None)
-    chunks: list[tuple[int, int, str | None, str]] = []
+    chunks: list[Chunk] = []
     if starts[0][0] > 1:
         end = starts[0][0] - 1
         chunks.extend(bounded_line_chunks(lines, 1, end, None))
@@ -443,7 +478,7 @@ def markdown_chunks(text: str) -> list[tuple[int, int, str | None, str]]:
     return chunks
 
 
-def fallback_code_chunks(text: str) -> list[tuple[int, int, str | None, str]]:
+def fallback_code_chunks(text: str) -> list[Chunk]:
     lines = text.splitlines()
     definition = re.compile(
         r"^\s*(?:export\s+)?(?:async\s+)?(?:def|class|function)\s+([A-Za-z_$][\w$]*)"
@@ -456,7 +491,7 @@ def fallback_code_chunks(text: str) -> list[tuple[int, int, str | None, str]]:
             starts.append((line_number, match.group(1) or match.group(2)))
     if not starts:
         return bounded_line_chunks(lines or [""], 1, max(1, len(lines)), None)
-    chunks: list[tuple[int, int, str | None, str]] = []
+    chunks: list[Chunk] = []
     if starts[0][0] > 1:
         end = starts[0][0] - 1
         chunks.extend(bounded_line_chunks(lines, 1, end, None))
@@ -466,7 +501,7 @@ def fallback_code_chunks(text: str) -> list[tuple[int, int, str | None, str]]:
     return chunks
 
 
-def code_chunks(root: Path, path: Path, text: str) -> list[tuple[int, int, str | None, str]]:
+def code_chunks(root: Path, path: Path, text: str) -> list[Chunk]:
     lines = text.splitlines() or [""]
     spans: list[dict[str, Any]] = []
     if path.suffix.lower() not in NON_CODE_EXTENSIONS:
@@ -493,7 +528,7 @@ def code_chunks(root: Path, path: Path, text: str) -> list[tuple[int, int, str |
             spans = []
     if not spans:
         return fallback_code_chunks(text)
-    chunks: list[tuple[int, int, str | None, str]] = []
+    chunks: list[Chunk] = []
     seen: set[tuple[int, int, str]] = set()
     first_start = min(int(span["startLine"]) for span in spans)
     if first_start > 1:
@@ -510,7 +545,7 @@ def code_chunks(root: Path, path: Path, text: str) -> list[tuple[int, int, str |
     return chunks
 
 
-def chunks_for(root: Path, path: Path, text: str) -> list[tuple[int, int, str | None, str]]:
+def chunks_for(root: Path, path: Path, text: str) -> list[Chunk]:
     if path.suffix.lower() in {".md", ".rst"}:
         return markdown_chunks(text)
     return code_chunks(root, path, text)
@@ -627,7 +662,9 @@ def build_file_documents(
         else (None, None, None, [])
     )
     documents: list[dict[str, Any]] = []
-    for start, end, symbol, snippet in chunks_for(root, path, text):
+    for start, end, start_column, end_column, symbol, snippet in chunks_for(
+        root, path, text
+    ):
         heading_path = symbol or ""
         public_symbol = heading_path.split(" > ")[-1] if heading_path else None
         symbol_tokens = tokenize(public_symbol or "")
@@ -639,6 +676,8 @@ def build_file_documents(
                 "path": relative,
                 "startLine": start,
                 "endLine": end,
+                "startColumn": start_column,
+                "endColumn": end_column,
                 "symbol": public_symbol,
                 "kind": "documentation"
                 if path.suffix.lower() in {".md", ".rst"}

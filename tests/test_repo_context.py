@@ -252,6 +252,32 @@ class RepoContextCliTests(unittest.TestCase):
             self.assertLessEqual(len(top["snippet"]), 2002)
             self.assertGreater(top["startLine"], 100)
 
+    def test_single_oversized_line_is_byte_bounded_with_column_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "oversized.txt").write_text(
+                ("é" * 4_000) + " needlevalue " + ("é" * 4_000),
+                encoding="utf-8",
+            )
+
+            payload = repo_context.find_context(root, "needlevalue")
+            index = json.loads(
+                (root / ".engineering-workflow" / "cache" / "context-index.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            documents = [
+                item for item in index["documents"] if item["path"] == "oversized.txt"
+            ]
+
+            self.assertIn("needlevalue", payload["results"][0]["snippet"])
+            self.assertGreater(len(documents), 1)
+            self.assertTrue(
+                all(len(item["snippet"].encode("utf-8")) <= 6_000 for item in documents)
+            )
+            self.assertTrue(all(item["startLine"] == 1 for item in documents))
+            self.assertGreater(documents[1]["startColumn"], 1)
+
     def test_tree_sitter_symbols_drive_retrieval_chunks_for_go(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

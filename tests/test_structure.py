@@ -5,7 +5,11 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import hashlib
 from pathlib import Path
+from unittest.mock import patch
+
+import rke.structure as structure_module
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "engineering.py"
@@ -284,6 +288,156 @@ class StructuralContextTests(unittest.TestCase):
             self.assertEqual(
                 json.loads(result.stdout)["error"]["code"], "structure_pattern_invalid"
             )
+
+    def test_search_worker_redacts_secret_values_from_snippets(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            secret = "supersecretvalue12345"
+            (root / "settings.py").write_text(
+                f'client_secret="{secret}"\n', encoding="utf-8"
+            )
+
+            result = self.run_cli(root, "structure", "search", "client_secret")
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertNotIn(secret, result.stdout)
+            self.assertIn("[REDACTED]", payload["matches"][0]["snippet"])
+            self.assertIn("credential-assignment", payload["matches"][0]["redactions"])
+
+    def test_explicit_scope_and_automatic_progressive_scope_are_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            for name in ("api", "worker"):
+                package = root / "packages" / name
+                package.mkdir(parents=True)
+                (package / "package.json").write_text(
+                    json.dumps({"name": name}), encoding="utf-8"
+                )
+            (root / "packages" / "api" / "api.py").write_text(
+                "def api():\n    return 1\n", encoding="utf-8"
+            )
+            (root / "packages" / "worker" / "worker.py").write_text(
+                "def worker():\n    return 1\n\ndef run():\n    return worker()\n",
+                encoding="utf-8",
+            )
+
+            scoped = self.run_cli(
+                root, "structure", "map", "--scope", "packages/api"
+            )
+            traced = self.run_cli(
+                root,
+                "structure",
+                "trace",
+                "worker",
+                "--direction",
+                "in",
+            )
+
+            self.assertEqual(scoped.returncode, 0, scoped.stderr)
+            scoped_payload = json.loads(scoped.stdout)
+            self.assertEqual(scoped_payload["sourceFileCount"], 1)
+            self.assertEqual(scoped_payload["scopeSelection"]["mode"], "explicit")
+            self.assertEqual(scoped_payload["scopeSelection"]["selected"], ["packages/api"])
+            cache_payload = json.loads(
+                (root / structure_module.CACHE_PATH).read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                set(cache_payload["graphShards"]),
+                {"packages/api", "packages/worker"},
+            )
+            self.assertEqual(traced.returncode, 0, traced.stderr)
+            trace_payload = json.loads(traced.stdout)
+            self.assertEqual(
+                trace_payload["scopeSelection"]["mode"], "automatic-progressive"
+            )
+            self.assertEqual(
+                trace_payload["scopeSelection"]["progressiveWidening"]["selected"],
+                ["packages/worker"],
+            )
+
+    def test_parser_batch_failure_retries_each_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "a.py").write_text("def a():\n    return 1\n", encoding="utf-8")
+            (root / "b.py").write_text("def b():\n    return 2\n", encoding="utf-8")
+            failed = subprocess.CompletedProcess([], 1, stdout="", stderr="failed")
+
+            with patch.object(structure_module.subprocess, "run", return_value=failed):
+                graph = structure_module.build_structure(root)
+
+            self.assertEqual({item.name for item in graph["symbols"]}, {"a", "b"})
+            self.assertTrue(
+                all(
+                    "batch-parser-fallback" in warning["warning"]
+                    for warning in graph["parseWarnings"]
+                )
+            )
+
+    def test_repository_map_accepts_more_than_five_thousand_source_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source = root / "src"
+            source.mkdir()
+            digest = hashlib.sha256(b"").hexdigest()
+            cached_files = {}
+            for index in range(5_001):
+                relative = f"src/module_{index}.py"
+                (root / relative).touch()
+                cached_files[relative] = {
+                    "path": relative,
+                    "language": "python",
+                    "digest": digest,
+                    "symbols": [],
+                    "imports": [],
+                    "warnings": [],
+                    "uncertainties": [],
+                }
+            cache = root / ".engineering-workflow" / "cache" / "structure-index.json"
+            cache.parent.mkdir(parents=True)
+            cache.write_text(
+                json.dumps({"schema": structure_module.CACHE_SCHEMA, "files": cached_files}),
+                encoding="utf-8",
+            )
+
+            payload = structure_module.repository_map(root, limit=5)
+
+            self.assertEqual(payload["sourceFileCount"], 5_001)
+            self.assertEqual(payload["cache"]["hits"], 5_001)
+            self.assertEqual(payload["scopeSelection"]["shardCount"], 1)
+            self.assertLess(len(json.dumps(payload)), 20_000)
+
+    def test_pathological_regex_times_out_in_isolated_worker(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "slow.py").write_text(
+                "value = '" + ("a" * 30_000) + "!'\n", encoding="utf-8"
+            )
+
+            result = self.run_cli(root, "structure", "search", "(a+)+$")
+
+            self.assertEqual(result.returncode, 2)
+            self.assertEqual(
+                json.loads(result.stdout)["error"]["code"],
+                "structure_pattern_timeout",
+            )
+
+    def test_agent_review_splits_oversized_lines_with_column_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "service.weirdcode").write_text("é" * 10_000, encoding="utf-8")
+
+            result = self.run_cli(root, "structure", "review", "service.weirdcode")
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertGreater(len(payload["chunks"]), 1)
+            self.assertTrue(
+                all(len(item["content"].encode("utf-8")) <= 6_000 for item in payload["chunks"])
+            )
+            self.assertEqual(payload["chunks"][0]["startLine"], 1)
+            self.assertEqual(payload["chunks"][1]["startLine"], 1)
+            self.assertGreater(payload["chunks"][1]["startColumn"], 1)
 
 
 if __name__ == "__main__":

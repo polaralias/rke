@@ -132,6 +132,15 @@ def strings(arguments: dict[str, Any], name: str) -> list[str]:
     return value
 
 
+def optional_strings(arguments: dict[str, Any], name: str) -> list[str]:
+    value = arguments.get(name, [])
+    if not isinstance(value, list) or not all(
+        isinstance(item, str) and item.strip() for item in value
+    ):
+        raise OperationError(f"Argument '{name}' must be a string array.")
+    return value
+
+
 def mapping(arguments: dict[str, Any], name: str) -> dict[str, Any]:
     value = arguments.get(name)
     if not isinstance(value, dict):
@@ -457,13 +466,18 @@ def structure_trace(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, An
             string(arguments, "symbol"),
             direction=string(arguments, "direction", default="in"),
             depth=integer(arguments, "depth", default=2),
+            scopes=optional_strings(arguments, "scopes") or None,
         ),
         0,
     )
 
 
 def structure_map(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
-    return repository_map(root, limit=integer(arguments, "limit", default=20)), 0
+    return repository_map(
+        root,
+        limit=integer(arguments, "limit", default=20),
+        scopes=optional_strings(arguments, "scopes") or None,
+    ), 0
 
 
 def structure_change_impact(
@@ -474,6 +488,7 @@ def structure_change_impact(
             root,
             strings(arguments, "changedPaths"),
             depth=integer(arguments, "depth", default=2),
+            scopes=optional_strings(arguments, "scopes") or None,
         ),
         0,
     )
@@ -489,6 +504,7 @@ def structure_search(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, A
             root,
             string(arguments, "pattern"),
             limit=integer(arguments, "limit", default=50),
+            scopes=optional_strings(arguments, "scopes") or None,
         ),
         0,
     )
@@ -553,6 +569,7 @@ def object_schema(
 
 STRING = {"type": "string"}
 STRING_ARRAY = {"type": "array", "items": STRING, "minItems": 1}
+OPTIONAL_STRING_ARRAY = {"type": "array", "items": STRING}
 PHASE = {"type": "string", "enum": ["understand", "design", "deliver", "close", "pause", "resume"]}
 TASK_MODE = {"type": "string", "enum": ["none", "lightweight", "full"]}
 HOST = {"type": "string", "enum": ["codex", "claude", "git"]}
@@ -939,6 +956,7 @@ OPERATIONS = (
                 "symbol": STRING,
                 "direction": {"type": "string", "enum": ["in", "out", "both"], "default": "in"},
                 "depth": {"type": "integer", "minimum": 1, "maximum": 5, "default": 2},
+                "scopes": OPTIONAL_STRING_ARRAY,
             },
             ["symbol"],
         ),
@@ -950,7 +968,7 @@ OPERATIONS = (
         "repo_structure_map",
         "Summarise repository structure",
         "Return source clusters and dependency hubs for orientation without rendering a graph.",
-        object_schema({"limit": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}}),
+        object_schema({"limit": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}, "scopes": OPTIONAL_STRING_ARRAY}),
         True,
         True,
         structure_map,
@@ -963,6 +981,7 @@ OPERATIONS = (
             {
                 "changedPaths": STRING_ARRAY,
                 "depth": {"type": "integer", "minimum": 1, "maximum": 5, "default": 2},
+                "scopes": OPTIONAL_STRING_ARRAY,
             },
             ["changedPaths"],
         ),
@@ -987,6 +1006,7 @@ OPERATIONS = (
             {
                 "pattern": STRING,
                 "limit": {"type": "integer", "minimum": 1, "maximum": 100, "default": 50},
+                "scopes": OPTIONAL_STRING_ARRAY,
             },
             ["pattern"],
         ),

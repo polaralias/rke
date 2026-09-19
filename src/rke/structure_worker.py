@@ -5,7 +5,14 @@ import json
 from pathlib import Path
 
 from .repo_context import ContextError, repository_relative_path
-from .structure import NON_CODE_LANGUAGES, build_structure, detect_language, retrieval_symbol_spans
+from .structure import (
+    NON_CODE_LANGUAGES,
+    _extract_file,
+    _serialize,
+    build_structure,
+    detect_language,
+    retrieval_symbol_spans,
+)
 
 
 def main() -> int:
@@ -13,9 +20,22 @@ def main() -> int:
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--path", action="append", required=True)
     parser.add_argument("--graph", action="store_true")
+    parser.add_argument("--extract", action="store_true")
     args = parser.parse_args()
     root = args.root.resolve()
     try:
+        if args.extract:
+            files = {}
+            for relative in args.path:
+                target, normalized = repository_relative_path(
+                    root,
+                    relative,
+                    escape_code="structure_path_escape",
+                    missing_code="structure_path_missing",
+                )
+                files[normalized] = _serialize(_extract_file(target, root))
+            print(json.dumps({"files": files}))
+            return 0
         if args.graph:
             graph = build_structure(root, include_paths=set(args.path))
             print(
