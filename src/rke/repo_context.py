@@ -12,9 +12,10 @@ from pathlib import Path
 from typing import Any
 
 from .io import ConcurrentWriteError, FileLock, atomic_write_json, sibling_lock
+from .security import is_sensitive_path, redact_secrets
 
 
-INDEX_SCHEMA_VERSION = 6
+INDEX_SCHEMA_VERSION = 7
 INDEX_RELATIVE_PATH = Path(".engineering-workflow") / "cache" / "context-index.json"
 DEFAULT_MANIFEST_PATH = ".rke/repo-context.json"
 LEGACY_MANIFEST_PATH = ".polaralias/repo-context.json"
@@ -335,18 +336,6 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def is_secret_path(relative: Path) -> bool:
-    lowered_parts = [part.lower() for part in relative.parts]
-    name = relative.name.lower()
-    return (
-        name == ".env"
-        or name.startswith(".env.")
-        or name in {"id_rsa", "id_dsa", "id_ed25519", "credentials.json"}
-        or relative.suffix.lower() in {".pem", ".p12", ".pfx", ".key"}
-        or bool({".ssh", ".aws", ".gnupg"}.intersection(lowered_parts))
-    )
-
-
 def git_visible_files(root: Path) -> list[Path] | None:
     try:
         result = subprocess.run(
@@ -361,7 +350,7 @@ def git_visible_files(root: Path) -> list[Path] | None:
     return [root / item.decode("utf-8") for item in result.stdout.split(b"\0") if item]
 
 
-def eligible_files(root: Path) -> tuple[list[Path], list[str]]:
+def eligible_files(root: Path) -> tuple[list[Path], list[str], list[str]]:
     excluded_parts = {
         ".git",
         ".engineering-workflow",
@@ -375,13 +364,16 @@ def eligible_files(root: Path) -> tuple[list[Path], list[str]]:
     resolved_root = root.resolve()
     eligible: list[Path] = []
     inaccessible: list[str] = []
+    sensitive: list[str] = []
     for path in candidates:
         try:
             relative = path.relative_to(root)
+            if is_sensitive_path(relative):
+                sensitive.append(relative.as_posix())
+                continue
             if (
                 path.is_file()
                 and not excluded_parts.intersection(relative.parts)
-                and not is_secret_path(relative)
                 and path.resolve().is_relative_to(resolved_root)
                 and path.stat().st_size <= 1_000_000
             ):
@@ -391,7 +383,7 @@ def eligible_files(root: Path) -> tuple[list[Path], list[str]]:
                 inaccessible.append(path.relative_to(root).as_posix())
             except ValueError:
                 inaccessible.append(str(path))
-    return sorted(eligible), sorted(inaccessible)
+    return sorted(eligible), sorted(inaccessible), sorted(set(sensitive))
 
 
 def read_text(path: Path) -> str | None:
@@ -569,9 +561,59 @@ def markdown_knowledge_metadata(
     return concept_type, authority, navigation_role, sorted(relationships)
 
 
-def file_fingerprint(path: Path) -> dict[str, int]:
-    stat = path.stat()
-    return {"size": stat.st_size, "modifiedNs": stat.st_mtime_ns}
+def _git_paths(root: Path, arguments: list[str]) -> set[str] | None:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), *arguments],
+            capture_output=True,
+            check=False,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    return {
+        value.decode("utf-8", errors="surrogateescape")
+        for value in result.stdout.split(b"\0")
+        if value
+    }
+
+
+def clean_git_blob_identities(root: Path) -> dict[str, str]:
+    try:
+        listed = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "--stage", "-z"],
+            capture_output=True,
+            check=False,
+        )
+    except OSError:
+        return {}
+    if listed.returncode != 0:
+        return {}
+    tracked: dict[str, str] = {}
+    for record in listed.stdout.split(b"\0"):
+        if not record or b"\t" not in record:
+            continue
+        metadata, raw_path = record.split(b"\t", 1)
+        fields = metadata.split()
+        if len(fields) != 3 or fields[2] != b"0":
+            continue
+        tracked[raw_path.decode("utf-8", errors="surrogateescape")] = fields[1].decode("ascii")
+    unstaged = _git_paths(root, ["diff", "-z", "--name-only", "--diff-filter=ACMRD", "--"])
+    staged = _git_paths(root, ["diff", "--cached", "-z", "--name-only", "--diff-filter=ACMRD", "--"])
+    if unstaged is None or staged is None:
+        return {}
+    dirty = unstaged | staged
+    return {path: oid for path, oid in tracked.items() if path not in dirty}
+
+
+def _decode_text(data: bytes) -> str | None:
+    if b"\x00" in data:
+        return None
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
 
 
 def build_file_documents(
@@ -667,13 +709,30 @@ def refresh_index(root: Path) -> tuple[dict[str, Any], bool, dict[str, Any]]:
 
     documents: list[dict[str, Any]] = []
     file_hashes: dict[str, str] = {}
-    file_fingerprints: dict[str, dict[str, int]] = {}
+    file_fingerprints: dict[str, dict[str, str]] = {}
     hashed_files = 0
     reused_files = 0
-    visible_files, inaccessible_files = eligible_files(root)
+    previous_redactions = (
+        existing.get("sensitiveEvidence", {}).get("redactedPaths", {})
+        if reusable
+        else {}
+    )
+    redacted_files: dict[str, list[str]] = {}
+    clean_blobs = clean_git_blob_identities(root)
+    visible_files, inaccessible_files, sensitive_files = eligible_files(root)
     for path in visible_files:
         relative = path.relative_to(root).as_posix()
-        fingerprint = file_fingerprint(path)
+        data: bytes | None = None
+        blob_oid = clean_blobs.get(relative)
+        if blob_oid:
+            fingerprint = {"kind": "git-blob", "identity": blob_oid}
+        else:
+            data = path.read_bytes()
+            fingerprint = {
+                "kind": "sha256",
+                "identity": hashlib.sha256(data).hexdigest(),
+            }
+            hashed_files += 1
         file_fingerprints[relative] = fingerprint
         if (
             reusable
@@ -684,14 +743,21 @@ def refresh_index(root: Path) -> tuple[dict[str, Any], bool, dict[str, Any]]:
             file_hashes[relative] = previous_hashes[relative]
             documents.extend(previous_documents[relative])
             reused_files += 1
+            if relative in previous_redactions:
+                redacted_files[relative] = previous_redactions[relative]
             continue
-        text = read_text(path)
+        if data is None:
+            data = path.read_bytes()
+            hashed_files += 1
+        text = _decode_text(data)
         if text is None:
             continue
-        hashed_files += 1
-        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        safe_text, secret_findings = redact_secrets(text)
+        if secret_findings:
+            redacted_files[relative] = secret_findings
+        digest = hashlib.sha256(data).hexdigest()
         file_hashes[relative] = digest
-        documents.extend(build_file_documents(root, path, text, digest))
+        documents.extend(build_file_documents(root, path, safe_text, digest))
 
     revision_hash = hashlib.sha256()
     for relative, digest in sorted(file_hashes.items()):
@@ -715,6 +781,10 @@ def refresh_index(root: Path) -> tuple[dict[str, Any], bool, dict[str, Any]]:
         "fileFingerprints": file_fingerprints,
         "documents": documents,
         "search": build_search_index(documents),
+        "sensitiveEvidence": {
+            "omittedPaths": sensitive_files,
+            "redactedPaths": redacted_files,
+        },
     }
     if refreshed:
         atomic_write_json(target, index)
@@ -727,6 +797,10 @@ def refresh_index(root: Path) -> tuple[dict[str, Any], bool, dict[str, Any]]:
             "hashedFiles": hashed_files,
             "reusedFiles": reused_files,
             "inaccessibleFilesSkipped": inaccessible_files,
+            "sensitiveEvidence": {
+                "omittedPaths": sensitive_files,
+                "redactedPaths": redacted_files,
+            },
         },
     )
 

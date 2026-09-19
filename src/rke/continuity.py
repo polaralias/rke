@@ -9,13 +9,9 @@ from typing import Any
 
 from .io import FileLock, atomic_write_text
 from .repo_context import repository_relative_path
+from .security import contains_secret
 
 
-SECRET_PATTERNS = (
-    re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
-    re.compile(r"(?i)(?:api[_-]?key|token|password|client[_-]?secret)\s*[:=]\s*[^\s]{8,}"),
-    re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b"),
-)
 STATUS_PATTERN = re.compile(r"^\*\*Status:\*\*\s*(.+?)\s*$", re.MULTILINE)
 REVIEW_PATTERN = re.compile(r"^\*\*Review after:\*\*\s*(\d{4}-\d{2}-\d{2})\s*$", re.MULTILINE)
 NEXT_PATTERN = re.compile(r"^## Suggested Next Step\s*\n+(.+?)(?=\n## |\Z)", re.MULTILINE | re.DOTALL)
@@ -55,7 +51,7 @@ def _git_surface(root: Path, target: Path) -> dict[str, bool]:
 
 def _reject_secrets(values: list[str]) -> None:
     combined = "\n".join(values)
-    if any(pattern.search(combined) for pattern in SECRET_PATTERNS):
+    if contains_secret(combined):
         raise ValueError("handoff content resembles a secret; store only the access requirement, never the value")
 
 

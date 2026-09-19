@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from .repo_context import is_secret_path
+from .security import is_sensitive_path
 
 
 INSTRUCTION_NAMES = {"AGENTS.md", "CLAUDE.md"}
@@ -54,7 +54,7 @@ def _eligible_files(root: Path) -> list[Path]:
         relative = path.relative_to(root)
         if {".git", ".engineering-workflow", ".rke-cache", "node_modules", "vendor"}.intersection(relative.parts):
             continue
-        if is_secret_path(relative):
+        if is_sensitive_path(relative):
             continue
         files.append(relative)
     return sorted(files, key=lambda value: value.as_posix().casefold())

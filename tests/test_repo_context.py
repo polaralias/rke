@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -309,7 +310,7 @@ class RepoContextCliTests(unittest.TestCase):
             payload = repo_context.find_context(root, "shared signal", limit=2)
             self.assertEqual({item["path"] for item in payload["results"]}, {"one.md", "two.md"})
             index = json.loads((root / ".engineering-workflow" / "cache" / "context-index.json").read_text(encoding="utf-8"))
-            self.assertEqual(index["schemaVersion"], 6)
+            self.assertEqual(index["schemaVersion"], 7)
             self.assertIn("shared", index["search"]["postings"])
             self.assertIn("averageFieldLengths", index["search"])
 
@@ -377,12 +378,17 @@ class RepoContextCliTests(unittest.TestCase):
             self.assertEqual(payload["changedFilesRefreshed"], 1)
             self.assertEqual(payload["deletedFilesRemoved"], 1)
 
-    def test_unchanged_refresh_reuses_cached_documents_without_rehashing(self) -> None:
+    def test_clean_tracked_refresh_reuses_git_blob_identity_without_rehashing(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.email", "tests@example.test"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.name", "RKE Tests"], cwd=root, check=True)
             (root / "gateway.py").write_text(
                 "def hydrate_credentials():\n    return 'github'\n", encoding="utf-8"
             )
+            subprocess.run(["git", "add", "gateway.py"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "fixture"], cwd=root, check=True)
             initial = self.run_cli(root, "context", "find", "credentials")
             self.assertEqual(initial.returncode, 0, initial.stderr)
 
@@ -393,6 +399,62 @@ class RepoContextCliTests(unittest.TestCase):
             self.assertFalse(payload["refreshed"])
             self.assertEqual(payload["hashedFiles"], 0)
             self.assertEqual(payload["reusedFiles"], 1)
+
+            gateway = root / "gateway.py"
+            original = gateway.stat()
+            gateway.write_text(
+                "def hydrate_credentials():\n    return 'gitlab'\n", encoding="utf-8"
+            )
+            os.utime(gateway, ns=(original.st_atime_ns, original.st_mtime_ns))
+            dirty = self.run_cli(root, "context", "find", "gitlab credentials")
+            self.assertEqual(dirty.returncode, 0, dirty.stderr)
+            dirty_payload = json.loads(dirty.stdout)
+            self.assertTrue(dirty_payload["refreshed"])
+            self.assertEqual(dirty_payload["hashedFiles"], 1)
+            self.assertIn("gitlab", dirty_payload["results"][0]["snippet"])
+
+    def test_same_size_edit_with_preserved_timestamp_invalidates_cached_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source = root / "gateway.txt"
+            source.write_text("alpha credential route\n", encoding="utf-8")
+            original = source.stat()
+            initial = repo_context.find_context(root, "alpha credential")
+            self.assertIn("alpha", initial["results"][0]["snippet"])
+
+            source.write_text("omega credential route\n", encoding="utf-8")
+            os.utime(source, ns=(original.st_atime_ns, original.st_mtime_ns))
+            refreshed = repo_context.find_context(root, "omega credential")
+
+            self.assertTrue(refreshed["refreshed"])
+            self.assertEqual(refreshed["changedFilesRefreshed"], 1)
+            self.assertIn("omega", refreshed["results"][0]["snippet"])
+
+    def test_sensitive_paths_are_reported_and_secret_values_are_redacted(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / ".docker").mkdir()
+            (root / ".docker" / "config.json").write_text(
+                '{"auths":{"registry.example":{"auth":"do-not-index"}}}\n',
+                encoding="utf-8",
+            )
+            (root / ".npmrc").write_text(
+                "//registry.example/:_authToken=do-not-index-this\n",
+                encoding="utf-8",
+            )
+            (root / "deployment.md").write_text(
+                "# Deployment\n\nclient_secret=supersecretvalue12345\n",
+                encoding="utf-8",
+            )
+
+            payload = repo_context.find_context(root, "deployment client secret")
+            serialized = json.dumps(payload)
+
+            self.assertIn(".docker/config.json", payload["sensitiveEvidence"]["omittedPaths"])
+            self.assertIn(".npmrc", payload["sensitiveEvidence"]["omittedPaths"])
+            self.assertIn("deployment.md", payload["sensitiveEvidence"]["redactedPaths"])
+            self.assertNotIn("supersecretvalue12345", serialized)
+            self.assertIn("[REDACTED]", serialized)
 
     def test_benchmark_reports_repeatable_retrieval_metrics(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

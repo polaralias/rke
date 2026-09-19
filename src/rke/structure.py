@@ -13,10 +13,10 @@ from typing import Any
 from .repo_context import (
     ContextError,
     eligible_files,
-    is_secret_path,
     read_text,
     repository_relative_path,
 )
+from .security import is_sensitive_path
 
 
 MAX_GRAPH_FILES = 5_000
@@ -108,7 +108,7 @@ def detect_language(path: Path) -> str | None:
 
 def _assert_reviewable(root: Path, target: Path) -> None:
     relative = target.relative_to(root)
-    if is_secret_path(relative) or {".git", ".engineering-workflow", "archive"}.intersection(relative.parts):
+    if is_sensitive_path(relative) or {".git", ".engineering-workflow", "archive"}.intersection(relative.parts):
         raise ContextError("structure_path_excluded", "The requested path is outside the structural-analysis boundary.")
     try:
         if target.stat().st_size > 1_000_000:
@@ -640,7 +640,7 @@ def _resolve_call(caller: Symbol, raw: str, graph: dict[str, Any]) -> Symbol | N
 
 
 def _source_candidates(root: Path) -> tuple[list[Path], list[str]]:
-    files, inaccessible = eligible_files(root)
+    files, inaccessible, _ = eligible_files(root)
     candidates: list[Path] = []
     for path in files:
         relative = path.relative_to(root)
