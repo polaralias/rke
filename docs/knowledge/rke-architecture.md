@@ -2,19 +2,24 @@
 type: Architecture Concept
 title: RKE architecture
 description: Defines the independently installed Repository Knowledge Engineering runtime, its shared CLI and MCP operation layer, repository boundaries, and relationship with EWF and OKF Tasks.
-timestamp: 2026-09-19T02:05:00+01:00
+timestamp: 2026-09-19T16:04:38+01:00
 authority: canonical
 verification: verified-working
-verified_at: 2026-09-19T02:05:00+01:00
+verified_at: 2026-09-19T16:04:38+01:00
 verified_against:
   - src/rke/operations.py
-  - src/rke/engineering.py
+  - src/rke/cli.py
+  - src/rke/lifecycle.py
+  - src/rke/io.py
+  - src/rke/security.py
+  - src/rke/structure.py
   - src/rke/repo_context_mcp.py
   - src/rke/host_integration.py
+  - .github/workflows/ci.yml
+  - .github/workflows/release-drafter.yml
+  - .github/workflows/publish-release.yml
   - skills/engineering-workflow/SKILL.md
   - skills/engineering-workflow/references/**/*
-  - "116 deterministic tests passed"
-  - "polaralias-rke 0.3.0 wheel built"
 owner: polaralias
 tags:
   - rke
@@ -39,7 +44,9 @@ The `polaralias-rke` package is the sole executable implementation. It exposes t
 - `rke` maps shell arguments to registered handlers and is authoritative for hooks, CI and automation.
 - `rke-mcp` maps MCP tool calls to the same handlers and schemas. It adds no domain implementation.
 
-The runtime exposes retrieval, structure, documentation, lifecycle, dissection, continuity, coordination, and publication operations through the shared registry. Its current contract is covered by the deterministic suite; release validation also requires a successful wheel build.
+The registry contains every public lifecycle, gate, journey, task, closure, host, retrieval, structure, knowledge, documentation, dissection, continuity, coordination and publication operation. CLI parsing and MCP JSON-RPC are transport adapters only. Shared schemas reject unsupported or invalid arguments before handlers run; shared outcomes retain structured non-zero results, and an MCP request failure cannot terminate the server.
+
+Durable workflow state and knowledge manifests use repository-local locks, revision checks and atomic replacement. Handoffs use collision-resistant identities and directory locking. Disposable retrieval and structure indexes use atomic last-writer-wins replacement and can always be rebuilt.
 
 The EWF skill is co-versioned in `skills/engineering-workflow`. Its operating contracts live only under the skill's `references/` directory: shared contracts are flat, phase-specific guidance is under `journeys/`, and opt-in capability guidance is under `extensions/`. The repository's `docs/knowledge/` directory is reserved for canonical RKE project knowledge and must not mirror those skill instructions.
 
@@ -53,19 +60,32 @@ Each repository owns tracked RKE knowledge bindings under `.rke/` and separate E
 
 Continuation defaults to ignored, untracked `local-docs/handoff/` artefacts. When the user deliberately needs durable collaboration, the same handoff core can write a commit-capable shared artefact under `.rke/handoffs/`; shared handoffs remain coordination evidence rather than canonical knowledge.
 
+## Retrieval and structural analysis
+
+Retrieval uses a field-aware BM25F index with parser-backed chunking and bounded structural or typed-knowledge expansion. Clean tracked files may reuse Git object identity; staged, dirty, untracked or uncertain content is hashed. Modification time and size are never sufficient proof of unchanged content. Credential stores and sensitive paths are omitted, detected secret-like content is redacted before persistence and response, and every omission or redaction remains visible as metadata.
+
+Structural analysis discovers package and source scopes, caches graph shards and widens progressively when the first likely scope cannot answer the query. Callers may pass explicit scopes, including multiple scopes, and may request whole-repository analysis without a brittle file-count rejection. Parser work is batched with individual fallback; unsupported or inconclusive files use bounded, source-digest-bound agent review. Public regex search runs in a timed isolated worker.
+
+## Installation and release
+
+`rke host install` places the pre-push gate at `.githooks/pre-push`, configures repository-local `core.hooksPath=.githooks`, and preserves independently owned hook paths unless `--force` is explicit. The packaged `rke-eval` corpus is loaded with `importlib.resources`, so installed and source invocations use the same cases.
+
+`rke.__version__` is the sole release version source. Hatch package metadata and MCP server identity derive from it. CI covers Linux Python 3.11–3.14, Windows at the oldest and current supported versions, deterministic tests, static analysis, distribution content and clean-install smoke tests. A matching `vX.Y.Z` tag builds wheel and sdist, validates package/MCP/tag identity, attests artifacts, publishes or promotes one GitHub release, and uses PyPI trusted publishing through the protected `pypi` environment.
+
 ## Methodology
 
 Documentation-driven development is the principle: make intended behaviour and durable decisions legible, implement against them, and validate them against source and runtime evidence.
 
-RKE is the operational methodology:
+RKE is the operational methodology, expressed as one normal journey:
 
-1. Retrieve bounded repository evidence.
-2. Resolve source-backed facts separately from user intent.
+1. Activate the repository workflow.
+2. Retrieve or trace bounded evidence and resolve facts separately from user intent.
 3. Use Query-to-Knowledge when consequential intent remains uncertain.
 4. Design and implement against explicit acceptance.
-5. Assess knowledge and documentation impact from the real Git delta.
+5. Assess documentation impact from the real Git delta.
 6. Use Repository Change Comprehension to explain the causal final state.
-7. Close only when validation, task truth, knowledge and documentation evidence reconcile.
+7. Apply documentation validation and freshness receipts.
+8. Close only when validation, task truth, knowledge and documentation evidence reconcile.
 
 ## Independent primitives
 
