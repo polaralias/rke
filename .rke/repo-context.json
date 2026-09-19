@@ -19,14 +19,14 @@
         "tests/**/*.py"
       ],
       "verified": {
-        "verifiedAt": "2026-09-19T20:47:55.151320Z",
-        "evidence": "Reviewed the final RKE 0.4.0 architecture and EWF 4.2.0 contract against lock crash recovery, manifest transaction concurrency, both distribution install paths, ordered PyPI/GitHub publication, canonical CLI/MCP retrieval, the complete shared registry, host integration, and the 154-test deterministic suite.",
+        "verifiedAt": "2026-09-19T21:09:41.854018Z",
+        "evidence": "Reproduced the Windows/Python 3.14 CI miss with Git ctime trust disabled and minimal stat checks; added batched filtered Git blob verification, deterministic regression coverage, and passed focused tests, Ruff, and Pyright.",
         "sourceHashes": {
           ".github/workflows/ci.yml": "d645d99256cbab4ca8027140a4b490049a2e63a8e242596ef2087ea7ba902132",
           ".github/workflows/publish-release.yml": "773b5053a61250024a5a9fdd9902c4196fab5e5851455ff08e6a2a52a124a982",
           ".github/workflows/release-drafter.yml": "e52919f1cd346a7db1899734d885deefc8e436d90ce85d82bfd621c1856793a9",
           "AGENTS.md": "24b649fdce6a1886d952ccbb70c3bf3ad5d2bcadafc7ae132ceddddd11e0620e",
-          "docs/knowledge/rke-architecture.md": "e3dec06e29fcb3f9928ede5eb8c6821c603b4f84a38b4f132d621562f4ff5347",
+          "docs/knowledge/rke-architecture.md": "001d0b001e4528b964321661f470334aa1432f0861d6927034a265e70c83a689",
           "pyproject.toml": "faa8e946d4a57cc74f5ca780a5d86791adf609c667ab46480db52ee04268ec9e",
           "README.md": "ff0fc6f8c259942f9b391ad9c22cdcd76613ae6205c9d9e69d37da4605c72cf4",
           "scripts/smoke_distribution.py": "f021ac3cb66a902a2dbbb052302cc86b1b14265e60c54776fe7ed0544f9fa16b",
@@ -64,7 +64,7 @@
           "src/rke/evals/__init__.py": "7b504b68acad6b033876d36bd5d11e319a1fa4224dec46496eb0059cb9308337",
           "src/rke/evals/agent-behaviour.json": "abf3c5a9befc0656d956f8dbc0bead0d0fbb91caaaada77543b484baa1f206e9",
           "src/rke/evaluate_agent.py": "712f7203f5805bfe6e78b20c1f0dd46d57b4d732cc0af5ff39f608d284c72f1c",
-          "src/rke/freshness.py": "042b0a28f79afc977a53a73166c491e80d376160139e8bd172ab748ab5413c7b",
+          "src/rke/freshness.py": "3c968959fe18640a2e5991ea5dc72a2d495c820f206b7e30d1f98a8bbc7ac5ae",
           "src/rke/hooks/__init__.py": "85b69618ff6c738fa9e5489dbdde2cd8500650a1f038edcea5ae7929f28ae62d",
           "src/rke/hooks/_invoke.py": "3937c6c69b22545d6bffc2e0e676ff5141208e444f53bb52ec1e1b11c3313495",
           "src/rke/hooks/pre_compaction.py": "3700eda49f9a60a1b746e419621ffa762ab23da683e18c4c5e36437c19d4cbc6",
@@ -81,7 +81,7 @@
           "src/rke/paths.py": "c37475ce0b8e958fdb5f7bfb8af11349a3bea15cd8356f0460c2284fdf2be3ea",
           "src/rke/publication.py": "bd3fa66b91d1ecb692a47646543aa872c7fe62c5ede1021845310049bbce465a",
           "src/rke/regex_worker.py": "389f0f7fbfadc8d01faff0adb0122d8bdf5da001c4dbabf354ef0b935928a1ff",
-          "src/rke/repo_context.py": "94a37928f3491fa7f7c81d549098b0440269b26cbd2e00fa2b467a8e7c063ad2",
+          "src/rke/repo_context.py": "7e10e5989ec5838f291255992b90912c35b963961cfd89177ef9c7702d5be3b4",
           "src/rke/repo_context_mcp.py": "f42c8b8e5f0cae76038208d86db53a9776b385176bbda9c122dc2bd4c4528e4c",
           "src/rke/retrieval.py": "befbb3a7207e499ea4448d5a5e60480f30b0ea715b560415cc504940e5cf62c1",
           "src/rke/security.py": "b1c5ed43749d393c0426e1ad0290365b40624d84e15ebf1a14c8cdc3fceee7bf",
@@ -108,7 +108,7 @@
           "tests/test_module_boundaries.py": "46bcffe19bad1b1efc7e15000f87db12c1f735e4919076766ed15ee79d52d15c",
           "tests/test_okf_adapter.py": "76d747d308054a7fc4277e7b15085cfb438374e60cef52cc0b9fe7471049b42e",
           "tests/test_release_contract.py": "d26f1db26e77523ff45d144293fdbb804350eb21c75395fa890ca64c41d90dc8",
-          "tests/test_repo_context.py": "937cd00839808536a06e39da8562daddc68196c6151c8d1e74040950f4e551e7",
+          "tests/test_repo_context.py": "8d696561db6542b30bd5733de2918f39ff74317944716f20fdfccac95dedc2dc",
           "tests/test_repo_context_mcp.py": "afe6587e8bc47ca93d32c8af1f3147a55bf5d54b70b4bf7fd2513527fefe4af7",
           "tests/test_structure.py": "432e73ceaad260916f5c1e2314ebe90c62c592ffdd6ba9ce555f20daf01f81f5",
           "tests/test_versioning.py": "8ba0842fe5d18cd979707a1e19310afc0c720607cff07af30c2388d10935a19a"
@@ -116,5 +116,5 @@
       }
     }
   ],
-  "revision": 4
+  "revision": 6
 }

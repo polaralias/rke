@@ -410,6 +410,8 @@ class RepoContextCliTests(unittest.TestCase):
             subprocess.run(["git", "init", "-q"], cwd=root, check=True)
             subprocess.run(["git", "config", "user.email", "tests@example.test"], cwd=root, check=True)
             subprocess.run(["git", "config", "user.name", "RKE Tests"], cwd=root, check=True)
+            subprocess.run(["git", "config", "core.trustctime", "false"], cwd=root, check=True)
+            subprocess.run(["git", "config", "core.checkStat", "minimal"], cwd=root, check=True)
             (root / "gateway.py").write_text(
                 "def hydrate_credentials():\n    return 'github'\n", encoding="utf-8"
             )

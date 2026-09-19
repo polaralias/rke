@@ -91,7 +91,10 @@ def _git_paths(root: Path, arguments: list[str]) -> set[str] | None:
     }
 
 
-def clean_git_blob_identities(root: Path) -> dict[str, str]:
+def clean_git_blob_identities(
+    root: Path,
+    eligible_paths: set[str] | None = None,
+) -> dict[str, str]:
     try:
         listed = subprocess.run(
             ["git", "-C", str(root), "ls-files", "--stage", "-z"],
@@ -123,7 +126,49 @@ def clean_git_blob_identities(root: Path) -> dict[str, str]:
     if unstaged is None or staged is None:
         return {}
     dirty = unstaged | staged
-    return {path: oid for path, oid in tracked.items() if path not in dirty}
+    candidates = {
+        path: oid
+        for path, oid in tracked.items()
+        if path not in dirty
+        and (eligible_paths is None or path in eligible_paths)
+        and "\n" not in path
+        and "\r" not in path
+        and (root / path).is_file()
+        and not (root / path).is_symlink()
+    }
+    if not candidates:
+        return {}
+
+    # Git's ordinary dirty check may trust cached size and timestamp metadata.
+    # A same-size edit with a restored timestamp can therefore look clean on
+    # filesystems where Git does not trust ctime. Batch-hash the remaining
+    # candidates through Git so attributes and worktree filters match the
+    # index representation before reusing an index blob as content identity.
+    paths = list(candidates)
+    try:
+        verified = subprocess.run(
+            ["git", "hash-object", "--stdin-paths"],
+            cwd=root,
+            input=("\n".join(paths) + "\n").encode("utf-8", errors="surrogateescape"),
+            capture_output=True,
+            check=False,
+        )
+    except OSError:
+        return {}
+    if verified.returncode != 0:
+        return {}
+    worktree_oids = [
+        value.decode("ascii")
+        for value in verified.stdout.splitlines()
+        if value
+    ]
+    if len(worktree_oids) != len(paths):
+        return {}
+    return {
+        path: candidates[path]
+        for path, worktree_oid in zip(paths, worktree_oids, strict=True)
+        if worktree_oid == candidates[path]
+    }
 
 
 def decode_text(data: bytes) -> str | None:

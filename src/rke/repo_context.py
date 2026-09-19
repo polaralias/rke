@@ -741,8 +741,11 @@ def refresh_index(root: Path) -> tuple[dict[str, Any], bool, dict[str, Any]]:
         else {}
     )
     redacted_files: dict[str, list[str]] = {}
-    clean_blobs = clean_git_blob_identities(root)
     visible_files, inaccessible_files, sensitive_files = eligible_files(root)
+    clean_blobs = clean_git_blob_identities(
+        root,
+        {path.relative_to(root).as_posix() for path in visible_files},
+    )
     for path in visible_files:
         relative = path.relative_to(root).as_posix()
         data: bytes | None = None
