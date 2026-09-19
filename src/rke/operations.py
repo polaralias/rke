@@ -6,7 +6,11 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .documentation import apply_documentation, assess_documentation, explain_change
+from .continuity import inspect_handoff, write_handoff
+from .coordination import plan_coordination, validate_coordination
+from .dissection import assess_dissection
 from .knowledge import build_indexes, inspect_bundle, register_knowledge
+from .publication import scan_publication
 from .repo_context import (
     check_context,
     find_context,
@@ -271,6 +275,48 @@ def structure_search(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, A
     )
 
 
+def dissection_assess(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return assess_dissection(root), 0
+
+
+def handoff_write(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    references = arguments.get("references", [])
+    if not isinstance(references, list) or not all(isinstance(value, str) for value in references):
+        raise OperationError("Argument 'references' must be a string array.")
+    return (
+        write_handoff(
+            root,
+            topic=string(arguments, "topic"),
+            summary=string(arguments, "summary"),
+            next_action=string(arguments, "nextAction"),
+            mode=string(arguments, "mode", default="standard"),
+            directory=string(arguments, "directory", default="local-docs/handoff"),
+            references=references,
+        ),
+        0,
+    )
+
+
+def handoff_inspect(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return inspect_handoff(
+        root,
+        path=optional_string(arguments, "path"),
+        directory=string(arguments, "directory", default="local-docs/handoff"),
+    )
+
+
+def coordination_validate(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return validate_coordination(root, string(arguments, "manifest"))
+
+
+def coordination_plan(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return plan_coordination(root, string(arguments, "manifest"))
+
+
+def publication_scan(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return scan_publication(root)
+
+
 def object_schema(
     properties: dict[str, Any], required: list[str] | None = None
 ) -> dict[str, Any]:
@@ -289,6 +335,70 @@ STRING_ARRAY = {"type": "array", "items": STRING, "minItems": 1}
 
 
 OPERATIONS = (
+    Operation(
+        "repo_dissection_assess",
+        "Assess repository dissection",
+        "Inventory entry points, runtime candidates, tests, docs, knowledge, tasks, and trust gaps without overclaiming runtime verification.",
+        object_schema({}),
+        True,
+        True,
+        dissection_assess,
+    ),
+    Operation(
+        "repo_handoff_write",
+        "Write a continuation handoff",
+        "Write one deterministic, secret-safe project handoff outside task and canonical knowledge surfaces.",
+        object_schema(
+            {
+                "topic": STRING,
+                "summary": STRING,
+                "nextAction": STRING,
+                "mode": {"type": "string", "enum": ["standard", "max"], "default": "standard"},
+                "directory": STRING,
+                "references": {"type": "array", "items": STRING},
+            },
+            ["topic", "summary", "nextAction"],
+        ),
+        False,
+        True,
+        handoff_write,
+    ),
+    Operation(
+        "repo_handoff_inspect",
+        "Inspect a continuation handoff",
+        "Select one active handoff and return the claims that must be re-verified before work resumes.",
+        object_schema({"path": STRING, "directory": STRING}),
+        True,
+        True,
+        handoff_inspect,
+    ),
+    Operation(
+        "repo_coordination_validate",
+        "Validate parallel delivery coordination",
+        "Validate topology, worktree boundaries, path ownership, dependency order, authority, and validation classes.",
+        object_schema({"manifest": STRING}, ["manifest"]),
+        True,
+        True,
+        coordination_validate,
+    ),
+    Operation(
+        "repo_coordination_plan",
+        "Plan worktree allocation",
+        "Return non-executing Git worktree argv plans from a valid coordination manifest.",
+        object_schema({"manifest": STRING}, ["manifest"]),
+        True,
+        True,
+        coordination_plan,
+    ),
+    Operation(
+        "repo_publication_scan",
+        "Scan publication safety",
+        "Run a redacted tracked-file safety scan and use gitleaks when it is already installed.",
+        object_schema({}),
+        True,
+        True,
+        publication_scan,
+    ),
     Operation(
         "repo_find_context",
         "Find repository context",

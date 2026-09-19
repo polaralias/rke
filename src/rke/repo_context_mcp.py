@@ -16,7 +16,7 @@ from .repo_context import ContextError
 LEGACY_PROTOCOL_VERSION = "2025-11-25"
 MODERN_PROTOCOL_VERSION = "2026-07-28"
 SUPPORTED_PROTOCOL_VERSIONS = [MODERN_PROTOCOL_VERSION, LEGACY_PROTOCOL_VERSION]
-SERVER_INFO = {"name": "rke", "version": "0.1.0"}
+SERVER_INFO = {"name": "rke", "version": "0.2.0"}
 SERVER_INFO_KEY = "io.modelcontextprotocol/serverInfo"
 PROTOCOL_VERSION_KEY = "io.modelcontextprotocol/protocolVersion"
 CLIENT_CAPABILITIES_KEY = "io.modelcontextprotocol/clientCapabilities"

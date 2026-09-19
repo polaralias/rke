@@ -41,10 +41,13 @@ JOURNEYS: dict[str, dict[str, Any]] = {
         "gates": [],
         "operations": [
             "repository-orientation",
+            "machine-readable-dissection",
             "bounded-evidence-retrieval",
             "runtime-verification",
+            "declared-versus-observed-trust-classification",
             "ambiguity-resolution",
             "knowledge-impact-classification",
+            "minimum-documentation-foundation",
         ],
     },
     "design": {
@@ -57,6 +60,8 @@ JOURNEYS: dict[str, dict[str, Any]] = {
             "bounded-feature-contract",
             "scenario-pressure-test",
             "public-behaviour-acceptance",
+            "verification-matrix",
+            "dependency-and-risk-modelling",
             "traceable-work-package-readiness",
         ],
     },
@@ -68,8 +73,12 @@ JOURNEYS: dict[str, dict[str, Any]] = {
         "operations": [
             "bound-change-explanation",
             "independent-lane-assessment",
+            "provisional-task-reconciliation",
+            "durable-knowledge-promotion",
+            "final-task-reconciliation",
             "task-and-knowledge-reconciliation",
             "final-validation",
+            "continuation-disposition",
             "explicit-closure",
         ],
     },
@@ -85,16 +94,6 @@ CAPABILITIES: dict[str, dict[str, Any]] = {
         "reference": "references/extensions/parallel-delivery.md",
         "gates": ["integrated-tree-validation", "worktree-cleanup"],
     },
-    "qa-planning": {
-        "name": "qa-planning",
-        "reference": "references/extensions/qa-planning.md",
-        "gates": ["qa-coverage"],
-    },
-    "tracker-sync": {
-        "name": "tracker-sync",
-        "reference": "references/extensions/tracker-sync.md",
-        "gates": ["tracker-reconciliation"],
-    },
     "publication": {
         "name": "publication",
         "reference": "references/extensions/publication.md",
@@ -103,19 +102,17 @@ CAPABILITIES: dict[str, dict[str, Any]] = {
 }
 LEGACY_ROUTES: dict[str, dict[str, Any]] = {
     "EWO": {"name": "engineering-workflow-orchestrator", "destination": "lifecycle", "command": ["start"]},
-    "RDS": {"name": "repo-dissection", "destination": "understand", "command": ["journey", "enter", "understand"]},
+    "RDS": {"name": "repo-dissection", "destination": "understand", "command": ["dissection", "assess"]},
     "QTK": {"name": "query-to-knowledge", "destination": "query-to-knowledge", "command": ["capability", "enable", "query-to-knowledge"]},
     "RKE": {"name": "repo-knowledge-engineering", "destination": "understand", "command": ["journey", "enter", "understand"]},
     "DDD": {"name": "doc-driven-development", "destination": "design", "command": ["journey", "enter", "design"]},
     "RTL": {"name": "repo-task-lifecycle", "destination": "tasks", "command": ["task", "configure"]},
-    "WTC": {"name": "worktree-task-coordinator", "destination": "parallel-delivery", "command": ["capability", "enable", "parallel-delivery"]},
+    "WTC": {"name": "worktree-task-coordinator", "destination": "parallel-delivery", "command": ["coordination", "validate"]},
     "RCC": {"name": "repo-change-comprehension", "destination": "close", "command": ["journey", "enter", "close"]},
-    "RSA": {"name": "repo-session-alignment", "destination": "close", "command": ["journey", "enter", "close"]},
-    "LHO": {"name": "local-handoff", "destination": "checkpoint", "command": ["checkpoint"]},
-    "LPK": {"name": "local-pickup", "destination": "resume", "command": ["resume"]},
+    "RSA": {"name": "repo-session-alignment", "destination": "close", "command": ["closure", "assess"]},
+    "LHO": {"name": "local-handoff", "destination": "handoff-write", "command": ["handoff", "write"]},
+    "LPK": {"name": "local-pickup", "destination": "handoff-inspect", "command": ["handoff", "inspect"]},
     "RPF": {"name": "repo-publish-finaliser", "destination": "publication", "command": ["capability", "enable", "publication"]},
-    "TPU": {"name": "tracker-publisher", "destination": "tracker-sync", "command": ["capability", "enable", "tracker-sync"]},
-    "TPW": {"name": "test-plan-writer", "destination": "qa-planning", "command": ["capability", "enable", "qa-planning"]},
     "RST": {"name": "repo-setup", "destination": "repository-setup", "command": ["use-separate-bootstrap-capability"], "separate": True},
 }
 
@@ -655,9 +652,7 @@ def closure_assessment(root: Path, *, base: str | None = None) -> tuple[dict[str
     task_mode = state["task_tracking"]["mode"]
     lanes = {
         "change": lane({"change-explanation"}),
-        "validation": lane(
-            {"implementation-validation", "integrated-tree-validation", "qa-coverage"}
-        ),
+        "validation": lane({"implementation-validation", "integrated-tree-validation"}),
         "tasks": lane(
             {"task-reconciliation"},
             "not-applicable" if task_mode == "none" else "state-clear",
@@ -666,10 +661,6 @@ def closure_assessment(root: Path, *, base: str | None = None) -> tuple[dict[str
         "coordination": lane(
             {"integrated-tree-validation", "worktree-cleanup"},
             "not-enabled" if "parallel-delivery" not in capabilities else "state-clear",
-        ),
-        "tracker": lane(
-            {"tracker-reconciliation"},
-            "not-enabled" if "tracker-sync" not in capabilities else "state-clear",
         ),
         "publication": lane(
             {"publication-safety"},
@@ -702,12 +693,33 @@ def closure_assessment(root: Path, *, base: str | None = None) -> tuple[dict[str
         and state["status"] in {"active", "closed"}
         and (documentation is None or documentation["ready"])
     )
+    task_status = lanes["tasks"]["status"]
+    knowledge_status = lanes["knowledge"]["status"]
+    session_alignment = {
+        "explanation": lanes["change"]["status"],
+        "tasks": "not present" if task_status == "not-applicable" else ("blocked" if task_status == "pending" else "no-op"),
+        "knowledge": "blocked" if knowledge_status == "pending" else "no-op",
+        "validation": lanes["validation"]["status"],
+        "handoff": "required" if state["primary_phase"] == "pause" else "not-required",
+        "closure": "complete" if ready else "blocked",
+        "requiredOrdering": [
+            "establish-final-delta",
+            "prepare-causal-explanation",
+            "discover-task-and-knowledge-lanes",
+            "reconcile-tasks-provisionally",
+            "promote-durable-knowledge",
+            "reconcile-tasks-finally",
+            "validate-affected-surfaces",
+            "write-handoff-only-if-continuation-is-needed",
+        ],
+    }
     return (
         {
             "result": "closure-ready" if ready else "closure-blocked",
             "ready": ready,
             "state_path": str(target),
             "lanes": lanes,
+            "sessionAlignment": session_alignment,
             "outstandingGates": outstanding,
             "documentation": documentation,
             "state": state,
@@ -868,6 +880,64 @@ def build_parser() -> argparse.ArgumentParser:
     )
     route_parser.add_argument("legacy_name")
     route_parser.add_argument("--root", type=Path, default=Path.cwd())
+    dissection_parser = subparsers.add_parser(
+        "dissection", help="Inventory an unfamiliar repository and its trust gaps."
+    )
+    dissection_subparsers = dissection_parser.add_subparsers(
+        dest="dissection_command", required=True
+    )
+    dissection_assess_parser = dissection_subparsers.add_parser(
+        "assess", help="Return a machine-readable repository dissection."
+    )
+    dissection_assess_parser.add_argument("--root", type=Path, default=Path.cwd())
+    handoff_parser = subparsers.add_parser(
+        "handoff", help="Write or inspect project-local continuation artefacts."
+    )
+    handoff_subparsers = handoff_parser.add_subparsers(
+        dest="handoff_command", required=True
+    )
+    handoff_write_parser = handoff_subparsers.add_parser(
+        "write", help="Write one deterministic continuation handoff."
+    )
+    handoff_write_parser.add_argument("--root", type=Path, default=Path.cwd())
+    handoff_write_parser.add_argument("--topic", required=True)
+    handoff_write_parser.add_argument("--summary", required=True)
+    handoff_write_parser.add_argument("--next-action", required=True)
+    handoff_write_parser.add_argument("--mode", choices=("standard", "max"), default="standard")
+    handoff_write_parser.add_argument("--directory", default="local-docs/handoff")
+    handoff_write_parser.add_argument("--reference", action="append", default=[])
+    handoff_inspect_parser = handoff_subparsers.add_parser(
+        "inspect", help="Select and verify one active continuation handoff."
+    )
+    handoff_inspect_parser.add_argument("--root", type=Path, default=Path.cwd())
+    handoff_inspect_parser.add_argument("--path")
+    handoff_inspect_parser.add_argument("--directory", default="local-docs/handoff")
+    coordination_parser = subparsers.add_parser(
+        "coordination", help="Validate and plan parallel or stacked worktree delivery."
+    )
+    coordination_subparsers = coordination_parser.add_subparsers(
+        dest="coordination_command", required=True
+    )
+    coordination_validate_parser = coordination_subparsers.add_parser(
+        "validate", help="Validate a coordination manifest without changing Git."
+    )
+    coordination_validate_parser.add_argument("--root", type=Path, default=Path.cwd())
+    coordination_validate_parser.add_argument("--manifest", required=True)
+    coordination_plan_parser = coordination_subparsers.add_parser(
+        "plan", help="Return non-executing worktree allocation commands."
+    )
+    coordination_plan_parser.add_argument("--root", type=Path, default=Path.cwd())
+    coordination_plan_parser.add_argument("--manifest", required=True)
+    publication_parser = subparsers.add_parser(
+        "publication", help="Assess bounded repository publication safety."
+    )
+    publication_subparsers = publication_parser.add_subparsers(
+        dest="publication_command", required=True
+    )
+    publication_scan_parser = publication_subparsers.add_parser(
+        "scan", help="Scan tracked files and use gitleaks when available."
+    )
+    publication_scan_parser.add_argument("--root", type=Path, default=Path.cwd())
     context_parser = subparsers.add_parser(
         "context", help="Build and query disposable repository context."
     )
@@ -1100,6 +1170,37 @@ def main() -> int:
             payload, exit_code = closure_assessment(root, base=args.base)
         elif args.command == "legacy" and args.legacy_command == "route":
             payload, exit_code = route_legacy(args.legacy_name)
+        elif args.command == "dissection" and args.dissection_command == "assess":
+            payload, exit_code = invoke_operation(root, "repo_dissection_assess", {})
+        elif args.command == "handoff" and args.handoff_command == "write":
+            payload, exit_code = invoke_operation(
+                root,
+                "repo_handoff_write",
+                {
+                    "topic": args.topic,
+                    "summary": args.summary,
+                    "nextAction": args.next_action,
+                    "mode": args.mode,
+                    "directory": args.directory,
+                    "references": args.reference,
+                },
+            )
+        elif args.command == "handoff" and args.handoff_command == "inspect":
+            payload, exit_code = invoke_operation(
+                root,
+                "repo_handoff_inspect",
+                {"path": args.path, "directory": args.directory},
+            )
+        elif args.command == "coordination" and args.coordination_command == "validate":
+            payload, exit_code = invoke_operation(
+                root, "repo_coordination_validate", {"manifest": args.manifest}
+            )
+        elif args.command == "coordination" and args.coordination_command == "plan":
+            payload, exit_code = invoke_operation(
+                root, "repo_coordination_plan", {"manifest": args.manifest}
+            )
+        elif args.command == "publication" and args.publication_command == "scan":
+            payload, exit_code = invoke_operation(root, "repo_publication_scan", {})
         elif args.command == "context" and args.context_command == "find":
             payload, exit_code = invoke_operation(
                 root,
@@ -1290,6 +1391,12 @@ def main() -> int:
         payload = {
             "result": "operation-error",
             "error": {"code": exc.code, "message": exc.message},
+        }
+        exit_code = 2
+    except ValueError as exc:
+        payload = {
+            "result": "operation-error",
+            "error": {"code": "invalid_operation_input", "message": str(exc)},
         }
         exit_code = 2
     json.dump(payload, sys.stdout, indent=2)

@@ -46,6 +46,10 @@ Installed commands:
 rke activate --phase deliver --task-mode none --root C:\repos\service
 rke context find "where are credentials hydrated" --root C:\repos\service
 rke structure trace hydrateCredentials --direction both --root C:\repos\service
+rke dissection assess --root C:\repos\service
+rke handoff write --topic credential-runtime --summary "Provider path is mapped." --next-action "Run the integration test." --root C:\repos\service
+rke coordination validate --manifest local-docs/worktrees.json --root C:\repos\service
+rke publication scan --root C:\repos\service
 rke documentation assess --base main --root C:\repos\service
 rke change explain --base main --summary "Moved credential hydration behind the provider boundary." --root C:\repos\service
 ```
@@ -64,6 +68,8 @@ Query-to-Knowledge and Repository Change Comprehension remain distinct named con
 
 - **Query-to-Knowledge (QTK)** is a human clarification loop. It groups consequential questions, recommends answers with rationale, and keeps a hard `shared-understanding` gate open until the user and agent agree on an implementation target. It is not ordinary repository orientation.
 - **Repository Change Comprehension (RCC)** reconstructs the causal behaviour of the final Git delta and records a bounded explanation receipt. It is not a changed-file summary.
+
+The formerly separate repository-dissection, design/decomposition, session-alignment, local handoff/pickup, and worktree-coordination behaviours now live as deep journeys and shared RKE operations behind EWF. Tracker synchronization remains in OKF Tasks. Scenario and test planning are part of design acceptance rather than a second optional QA workflow.
 
 ## Source layout
 

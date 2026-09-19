@@ -166,6 +166,12 @@ class RepoContextMcpTests(unittest.TestCase):
             self.assertEqual(
                 {tool["name"] for tool in tools},
                 {
+                    "repo_dissection_assess",
+                    "repo_handoff_write",
+                    "repo_handoff_inspect",
+                    "repo_coordination_validate",
+                    "repo_coordination_plan",
+                    "repo_publication_scan",
                     "repo_find_context",
                     "repo_context_check",
                     "repo_knowledge_impact",
@@ -188,6 +194,12 @@ class RepoContextMcpTests(unittest.TestCase):
             )
             read_only = {tool["name"]: tool["annotations"]["readOnlyHint"] for tool in tools}
             self.assertTrue(read_only["repo_find_context"])
+            self.assertTrue(read_only["repo_dissection_assess"])
+            self.assertFalse(read_only["repo_handoff_write"])
+            self.assertTrue(read_only["repo_handoff_inspect"])
+            self.assertTrue(read_only["repo_coordination_validate"])
+            self.assertTrue(read_only["repo_coordination_plan"])
+            self.assertTrue(read_only["repo_publication_scan"])
             self.assertTrue(read_only["repo_context_check"])
             self.assertTrue(read_only["repo_knowledge_impact"])
             self.assertFalse(read_only["repo_knowledge_verify"])
@@ -255,7 +267,7 @@ class RepoContextMcpTests(unittest.TestCase):
             self.assertIn("ttlMs", listed)
             self.assertEqual(
                 listed["_meta"]["io.modelcontextprotocol/serverInfo"]["version"],
-                "0.1.0",
+                "0.2.0",
             )
 
     def test_modern_tool_calls_include_result_discriminator_and_server_identity(self) -> None:

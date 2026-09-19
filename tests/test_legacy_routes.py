@@ -22,11 +22,9 @@ class LegacyRouteTests(unittest.TestCase):
         "WTC": "parallel-delivery",
         "RCC": "close",
         "RSA": "close",
-        "LHO": "checkpoint",
-        "LPK": "resume",
+        "LHO": "handoff-write",
+        "LPK": "handoff-inspect",
         "RPF": "publication",
-        "TPU": "tracker-sync",
-        "TPW": "qa-planning",
         "RST": "repository-setup",
     }
 
@@ -96,6 +94,19 @@ class LegacyRouteTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             payload = json.loads(result.stdout)
             self.assertEqual(payload["result"], "legacy-route-unknown")
+
+    def test_retired_tracker_and_qa_aliases_are_not_active_routes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for alias in ("TPU", "TPW", "tracker-publisher", "test-plan-writer"):
+                with self.subTest(alias=alias):
+                    result = subprocess.run(
+                        [sys.executable, str(SCRIPT), "legacy", "route", alias, "--root", temp_dir],
+                        text=True,
+                        capture_output=True,
+                        check=False,
+                    )
+                    self.assertEqual(result.returncode, 2)
+                    self.assertEqual(json.loads(result.stdout)["result"], "legacy-route-unknown")
 
 
 if __name__ == "__main__":

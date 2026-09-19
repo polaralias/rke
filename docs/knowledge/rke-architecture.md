@@ -2,18 +2,18 @@
 type: Architecture Concept
 title: RKE architecture
 description: Defines the independently installed Repository Knowledge Engineering runtime, its shared CLI and MCP operation layer, repository boundaries, and relationship with EWF and OKF Tasks.
-timestamp: 2026-09-18T22:45:00+01:00
+timestamp: 2026-09-19T02:05:00+01:00
 authority: canonical
 verification: verified-working
-verified_at: 2026-09-18T22:45:00+01:00
+verified_at: 2026-09-19T02:05:00+01:00
 verified_against:
   - src/rke/operations.py
   - src/rke/engineering.py
   - src/rke/repo_context_mcp.py
   - src/rke/host_integration.py
   - skills/engineering-workflow/SKILL.md
-  - "106 deterministic tests passed"
-  - "polaralias-rke 0.1.0 wheel built"
+  - "112 deterministic tests passed"
+  - "polaralias-rke 0.2.0 wheel built"
 owner: polaralias
 tags:
   - rke
@@ -38,7 +38,7 @@ The `polaralias-rke` package is the sole executable implementation. It exposes t
 - `rke` maps shell arguments to registered handlers and is authoritative for hooks, CI and automation.
 - `rke-mcp` maps MCP tool calls to the same handlers and schemas. It adds no domain implementation.
 
-The initial extracted runtime is covered by 106 deterministic tests and a successful wheel build.
+The runtime exposes retrieval, structure, documentation, lifecycle, dissection, continuity, coordination, and publication operations through the shared registry. Its current contract is covered by 112 deterministic tests; release validation also requires a successful wheel build.
 
 The EWF skill is co-versioned in `skill/engineering-workflow`. The Polaralias skills repository carries a synchronized catalogue mirror for agent discovery. A mirror may not contain a divergent runtime copy.
 

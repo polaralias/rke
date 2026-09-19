@@ -128,7 +128,7 @@ class EngineeringWorkflowCliTests(unittest.TestCase):
                 "--capability",
                 "task-lifecycle",
                 "--capability",
-                "qa-planning",
+                "publication",
                 "--gate",
                 "acceptance-defined",
             )
@@ -141,7 +141,7 @@ class EngineeringWorkflowCliTests(unittest.TestCase):
             )
             self.assertEqual(state["primary_phase"], "design")
             self.assertEqual(
-                state["active_capabilities"], ["task-lifecycle", "qa-planning"]
+                state["active_capabilities"], ["task-lifecycle", "publication"]
             )
             self.assertEqual(state["outstanding_gates"], ["acceptance-defined"])
             self.assertEqual(state["task_tracking"]["mode"], "lightweight")
@@ -463,6 +463,16 @@ class EngineeringWorkflowCliTests(unittest.TestCase):
             self.assertEqual(payload["lanes"]["knowledge"]["status"], "pending")
             self.assertEqual(payload["lanes"]["tasks"]["status"], "pending")
             self.assertEqual(payload["lanes"]["publication"]["status"], "not-enabled")
+            self.assertNotIn("tracker", payload["lanes"])
+            self.assertEqual(payload["sessionAlignment"]["tasks"], "blocked")
+            self.assertEqual(
+                payload["sessionAlignment"]["requiredOrdering"][3:6],
+                [
+                    "reconcile-tasks-provisionally",
+                    "promote-durable-knowledge",
+                    "reconcile-tasks-finally",
+                ],
+            )
             self.assertEqual(payload["state"]["status"], "active")
 
     def test_gate_free_closure_assessment_is_ready_but_does_not_close(self) -> None:
