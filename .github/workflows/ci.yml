@@ -65,6 +65,7 @@ jobs:
       - run: python -m build
       - run: python scripts/validate_release.py --dist dist
       - run: python scripts/smoke_distribution.py dist/*.whl
+      - run: python scripts/smoke_distribution.py dist/*.tar.gz
       - uses: actions/upload-artifact@v6
         with:
           name: rke-distributions

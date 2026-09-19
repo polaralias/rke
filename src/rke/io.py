@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 import tempfile
 import time
 from pathlib import Path
@@ -13,26 +14,118 @@ class ConcurrentWriteError(ValueError):
 
 
 class FileLock:
-    """Small cross-platform lock based on exclusive lock-file creation."""
+    """Cross-platform lock file with ownership-safe stale-lock recovery."""
 
-    def __init__(self, path: Path, *, timeout: float = 10.0) -> None:
+    def __init__(
+        self,
+        path: Path,
+        *,
+        timeout: float = 10.0,
+        stale_after: float = 3600.0,
+    ) -> None:
         self.path = path
         self.timeout = timeout
+        self.stale_after = stale_after
         self._descriptor: int | None = None
+        self._token: str | None = None
+
+    @staticmethod
+    def _process_alive(pid: int) -> bool:
+        if pid <= 0:
+            return False
+        if pid == os.getpid():
+            return True
+        if os.name == "nt":
+            import ctypes
+            from ctypes import wintypes
+
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+            kernel32.OpenProcess.restype = wintypes.HANDLE
+            kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+            kernel32.CloseHandle.restype = wintypes.BOOL
+            handle = kernel32.OpenProcess(0x1000, False, pid)
+            if handle:
+                kernel32.CloseHandle(handle)
+                return True
+            return ctypes.get_last_error() != 87
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        return True
+
+    def _reclaim_stale_lock(self) -> bool:
+        try:
+            observed = self.path.stat()
+            record = json.loads(self.path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, OSError, UnicodeDecodeError, json.JSONDecodeError):
+            try:
+                observed = self.path.stat()
+            except FileNotFoundError:
+                return True
+            record = None
+        created_at = record.get("createdAt") if isinstance(record, dict) else None
+        pid = record.get("pid") if isinstance(record, dict) else None
+        age = time.time() - (
+            float(created_at)
+            if isinstance(created_at, (int, float)) and not isinstance(created_at, bool)
+            else observed.st_mtime
+        )
+        owner_dead = (
+            isinstance(pid, int)
+            and not isinstance(pid, bool)
+            and not self._process_alive(pid)
+        )
+        if not owner_dead and age < self.stale_after:
+            return False
+        try:
+            current = self.path.stat()
+        except FileNotFoundError:
+            return True
+        identity = ("st_dev", "st_ino", "st_mtime_ns", "st_size")
+        if any(getattr(current, field) != getattr(observed, field) for field in identity):
+            return False
+        try:
+            self.path.unlink()
+        except FileNotFoundError:
+            pass
+        return True
 
     def __enter__(self) -> FileLock:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         deadline = time.monotonic() + self.timeout
         while True:
             try:
-                self._descriptor = os.open(
+                descriptor = os.open(
                     self.path,
                     os.O_CREAT | os.O_EXCL | os.O_WRONLY,
                     0o600,
                 )
-                os.write(self._descriptor, f"{os.getpid()}\n".encode("ascii"))
+                try:
+                    self._token = secrets.token_hex(16)
+                    record = {
+                        "pid": os.getpid(),
+                        "createdAt": time.time(),
+                        "token": self._token,
+                    }
+                    os.write(descriptor, (json.dumps(record) + "\n").encode("utf-8"))
+                    os.fsync(descriptor)
+                except Exception:
+                    os.close(descriptor)
+                    self._token = None
+                    try:
+                        self.path.unlink()
+                    except FileNotFoundError:
+                        pass
+                    raise
+                self._descriptor = descriptor
                 return self
             except FileExistsError:
+                if self._reclaim_stale_lock():
+                    continue
                 if time.monotonic() >= deadline:
                     raise ConcurrentWriteError(
                         f"Timed out waiting for durable-write lock: {self.path}"
@@ -44,9 +137,12 @@ class FileLock:
             os.close(self._descriptor)
             self._descriptor = None
         try:
-            self.path.unlink()
-        except FileNotFoundError:
+            record = json.loads(self.path.read_text(encoding="utf-8"))
+            if isinstance(record, dict) and record.get("token") == self._token:
+                self.path.unlink()
+        except (FileNotFoundError, OSError, UnicodeDecodeError, json.JSONDecodeError):
             pass
+        self._token = None
 
 
 def sibling_lock(path: Path) -> Path:

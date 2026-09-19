@@ -4,12 +4,15 @@ import json
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 from rke import documentation as documentation_module
 from rke.documentation import apply_documentation
+from rke.manifest import load_knowledge_manifest, write_knowledge_manifest
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "engineering.py"
@@ -185,6 +188,67 @@ class DocumentationLifecycleTests(unittest.TestCase):
             self.assertFalse(
                 (root / ".engineering-workflow" / "documentation-receipt.json").exists()
             )
+
+    def test_failed_apply_cannot_erase_a_waiting_manifest_writer(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.repository(root)
+            (root / "src" / "workflow.py").write_text(
+                "MODE = 'after'\n", encoding="utf-8"
+            )
+            concept = root / "docs" / "knowledge" / "workflow.md"
+            concept.write_text(
+                concept.read_text(encoding="utf-8").replace(
+                    "Documentation is assessed before merge.",
+                    "Documentation impact is assessed and verified before merge.",
+                ),
+                encoding="utf-8",
+            )
+            target, relative, waiting_payload = load_knowledge_manifest(root)
+            waiting_payload["concurrentWriter"] = "preserved"
+            original_verify = documentation_module.verify_knowledge
+            writer_started = threading.Event()
+            writer_errors: list[Exception] = []
+            writer: threading.Thread | None = None
+
+            def waiting_write() -> None:
+                writer_started.set()
+                try:
+                    write_knowledge_manifest(root, target, relative, waiting_payload)
+                except Exception as exc:  # pragma: no cover - asserted below
+                    writer_errors.append(exc)
+
+            def fail_after_verification(*args: object, **kwargs: object) -> object:
+                nonlocal writer
+                original_verify(*args, **kwargs)
+                writer = threading.Thread(target=waiting_write)
+                writer.start()
+                self.assertTrue(writer_started.wait(timeout=1))
+                time.sleep(0.05)
+                self.assertTrue(writer.is_alive(), "manifest writer did not wait for the transaction lock")
+                raise RuntimeError("simulated post-verification failure")
+
+            with patch(
+                "rke.documentation.verify_knowledge",
+                side_effect=fail_after_verification,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "post-verification"):
+                    apply_documentation(
+                        root,
+                        base="HEAD",
+                        bundle="docs/knowledge",
+                        knowledge_paths=["docs/knowledge/workflow.md"],
+                        evidence="Reviewed source and concept together.",
+                        reader_queries=["how is documentation assessed before merge"],
+                    )
+
+            self.assertIsNotNone(writer)
+            writer.join(timeout=2)
+            self.assertFalse(writer.is_alive())
+            self.assertEqual(writer_errors, [])
+            persisted = json.loads(target.read_text(encoding="utf-8"))
+            self.assertEqual(persisted["concurrentWriter"], "preserved")
+            self.assertNotIn("verified", persisted["knowledge"][0])
 
     def test_assess_discovers_nested_repository_rules_for_changed_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -7,9 +7,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .io import FileLock, atomic_write_bytes, atomic_write_json
+from .io import FileLock, atomic_write_bytes, atomic_write_json, sibling_lock
 from .knowledge import build_indexes, inspect_bundle
-from .manifest import DEFAULT_MANIFEST_PATH
+from .manifest import DEFAULT_MANIFEST_PATH, load_knowledge_manifest
 from .repo_context import (
     check_context,
     find_context,
@@ -292,20 +292,21 @@ def apply_documentation(
             "Canonical knowledge bundle validation failed before index generation.",
         )
     bundle_path = (root / bundle).resolve()
+    manifest_target, _, _ = load_knowledge_manifest(root, manifest)
     mutation_paths = {
         directory / "index.md"
         for directory in {bundle_path, *(path.parent for path in bundle_path.rglob("*.md"))}
     }
     mutation_paths.update(
         {
-            (root / manifest).resolve(),
+            manifest_target,
             root / ".polaralias" / "repo-context.json",
             root / ".engineering-workflow" / "cache" / "context-index.json",
             root / ".engineering-workflow" / "documentation-receipt.json",
         }
     )
     transaction_lock = root / ".engineering-workflow" / ".documentation.lock"
-    with FileLock(transaction_lock):
+    with FileLock(transaction_lock), FileLock(sibling_lock(manifest_target)):
         staged_before = {
             path: path.read_bytes() if path.is_file() else None
             for path in mutation_paths
@@ -331,7 +332,13 @@ def apply_documentation(
                     }
                 )
             verification = [
-                verify_knowledge(root, path, evidence.strip(), manifest=manifest)
+                verify_knowledge(
+                    root,
+                    path,
+                    evidence.strip(),
+                    manifest=manifest,
+                    _manifest_lock_held=True,
+                )
                 for path in selected
             ]
             context = check_context(root, manifest=manifest)

@@ -1267,6 +1267,7 @@ def verify_knowledge(
     evidence: str,
     *,
     manifest: str = DEFAULT_MANIFEST_PATH,
+    _manifest_lock_held: bool = False,
 ) -> dict[str, Any]:
     target, manifest_relative, binding_manifest = load_knowledge_manifest(root, manifest)
     _, knowledge_path = repository_relative_path(
@@ -1300,7 +1301,13 @@ def verify_knowledge(
         "evidence": evidence,
         "sourceHashes": source_hashes,
     }
-    write_knowledge_manifest(root, target, manifest, binding_manifest)
+    write_knowledge_manifest(
+        root,
+        target,
+        manifest,
+        binding_manifest,
+        _lock_held=_manifest_lock_held,
+    )
     return {
         "result": "knowledge-verified",
         "manifest": manifest_relative,

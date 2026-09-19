@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from contextlib import nullcontext
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -146,12 +147,15 @@ def write_knowledge_manifest(
     target: Path,
     manifest: str,
     payload: dict[str, Any],
+    *,
+    _lock_held: bool = False,
 ) -> None:
     expected_revision = payload.get("revision", 0)
     if not isinstance(expected_revision, int) or expected_revision < 0:
         raise ConcurrentWriteError("Knowledge manifest has an invalid revision.")
     legacy = root.resolve() / LEGACY_MANIFEST_PATH
-    with FileLock(sibling_lock(target)):
+    lock = nullcontext() if _lock_held else FileLock(sibling_lock(target))
+    with lock:
         source = target
         if not target.exists() and manifest == DEFAULT_MANIFEST_PATH and legacy.exists():
             source = legacy

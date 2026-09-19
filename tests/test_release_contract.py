@@ -16,7 +16,8 @@ def test_ci_covers_supported_interpreters_and_distribution_smoke() -> None:
     assert "python -m ruff check ." in workflow
     assert "python -m pyright" in workflow
     assert "python -m build" in workflow
-    assert "scripts/smoke_distribution.py" in workflow
+    assert "scripts/smoke_distribution.py dist/*.whl" in workflow
+    assert "scripts/smoke_distribution.py dist/*.tar.gz" in workflow
 
 
 def test_release_draft_has_one_serialized_main_branch_trigger() -> None:
@@ -31,8 +32,11 @@ def test_tag_release_validates_and_publishes_the_built_artifacts() -> None:
     workflow = read_workflow("publish-release.yml")
     assert '"v*.*.*"' in workflow
     assert "scripts/validate_release.py --tag" in workflow
-    assert "scripts/smoke_distribution.py" in workflow
+    assert "scripts/smoke_distribution.py dist/*.whl" in workflow
+    assert "scripts/smoke_distribution.py dist/*.tar.gz" in workflow
     assert "actions/attest-build-provenance@v3" in workflow
     assert "pypa/gh-action-pypi-publish@release/v1" in workflow
     assert 'gh release view "$tag"' in workflow
     assert 'gh release edit "$tag" --draft=false' in workflow
+    assert "needs: publish-pypi" in workflow
+    assert workflow.index("publish-pypi:") < workflow.index("publish-github:")

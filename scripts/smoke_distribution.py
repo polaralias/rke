@@ -23,17 +23,17 @@ def run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("wheel", type=Path)
+    parser.add_argument("distribution", type=Path)
     args = parser.parse_args(argv)
-    wheel = args.wheel.resolve()
-    if not wheel.is_file():
-        parser.error(f"wheel does not exist: {wheel}")
+    distribution = args.distribution.resolve()
+    if not distribution.is_file():
+        parser.error(f"distribution does not exist: {distribution}")
 
     with tempfile.TemporaryDirectory(prefix="rke-release-smoke-") as temp:
         environment = Path(temp) / "venv"
         venv.EnvBuilder(with_pip=True).create(environment)
         python = executable(environment, "python")
-        run([str(python), "-m", "pip", "install", str(wheel)])
+        run([str(python), "-m", "pip", "install", str(distribution)])
 
         for command in (
             "rke",
@@ -73,7 +73,7 @@ def main(argv: list[str] | None = None) -> int:
         if resource_check.returncode:
             raise RuntimeError("packaged evaluation corpus is unavailable")
 
-    print(f"Clean-install smoke passed: {wheel.name}")
+    print(f"Clean-install smoke passed: {distribution.name}")
     return 0
 
 

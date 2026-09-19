@@ -91,7 +91,7 @@ Structural operations detect package and source scopes automatically, cache grap
 
 `rke-eval` loads its packaged corpus without a repository-relative data dependency. It invokes a configured model and consumes model usage, so deterministic tests remain the default inner loop.
 
-`rke.__version__` is the only version source. Release Drafter prepares one serialized draft from that version. A matching `vX.Y.Z` tag runs the complete test/build/clean-install checks, attests wheel and sdist artifacts, publishes or promotes the single GitHub release, and submits to PyPI through trusted publishing when the repository `pypi` environment is configured. Published tags are immutable.
+`rke.__version__` is the only version source. Release Drafter prepares one serialized draft from that version. A matching `vX.Y.Z` tag runs the complete tests, separately clean-installs wheel and sdist, attests both artifacts, and submits them to PyPI through trusted publishing when the repository `pypi` environment is configured. Only a successful PyPI job promotes or creates the single public GitHub release. Published tags are immutable.
 
 ## Preserved workflows
 
