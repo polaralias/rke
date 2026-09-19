@@ -7,13 +7,22 @@ import shutil
 import signal
 import subprocess
 import tempfile
+from importlib import resources
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from .host_integration import install_codex_routing
 
 
-def _load_cases(path: Path) -> list[dict[str, Any]]:
+class TextResource(Protocol):
+    def read_text(self, encoding: str = "utf-8") -> str: ...
+
+
+def _default_corpus() -> TextResource:
+    return resources.files("rke.evals").joinpath("agent-behaviour.json")
+
+
+def _load_cases(path: TextResource) -> list[dict[str, Any]]:
     value = json.loads(path.read_text(encoding="utf-8"))
     if value.get("schema") != 1 or not isinstance(value.get("cases"), list):
         raise ValueError("Evaluation corpus must use schema 1 and contain cases.")
@@ -148,13 +157,14 @@ def _run_case(case: dict[str, Any], codex: str, model: str | None, timeout: int)
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run bounded end-to-end agent behaviour evaluations for engineering-workflow.")
-    parser.add_argument("--corpus", type=Path, default=Path(__file__).resolve().parents[1] / "tests" / "evals" / "agent-behaviour.json")
+    parser.add_argument("--corpus", type=Path)
     parser.add_argument("--case", action="append", dest="case_ids")
     parser.add_argument("--codex", default=shutil.which("codex") or "codex")
     parser.add_argument("--model")
     parser.add_argument("--timeout", type=int, default=300)
     args = parser.parse_args()
-    cases = _load_cases(args.corpus.resolve())
+    corpus = args.corpus.resolve() if args.corpus else _default_corpus()
+    cases = _load_cases(corpus)
     if args.case_ids:
         cases = [case for case in cases if case.get("id") in set(args.case_ids)]
     if not cases:

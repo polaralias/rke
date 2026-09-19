@@ -4,9 +4,10 @@ import json
 import os
 import shlex
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any
+
+from .io import atomic_write_text
 
 
 HOSTS = ("codex", "claude", "git")
@@ -29,9 +30,7 @@ class HostIntegrationError(Exception):
 
 
 def write_text_lf(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="\n") as stream:
-        stream.write(content)
+    atomic_write_text(path, content)
 
 
 def host_recipe(root: Path, *, host: str, base: str) -> dict[str, Any]:
@@ -87,9 +86,9 @@ def host_recipe(root: Path, *, host: str, base: str) -> dict[str, Any]:
     }
 
 
-def git_hooks_directory(root: Path) -> Path:
+def ensure_git_repository(root: Path) -> None:
     result = subprocess.run(
-        ["git", "rev-parse", "--git-path", "hooks"],
+        ["git", "rev-parse", "--show-toplevel"],
         cwd=root,
         text=True,
         capture_output=True,
@@ -100,13 +99,35 @@ def git_hooks_directory(root: Path) -> Path:
             "host_git_repository_required",
             result.stderr.strip() or "Host hook installation requires a Git repository.",
         )
-    value = Path(result.stdout.strip())
-    return value if value.is_absolute() else (root / value).resolve()
+
+
+def configured_hooks_path(root: Path) -> str | None:
+    result = subprocess.run(
+        ["git", "config", "--local", "--get", "core.hooksPath"],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode == 1:
+        return None
+    if result.returncode != 0:
+        raise HostIntegrationError(
+            "host_git_config_failed",
+            result.stderr.strip() or "Could not inspect core.hooksPath.",
+        )
+    return result.stdout.strip()
 
 
 def install_pre_push(root: Path, *, base: str, force: bool) -> str:
-    hooks = git_hooks_directory(root)
-    target = hooks / "pre-push"
+    ensure_git_repository(root)
+    hooks_path = configured_hooks_path(root)
+    if hooks_path not in {None, ".githooks"} and not force:
+        raise HostIntegrationError(
+            "host_hooks_path_owned",
+            f"Refusing to replace independently configured core.hooksPath={hooks_path!r} without --force.",
+        )
+    target = root / ".githooks" / "pre-push"
     if target.exists():
         existing = target.read_text(encoding="utf-8", errors="replace")
         if HOOK_MARKER not in existing and not force:
@@ -132,7 +153,19 @@ def install_pre_push(root: Path, *, base: str, force: bool) -> str:
         os.chmod(target, 0o755)
     except OSError:
         pass
-    return str(target)
+    configured = subprocess.run(
+        ["git", "config", "--local", "core.hooksPath", ".githooks"],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if configured.returncode != 0:
+        raise HostIntegrationError(
+            "host_git_config_failed",
+            configured.stderr.strip() or "Could not configure core.hooksPath.",
+        )
+    return target.relative_to(root).as_posix()
 
 
 def install_claude_mcp(root: Path, *, force: bool) -> str:

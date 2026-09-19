@@ -6,17 +6,15 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from .security import SECRET_PATTERNS, is_sensitive_path
+
 
 PATTERNS = {
-    "private-key": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
-    "credential-assignment": re.compile(r"(?i)(?:api[_-]?key|token|password|client[_-]?secret)\s*[:=]\s*[^\s]{8,}"),
-    "github-token": re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b"),
-    "aws-access-key": re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+    **SECRET_PATTERNS,
     "windows-user-path": re.compile(r"(?i)\b[A-Z]:\\Users\\[^\\\s]+"),
     "unix-home-path": re.compile(r"/(?:Users|home)/[^/\s]+"),
     "email-address": re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE),
 }
-ENV_NAMES = {".env", ".env.local", ".env.production", ".env.development"}
 CACHE_PARTS = {"__pycache__", ".pytest_cache", ".ruff_cache", ".mypy_cache"}
 
 
@@ -35,8 +33,8 @@ def scan_publication(root: Path) -> tuple[dict[str, Any], int]:
     findings: list[dict[str, Any]] = []
     files = _tracked(root)
     for relative in files:
-        if relative.name in ENV_NAMES:
-            findings.append({"path": relative.as_posix(), "kind": "tracked-environment-file", "line": None})
+        if is_sensitive_path(relative):
+            findings.append({"path": relative.as_posix(), "kind": "tracked-sensitive-file", "line": None})
         if CACHE_PARTS.intersection(relative.parts):
             findings.append({"path": relative.as_posix(), "kind": "tracked-cache", "line": None})
         target = root / relative
@@ -46,10 +44,10 @@ def scan_publication(root: Path) -> tuple[dict[str, Any], int]:
             text = target.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
-        for number, line in enumerate(text.splitlines(), start=1):
-            for kind, pattern in PATTERNS.items():
-                if pattern.search(line):
-                    findings.append({"path": relative.as_posix(), "kind": kind, "line": number})
+        for kind, pattern in PATTERNS.items():
+            for match in pattern.finditer(text):
+                line = text.count("\n", 0, match.start()) + 1
+                findings.append({"path": relative.as_posix(), "kind": kind, "line": line})
     gitleaks = shutil.which("gitleaks")
     gitleaks_result: dict[str, Any] = {"available": bool(gitleaks), "executed": False}
     if gitleaks:

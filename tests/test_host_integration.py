@@ -79,15 +79,24 @@ class HostIntegrationTests(unittest.TestCase):
             self.assertIn("existing", config["mcpServers"])
             self.assertEqual(config["mcpServers"]["rke"]["command"], "rke-mcp")
             self.assertEqual(config["mcpServers"]["rke"]["args"], [])
-            hook = root / ".git" / "hooks" / "pre-push"
+            hook = root / ".githooks" / "pre-push"
             self.assertTrue(hook.is_file())
             self.assertIn("Polaralias engineering workflow", hook.read_text(encoding="utf-8"))
+            hooks_path = subprocess.run(
+                ["git", "config", "--local", "--get", "core.hooksPath"],
+                cwd=root,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            self.assertEqual(hooks_path.stdout.strip(), ".githooks")
 
     def test_install_refuses_to_replace_an_independently_owned_hook(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-            hook = root / ".git" / "hooks" / "pre-push"
+            hook = root / ".githooks" / "pre-push"
+            hook.parent.mkdir()
             hook.write_text("#!/bin/sh\necho existing\n", encoding="utf-8")
 
             result = self.run_cli(
@@ -98,6 +107,54 @@ class HostIntegrationTests(unittest.TestCase):
             payload = json.loads(result.stdout)
             self.assertEqual(payload["error"]["code"], "host_hook_owned")
             self.assertEqual(hook.read_text(encoding="utf-8"), "#!/bin/sh\necho existing\n")
+
+    def test_install_refuses_an_independently_configured_hooks_path_without_force(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(
+                ["git", "config", "--local", "core.hooksPath", "custom-hooks"],
+                cwd=root,
+                check=True,
+            )
+
+            refused = self.run_cli(
+                root, "host", "install", "--host", "git", "--base", "main"
+            )
+
+            self.assertEqual(refused.returncode, 2)
+            self.assertEqual(
+                json.loads(refused.stdout)["error"]["code"], "host_hooks_path_owned"
+            )
+            self.assertFalse((root / ".githooks" / "pre-push").exists())
+            configured = subprocess.run(
+                ["git", "config", "--local", "--get", "core.hooksPath"],
+                cwd=root,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            self.assertEqual(configured.stdout.strip(), "custom-hooks")
+
+            forced = self.run_cli(
+                root,
+                "host",
+                "install",
+                "--host",
+                "git",
+                "--base",
+                "main",
+                "--force",
+            )
+            self.assertEqual(forced.returncode, 0, forced.stderr or forced.stdout)
+            configured = subprocess.run(
+                ["git", "config", "--local", "--get", "core.hooksPath"],
+                cwd=root,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            self.assertEqual(configured.stdout.strip(), ".githooks")
 
 
 if __name__ == "__main__":

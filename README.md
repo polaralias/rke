@@ -13,6 +13,16 @@ RKE follows a documentation-driven-development principle: accepted behaviour and
 
 The runtime is installed once per machine. Every operation selects its repository explicitly; state, indexes and receipts remain inside that repository. Tracked RKE knowledge bindings live under `.rke/`; EWF lifecycle state remains separate under `.engineering-workflow/`. One MCP process can serve multiple repositories without merging their evidence.
 
+## Normal engineering journey
+
+Use one installed runtime and one EWF entry point:
+
+```text
+activate → retrieve/trace → change → documentation assess → explain → apply → close
+```
+
+The agent chooses the smallest relevant operations for the work. Retrieval and traces guide inspection; they do not replace source verification. Documentation assessment and causal explanation operate on the actual Git delta, and apply validates agent-authored canonical knowledge before close accepts the exact-delta receipts.
+
 ## Install
 
 ```powershell
@@ -62,6 +72,26 @@ codex mcp add rke -- rke-mcp
 ```
 
 MCP operations require a `repository` path in each tool call. Use one or more `--allow-root <directory>` options when the server should be restricted to known workspace parents. `rke-mcp --root <repository>` remains available only as a compatibility mode for fixed-root clients.
+
+Install repository routing and the pre-push closure gate with:
+
+```powershell
+rke host install --host codex --base main --root C:\repos\service
+```
+
+The gate lives at `.githooks/pre-push`; installation configures `core.hooksPath=.githooks`. An independently configured hook path is preserved unless the caller deliberately supplies `--force`. Codex user-level MCP activation remains a separate explicit command returned by the installer.
+
+## Retrieval and structural scope
+
+Repository retrieval uses BM25F and Git-backed content identity. Clean tracked files reuse Git object identity, while dirty, staged, untracked and uncertain files are content-hashed. Known credential locations are omitted, secret-like values are redacted, and the response reports those boundaries without returning the values.
+
+Structural operations detect package and source scopes automatically, cache graph shards and widen only when the first likely scope is insufficient. Use repeatable `--scope <relative-path>` options to override selection or combine scopes. Whole-repository analysis fuses bounded shards instead of rejecting a repository at an arbitrary file count. Tree-sitter is preferred; unavailable or inconclusive parsing returns a bounded agent-review packet with explicit confidence and uncertainty.
+
+## Evaluation and release
+
+`rke-eval` loads its packaged corpus without a repository-relative data dependency. It invokes a configured model and consumes model usage, so deterministic tests remain the default inner loop.
+
+`rke.__version__` is the only version source. Release Drafter prepares one serialized draft from that version. A matching `vX.Y.Z` tag runs the complete test/build/clean-install checks, attests wheel and sdist artifacts, publishes or promotes the single GitHub release, and submits to PyPI through trusted publishing when the repository `pypi` environment is configured. Published tags are immutable.
 
 ## Preserved workflows
 

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import subprocess
+import os
 from pathlib import Path
 from typing import Any
 
-from .repo_context import is_secret_path
+from .security import is_sensitive_path
 
 
 INSTRUCTION_NAMES = {"AGENTS.md", "CLAUDE.md"}
@@ -48,15 +49,51 @@ def _git(root: Path, *arguments: str) -> str | None:
 
 def _eligible_files(root: Path) -> list[Path]:
     files: list[Path] = []
-    for path in root.rglob("*"):
-        if not path.is_file():
-            continue
-        relative = path.relative_to(root)
+    visible = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(root),
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "-z",
+        ],
+        capture_output=True,
+        check=False,
+    )
+    if visible.returncode == 0:
+        candidates = [
+            Path(value.decode("utf-8", errors="surrogateescape"))
+            for value in visible.stdout.split(b"\0")
+            if value
+        ]
+    else:
+        candidates = []
+        excluded = {
+            ".git",
+            ".engineering-workflow",
+            ".rke-cache",
+            "node_modules",
+            "vendor",
+            "__pycache__",
+        }
+        for current, directories, filenames in os.walk(root):
+            directories[:] = [name for name in directories if name not in excluded]
+            base = Path(current)
+            candidates.extend((base / name).relative_to(root) for name in filenames)
+    for relative in candidates:
+        path = root / relative
         if {".git", ".engineering-workflow", ".rke-cache", "node_modules", "vendor"}.intersection(relative.parts):
             continue
-        if is_secret_path(relative):
+        if is_sensitive_path(relative):
             continue
-        files.append(relative)
+        try:
+            if path.is_file():
+                files.append(relative)
+        except OSError:
+            continue
     return sorted(files, key=lambda value: value.as_posix().casefold())
 
 

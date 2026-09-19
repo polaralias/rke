@@ -4,16 +4,11 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
-    types:
-      - opened
-      - reopened
-      - synchronize
-      - closed
-      - labeled
-      - unlabeled
+  workflow_dispatch:
+
+concurrency:
+  group: release-drafter-${{ github.repository }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -25,15 +20,19 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
-      - name: Read repo version
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Read package version
         id: repo-version
         shell: bash
         run: |
           set -euo pipefail
-          version="$(cat VERSION)"
+          python -m pip install . --no-deps
+          version="$(python -c 'import rke; print(rke.__version__)')"
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
       - name: Update release draft

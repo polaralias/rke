@@ -11,11 +11,37 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .errors import ContextError
+from .freshness import (
+    clean_git_blob_identities as _clean_git_blob_identities,
+    decode_text as _decode_fresh_text,
+    eligible_files as _eligible_files,
+    git_visible_files as _git_visible_files,
+    read_text as _read_fresh_text,
+)
+from .io import ConcurrentWriteError, FileLock, atomic_write_json, sibling_lock
+from .index import (
+    build_search_index as _build_focused_search_index,
+    tokenize as _focused_tokenize,
+)
+from .manifest import (
+    DEFAULT_MANIFEST_PATH,
+    LEGACY_MANIFEST_PATH,
+    load_knowledge_manifest as _load_manifest,
+    write_knowledge_manifest as _write_manifest,
+)
+from .paths import glob_matches, repository_relative_path, validate_source_pattern
+from .retrieval import (
+    bm25f_scores as _focused_bm25f_scores,
+    diversify_results as _focused_diversify_results,
+    matched_excerpt as _focused_matched_excerpt,
+    ranked_result as _focused_ranked_result,
+)
+from .security import is_sensitive_path, redact_secrets
 
-INDEX_SCHEMA_VERSION = 6
+
+INDEX_SCHEMA_VERSION = 7
 INDEX_RELATIVE_PATH = Path(".engineering-workflow") / "cache" / "context-index.json"
-DEFAULT_MANIFEST_PATH = ".rke/repo-context.json"
-LEGACY_MANIFEST_PATH = ".polaralias/repo-context.json"
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9]+")
 MARKDOWN_LINK_PATTERN = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 IDENTIFIER_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
@@ -93,64 +119,6 @@ CANDIDATE_PATH_STOPWORDS = CANDIDATE_STOPWORDS | {
 }
 
 
-class ContextError(Exception):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
-        self.code = code
-        self.message = message
-
-
-def repository_relative_path(
-    root: Path,
-    value: str,
-    *,
-    escape_code: str,
-    missing_code: str | None = None,
-) -> tuple[Path, str]:
-    candidate = Path(value)
-    if candidate.is_absolute():
-        raise ContextError(escape_code, "Path must be repository-relative.")
-    resolved_root = root.resolve()
-    resolved = (root / candidate).resolve()
-    if not resolved.is_relative_to(resolved_root):
-        raise ContextError(escape_code, "Path must remain inside the repository root.")
-    if missing_code and not resolved.exists():
-        raise ContextError(missing_code, f"Repository path does not exist: {value}")
-    return resolved, resolved.relative_to(resolved_root).as_posix()
-
-
-def validate_source_pattern(value: str) -> str:
-    candidate = Path(value)
-    if candidate.is_absolute() or ".." in candidate.parts:
-        raise ContextError(
-            "knowledge_manifest_invalid",
-            "Knowledge source patterns must remain repository-relative.",
-        )
-    return candidate.as_posix()
-
-
-def glob_matches(path: str, pattern: str) -> bool:
-    expression = ""
-    index = 0
-    while index < len(pattern):
-        if pattern[index : index + 3] == "**/":
-            expression += "(?:.*/)?"
-            index += 3
-        elif pattern[index : index + 2] == "**":
-            expression += ".*"
-            index += 2
-        elif pattern[index] == "*":
-            expression += "[^/]*"
-            index += 1
-        elif pattern[index] == "?":
-            expression += "[^/]"
-            index += 1
-        else:
-            expression += re.escape(pattern[index])
-            index += 1
-    return re.fullmatch(expression, path) is not None
-
-
 def load_knowledge_manifest(
     root: Path, manifest: str = DEFAULT_MANIFEST_PATH
 ) -> tuple[Path, str, dict[str, Any]]:
@@ -174,7 +142,7 @@ def load_knowledge_manifest(
         if not target.exists() and legacy.exists():
             source = legacy
     if not source.exists():
-        return target, relative, {"schemaVersion": 1, "knowledge": []}
+        return target, relative, {"schemaVersion": 1, "revision": 0, "knowledge": []}
     try:
         payload = json.loads(source.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
@@ -192,6 +160,13 @@ def load_knowledge_manifest(
             "knowledge_manifest_invalid",
             "Knowledge binding manifest requires schemaVersion 1 and a knowledge list.",
         )
+    revision = payload.get("revision", 0)
+    if not isinstance(revision, int) or isinstance(revision, bool) or revision < 0:
+        raise ContextError(
+            "knowledge_manifest_invalid",
+            "Knowledge binding manifest revision must be a non-negative integer.",
+        )
+    payload["revision"] = revision
     seen_paths: set[str] = set()
     for entry in knowledge:
         if (
@@ -280,17 +255,45 @@ def write_knowledge_manifest(
     manifest: str,
     payload: dict[str, Any],
 ) -> None:
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    if manifest != DEFAULT_MANIFEST_PATH:
-        return
+    expected_revision = payload.get("revision", 0)
+    if not isinstance(expected_revision, int) or expected_revision < 0:
+        raise ConcurrentWriteError("Knowledge manifest has an invalid revision.")
     legacy = root.resolve() / LEGACY_MANIFEST_PATH
-    if legacy.exists() and legacy.resolve() != target.resolve():
-        legacy.unlink()
-        try:
-            legacy.parent.rmdir()
-        except OSError:
-            pass
+    with FileLock(sibling_lock(target)):
+        source = target
+        if not target.exists() and manifest == DEFAULT_MANIFEST_PATH and legacy.exists():
+            source = legacy
+        if source.exists():
+            try:
+                current = json.loads(source.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise ConcurrentWriteError(
+                    "Knowledge manifest changed to an unreadable value before it could be written."
+                ) from error
+            current_revision = current.get("revision", 0) if isinstance(current, dict) else -1
+            if current_revision != expected_revision:
+                raise ConcurrentWriteError(
+                    "Knowledge manifest changed after it was read; reload it before writing."
+                )
+        elif expected_revision != 0:
+            raise ConcurrentWriteError(
+                "Knowledge manifest was removed after it was read; reload it before writing."
+            )
+        payload["revision"] = expected_revision + 1
+        atomic_write_json(target, payload)
+        if manifest != DEFAULT_MANIFEST_PATH:
+            return
+        if legacy.exists() and legacy.resolve() != target.resolve():
+            legacy.unlink()
+            try:
+                legacy.parent.rmdir()
+            except OSError:
+                pass
+
+
+# Public compatibility names delegate to the focused manifest owner.
+load_knowledge_manifest = _load_manifest
+write_knowledge_manifest = _write_manifest
 
 
 def tokenize(value: str) -> list[str]:
@@ -299,20 +302,11 @@ def tokenize(value: str) -> list[str]:
     return [TOKEN_ALIASES.get(token, token) for token in tokens]
 
 
+tokenize = _focused_tokenize
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-
-
-def is_secret_path(relative: Path) -> bool:
-    lowered_parts = [part.lower() for part in relative.parts]
-    name = relative.name.lower()
-    return (
-        name == ".env"
-        or name.startswith(".env.")
-        or name in {"id_rsa", "id_dsa", "id_ed25519", "credentials.json"}
-        or relative.suffix.lower() in {".pem", ".p12", ".pfx", ".key"}
-        or bool({".ssh", ".aws", ".gnupg"}.intersection(lowered_parts))
-    )
 
 
 def git_visible_files(root: Path) -> list[Path] | None:
@@ -329,7 +323,7 @@ def git_visible_files(root: Path) -> list[Path] | None:
     return [root / item.decode("utf-8") for item in result.stdout.split(b"\0") if item]
 
 
-def eligible_files(root: Path) -> tuple[list[Path], list[str]]:
+def eligible_files(root: Path) -> tuple[list[Path], list[str], list[str]]:
     excluded_parts = {
         ".git",
         ".engineering-workflow",
@@ -343,13 +337,16 @@ def eligible_files(root: Path) -> tuple[list[Path], list[str]]:
     resolved_root = root.resolve()
     eligible: list[Path] = []
     inaccessible: list[str] = []
+    sensitive: list[str] = []
     for path in candidates:
         try:
             relative = path.relative_to(root)
+            if is_sensitive_path(relative):
+                sensitive.append(relative.as_posix())
+                continue
             if (
                 path.is_file()
                 and not excluded_parts.intersection(relative.parts)
-                and not is_secret_path(relative)
                 and path.resolve().is_relative_to(resolved_root)
                 and path.stat().st_size <= 1_000_000
             ):
@@ -359,7 +356,7 @@ def eligible_files(root: Path) -> tuple[list[Path], list[str]]:
                 inaccessible.append(path.relative_to(root).as_posix())
             except ValueError:
                 inaccessible.append(str(path))
-    return sorted(eligible), sorted(inaccessible)
+    return sorted(eligible), sorted(inaccessible), sorted(set(sensitive))
 
 
 def read_text(path: Path) -> str | None:
@@ -372,31 +369,66 @@ def read_text(path: Path) -> str | None:
         return None
 
 
+Chunk = tuple[int, int, int, int, str | None, str]
+
+
+def _utf8_segments(line: str, maximum: int) -> list[tuple[int, int, str]]:
+    segments: list[tuple[int, int, str]] = []
+    start = 0
+    while start < len(line):
+        end = start
+        size = 0
+        while end < len(line):
+            width = len(line[end].encode("utf-8"))
+            if size and size + width > maximum:
+                break
+            size += width
+            end += 1
+        segments.append((start + 1, end + 1, line[start:end]))
+        start = end
+    return segments or [(1, 1, "")]
+
+
 def bounded_line_chunks(
     lines: list[str], start: int, end: int, label: str | None
-) -> list[tuple[int, int, str | None, str]]:
-    chunks: list[tuple[int, int, str | None, str]] = []
+) -> list[Chunk]:
+    chunks: list[Chunk] = []
     cursor = max(1, start)
     final = min(len(lines), max(cursor, end))
     while cursor <= final:
+        current_line = lines[cursor - 1]
+        if len(current_line.encode("utf-8")) > MAX_CHUNK_CHARACTERS:
+            for start_column, end_column, content in _utf8_segments(
+                current_line, MAX_CHUNK_CHARACTERS
+            ):
+                chunks.append(
+                    (cursor, cursor, start_column, end_column, label, content)
+                )
+            cursor += 1
+            continue
         chunk_end = cursor - 1
-        characters = 0
+        encoded_bytes = 0
         while chunk_end < final and chunk_end - cursor + 1 < MAX_CHUNK_LINES:
             next_line = lines[chunk_end]
-            if chunk_end >= cursor and characters + len(next_line) + 1 > MAX_CHUNK_CHARACTERS:
+            next_size = len(next_line.encode("utf-8")) + 1
+            if next_size > MAX_CHUNK_CHARACTERS:
                 break
-            characters += len(next_line) + 1
+            if chunk_end >= cursor and encoded_bytes + next_size > MAX_CHUNK_CHARACTERS:
+                break
+            encoded_bytes += next_size
             chunk_end += 1
         if chunk_end < cursor:
-            chunk_end = cursor
-        chunks.append((cursor, chunk_end, label, "\n".join(lines[cursor - 1 : chunk_end])))
+            continue
+        content = "\n".join(lines[cursor - 1 : chunk_end])
+        end_column = len(lines[chunk_end - 1]) + 1
+        chunks.append((cursor, chunk_end, 1, end_column, label, content))
         if chunk_end >= final:
             break
         cursor = max(cursor + 1, chunk_end - CHUNK_OVERLAP_LINES + 1)
     return chunks
 
 
-def markdown_chunks(text: str) -> list[tuple[int, int, str | None, str]]:
+def markdown_chunks(text: str) -> list[Chunk]:
     lines = text.splitlines()
     starts: list[tuple[int, int, str]] = []
     for line_number, line in enumerate(lines, start=1):
@@ -405,7 +437,7 @@ def markdown_chunks(text: str) -> list[tuple[int, int, str | None, str]]:
             starts.append((line_number, len(match.group(1)), match.group(2)))
     if not starts:
         return bounded_line_chunks(lines or [""], 1, max(1, len(lines)), None)
-    chunks: list[tuple[int, int, str | None, str]] = []
+    chunks: list[Chunk] = []
     if starts[0][0] > 1:
         end = starts[0][0] - 1
         chunks.extend(bounded_line_chunks(lines, 1, end, None))
@@ -419,7 +451,7 @@ def markdown_chunks(text: str) -> list[tuple[int, int, str | None, str]]:
     return chunks
 
 
-def fallback_code_chunks(text: str) -> list[tuple[int, int, str | None, str]]:
+def fallback_code_chunks(text: str) -> list[Chunk]:
     lines = text.splitlines()
     definition = re.compile(
         r"^\s*(?:export\s+)?(?:async\s+)?(?:def|class|function)\s+([A-Za-z_$][\w$]*)"
@@ -432,7 +464,7 @@ def fallback_code_chunks(text: str) -> list[tuple[int, int, str | None, str]]:
             starts.append((line_number, match.group(1) or match.group(2)))
     if not starts:
         return bounded_line_chunks(lines or [""], 1, max(1, len(lines)), None)
-    chunks: list[tuple[int, int, str | None, str]] = []
+    chunks: list[Chunk] = []
     if starts[0][0] > 1:
         end = starts[0][0] - 1
         chunks.extend(bounded_line_chunks(lines, 1, end, None))
@@ -442,7 +474,7 @@ def fallback_code_chunks(text: str) -> list[tuple[int, int, str | None, str]]:
     return chunks
 
 
-def code_chunks(root: Path, path: Path, text: str) -> list[tuple[int, int, str | None, str]]:
+def code_chunks(root: Path, path: Path, text: str) -> list[Chunk]:
     lines = text.splitlines() or [""]
     spans: list[dict[str, Any]] = []
     if path.suffix.lower() not in NON_CODE_EXTENSIONS:
@@ -469,7 +501,7 @@ def code_chunks(root: Path, path: Path, text: str) -> list[tuple[int, int, str |
             spans = []
     if not spans:
         return fallback_code_chunks(text)
-    chunks: list[tuple[int, int, str | None, str]] = []
+    chunks: list[Chunk] = []
     seen: set[tuple[int, int, str]] = set()
     first_start = min(int(span["startLine"]) for span in spans)
     if first_start > 1:
@@ -486,7 +518,7 @@ def code_chunks(root: Path, path: Path, text: str) -> list[tuple[int, int, str |
     return chunks
 
 
-def chunks_for(root: Path, path: Path, text: str) -> list[tuple[int, int, str | None, str]]:
+def chunks_for(root: Path, path: Path, text: str) -> list[Chunk]:
     if path.suffix.lower() in {".md", ".rst"}:
         return markdown_chunks(text)
     return code_chunks(root, path, text)
@@ -537,9 +569,67 @@ def markdown_knowledge_metadata(
     return concept_type, authority, navigation_role, sorted(relationships)
 
 
-def file_fingerprint(path: Path) -> dict[str, int]:
-    stat = path.stat()
-    return {"size": stat.st_size, "modifiedNs": stat.st_mtime_ns}
+def _git_paths(root: Path, arguments: list[str]) -> set[str] | None:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), *arguments],
+            capture_output=True,
+            check=False,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    return {
+        value.decode("utf-8", errors="surrogateescape")
+        for value in result.stdout.split(b"\0")
+        if value
+    }
+
+
+def clean_git_blob_identities(root: Path) -> dict[str, str]:
+    try:
+        listed = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "--stage", "-z"],
+            capture_output=True,
+            check=False,
+        )
+    except OSError:
+        return {}
+    if listed.returncode != 0:
+        return {}
+    tracked: dict[str, str] = {}
+    for record in listed.stdout.split(b"\0"):
+        if not record or b"\t" not in record:
+            continue
+        metadata, raw_path = record.split(b"\t", 1)
+        fields = metadata.split()
+        if len(fields) != 3 or fields[2] != b"0":
+            continue
+        tracked[raw_path.decode("utf-8", errors="surrogateescape")] = fields[1].decode("ascii")
+    unstaged = _git_paths(root, ["diff", "-z", "--name-only", "--diff-filter=ACMRD", "--"])
+    staged = _git_paths(root, ["diff", "--cached", "-z", "--name-only", "--diff-filter=ACMRD", "--"])
+    if unstaged is None or staged is None:
+        return {}
+    dirty = unstaged | staged
+    return {path: oid for path, oid in tracked.items() if path not in dirty}
+
+
+def _decode_text(data: bytes) -> str | None:
+    if b"\x00" in data:
+        return None
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+
+
+# Public compatibility names delegate to the focused freshness owner.
+git_visible_files = _git_visible_files
+eligible_files = _eligible_files
+read_text = _read_fresh_text
+clean_git_blob_identities = _clean_git_blob_identities
+_decode_text = _decode_fresh_text
 
 
 def build_file_documents(
@@ -553,7 +643,9 @@ def build_file_documents(
         else (None, None, None, [])
     )
     documents: list[dict[str, Any]] = []
-    for start, end, symbol, snippet in chunks_for(root, path, text):
+    for start, end, start_column, end_column, symbol, snippet in chunks_for(
+        root, path, text
+    ):
         heading_path = symbol or ""
         public_symbol = heading_path.split(" > ")[-1] if heading_path else None
         symbol_tokens = tokenize(public_symbol or "")
@@ -565,6 +657,8 @@ def build_file_documents(
                 "path": relative,
                 "startLine": start,
                 "endLine": end,
+                "startColumn": start_column,
+                "endColumn": end_column,
                 "symbol": public_symbol,
                 "kind": "documentation"
                 if path.suffix.lower() in {".md", ".rst"}
@@ -617,6 +711,9 @@ def build_search_index(documents: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+build_search_index = _build_focused_search_index
+
+
 def refresh_index(root: Path) -> tuple[dict[str, Any], bool, dict[str, Any]]:
     target = root / INDEX_RELATIVE_PATH
     existing: dict[str, Any] | None = None
@@ -635,13 +732,30 @@ def refresh_index(root: Path) -> tuple[dict[str, Any], bool, dict[str, Any]]:
 
     documents: list[dict[str, Any]] = []
     file_hashes: dict[str, str] = {}
-    file_fingerprints: dict[str, dict[str, int]] = {}
+    file_fingerprints: dict[str, dict[str, str]] = {}
     hashed_files = 0
     reused_files = 0
-    visible_files, inaccessible_files = eligible_files(root)
+    previous_redactions = (
+        existing.get("sensitiveEvidence", {}).get("redactedPaths", {})
+        if reusable
+        else {}
+    )
+    redacted_files: dict[str, list[str]] = {}
+    clean_blobs = clean_git_blob_identities(root)
+    visible_files, inaccessible_files, sensitive_files = eligible_files(root)
     for path in visible_files:
         relative = path.relative_to(root).as_posix()
-        fingerprint = file_fingerprint(path)
+        data: bytes | None = None
+        blob_oid = clean_blobs.get(relative)
+        if blob_oid:
+            fingerprint = {"kind": "git-blob", "identity": blob_oid}
+        else:
+            data = path.read_bytes()
+            fingerprint = {
+                "kind": "sha256",
+                "identity": hashlib.sha256(data).hexdigest(),
+            }
+            hashed_files += 1
         file_fingerprints[relative] = fingerprint
         if (
             reusable
@@ -652,14 +766,21 @@ def refresh_index(root: Path) -> tuple[dict[str, Any], bool, dict[str, Any]]:
             file_hashes[relative] = previous_hashes[relative]
             documents.extend(previous_documents[relative])
             reused_files += 1
+            if relative in previous_redactions:
+                redacted_files[relative] = previous_redactions[relative]
             continue
-        text = read_text(path)
+        if data is None:
+            data = path.read_bytes()
+            hashed_files += 1
+        text = _decode_text(data)
         if text is None:
             continue
-        hashed_files += 1
-        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        safe_text, secret_findings = redact_secrets(text)
+        if secret_findings:
+            redacted_files[relative] = secret_findings
+        digest = hashlib.sha256(data).hexdigest()
         file_hashes[relative] = digest
-        documents.extend(build_file_documents(root, path, text, digest))
+        documents.extend(build_file_documents(root, path, safe_text, digest))
 
     revision_hash = hashlib.sha256()
     for relative, digest in sorted(file_hashes.items()):
@@ -683,10 +804,13 @@ def refresh_index(root: Path) -> tuple[dict[str, Any], bool, dict[str, Any]]:
         "fileFingerprints": file_fingerprints,
         "documents": documents,
         "search": build_search_index(documents),
+        "sensitiveEvidence": {
+            "omittedPaths": sensitive_files,
+            "redactedPaths": redacted_files,
+        },
     }
     if refreshed:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(target, index)
     return (
         existing if existing and not refreshed else index,
         refreshed,
@@ -696,6 +820,10 @@ def refresh_index(root: Path) -> tuple[dict[str, Any], bool, dict[str, Any]]:
             "hashedFiles": hashed_files,
             "reusedFiles": reused_files,
             "inaccessibleFilesSkipped": inaccessible_files,
+            "sensitiveEvidence": {
+                "omittedPaths": sensitive_files,
+                "redactedPaths": redacted_files,
+            },
         },
     )
 
@@ -951,6 +1079,12 @@ def diversify_results(ranked: list[dict[str, Any]], limit: int) -> list[dict[str
         item["score"] = round(item["score"], 6)
         item.pop("documentId", None)
     return selected
+
+
+bm25f_scores = _focused_bm25f_scores
+matched_excerpt = _focused_matched_excerpt
+ranked_result = _focused_ranked_result
+diversify_results = _focused_diversify_results
 
 
 def resolve_scope(root: Path, scope: str | None) -> str | None:

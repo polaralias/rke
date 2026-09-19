@@ -12,7 +12,7 @@ import rke.evaluate_agent as MODULE
 
 class AgentEvaluationTests(unittest.TestCase):
     def test_checked_in_corpus_covers_activation_non_activation_and_boundary(self) -> None:
-        corpus = Path(__file__).parent / "evals" / "agent-behaviour.json"
+        corpus = MODULE._default_corpus()
         cases = MODULE._load_cases(corpus)
         self.assertEqual({case["category"] for case in cases}, {"activation", "non-activation", "boundary"})
 

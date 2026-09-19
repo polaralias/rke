@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import re
-import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
-from .repo_context import (
+from .io import atomic_write_text
+from .manifest import (
     DEFAULT_MANIFEST_PATH,
     load_knowledge_manifest,
-    repository_relative_path,
-    validate_source_pattern,
     write_knowledge_manifest,
 )
+from .paths import repository_relative_path, validate_source_pattern
 
 try:
     import yaml
@@ -227,8 +226,7 @@ def generated_index(directory: Path, bundle: Path) -> str:
 
 
 def write_utf8_lf(path: Path, content: str) -> None:
-    with path.open("w", encoding="utf-8", newline="\n") as stream:
-        stream.write(content)
+    atomic_write_text(path, content)
 
 
 def build_indexes(root: Path, bundle: str, *, force: bool = False) -> dict[str, Any]:

@@ -7,9 +7,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .io import FileLock, atomic_write_bytes, atomic_write_json
 from .knowledge import build_indexes, inspect_bundle
+from .manifest import DEFAULT_MANIFEST_PATH
 from .repo_context import (
-    DEFAULT_MANIFEST_PATH,
     check_context,
     find_context,
     impact_context,
@@ -37,10 +38,7 @@ def utc_now() -> str:
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="\n") as stream:
-        json.dump(payload, stream, indent=2)
-        stream.write("\n")
+    atomic_write_json(path, payload)
 
 
 def git_output(root: Path, arguments: list[str]) -> str:
@@ -264,6 +262,7 @@ def apply_documentation(
     reader_queries: list[str],
     manifest: str = DEFAULT_MANIFEST_PATH,
 ) -> dict[str, Any]:
+    root = root.resolve()
     selected = sorted(set(knowledge_paths))
     if not selected:
         raise DocumentationError(
@@ -292,49 +291,82 @@ def apply_documentation(
             "documentation_bundle_invalid",
             "Canonical knowledge bundle validation failed before index generation.",
         )
-    index_result = build_indexes(root, bundle)
-    reader_checks: list[dict[str, Any]] = []
-    for query in queries:
-        retrieval = find_context(root, query, limit=5)
-        ranked_paths = [item["path"] for item in retrieval["results"]]
-        matched = next((path for path in ranked_paths if path in selected), None)
-        if matched is None:
-            raise DocumentationError(
-                "documentation_reader_check_failed",
-                f"Reader query did not retrieve affected canonical knowledge: {query}",
-            )
-        reader_checks.append(
-            {
-                "query": query,
-                "status": "passed",
-                "matchedKnowledge": matched,
-                "rank": ranked_paths.index(matched) + 1,
-            }
-        )
-    verification = [
-        verify_knowledge(root, path, evidence.strip(), manifest=manifest)
-        for path in selected
-    ]
-    context = check_context(root, manifest=manifest)
-    if context["knowledgeFreshness"] != "fresh":
-        raise DocumentationError(
-            "documentation_freshness_failed",
-            "Canonical knowledge is not fresh after verification.",
-        )
-    receipt = {
-        "schemaVersion": 1,
-        "base": assessment["base"],
-        "baseRevision": assessment["baseRevision"],
-        "deltaFingerprint": assessment["assessmentId"],
-        "outcome": assessment["outcome"],
-        "changedPaths": assessment["changedPaths"],
-        "knowledgePaths": selected,
-        "evidence": evidence.strip(),
-        "readerChecks": reader_checks,
-        "generationContext": assessment["generationContext"],
-        "recordedAt": utc_now(),
+    bundle_path = (root / bundle).resolve()
+    mutation_paths = {
+        directory / "index.md"
+        for directory in {bundle_path, *(path.parent for path in bundle_path.rglob("*.md"))}
     }
-    write_json(root / ".engineering-workflow" / "documentation-receipt.json", receipt)
+    mutation_paths.update(
+        {
+            (root / manifest).resolve(),
+            root / ".polaralias" / "repo-context.json",
+            root / ".engineering-workflow" / "cache" / "context-index.json",
+            root / ".engineering-workflow" / "documentation-receipt.json",
+        }
+    )
+    transaction_lock = root / ".engineering-workflow" / ".documentation.lock"
+    with FileLock(transaction_lock):
+        staged_before = {
+            path: path.read_bytes() if path.is_file() else None
+            for path in mutation_paths
+        }
+        try:
+            index_result = build_indexes(root, bundle)
+            reader_checks: list[dict[str, Any]] = []
+            for query in queries:
+                retrieval = find_context(root, query, limit=5)
+                ranked_paths = [item["path"] for item in retrieval["results"]]
+                matched = next((path for path in ranked_paths if path in selected), None)
+                if matched is None:
+                    raise DocumentationError(
+                        "documentation_reader_check_failed",
+                        f"Reader query did not retrieve affected canonical knowledge: {query}",
+                    )
+                reader_checks.append(
+                    {
+                        "query": query,
+                        "status": "passed",
+                        "matchedKnowledge": matched,
+                        "rank": ranked_paths.index(matched) + 1,
+                    }
+                )
+            verification = [
+                verify_knowledge(root, path, evidence.strip(), manifest=manifest)
+                for path in selected
+            ]
+            context = check_context(root, manifest=manifest)
+            if context["knowledgeFreshness"] != "fresh":
+                raise DocumentationError(
+                    "documentation_freshness_failed",
+                    "Canonical knowledge is not fresh after verification.",
+                )
+            receipt = {
+                "schemaVersion": 1,
+                "base": assessment["base"],
+                "baseRevision": assessment["baseRevision"],
+                "deltaFingerprint": assessment["assessmentId"],
+                "outcome": assessment["outcome"],
+                "changedPaths": assessment["changedPaths"],
+                "knowledgePaths": selected,
+                "evidence": evidence.strip(),
+                "readerChecks": reader_checks,
+                "generationContext": assessment["generationContext"],
+                "recordedAt": utc_now(),
+            }
+            write_json(
+                root / ".engineering-workflow" / "documentation-receipt.json",
+                receipt,
+            )
+        except Exception:
+            for path, previous in staged_before.items():
+                if previous is None:
+                    try:
+                        path.unlink()
+                    except FileNotFoundError:
+                        pass
+                else:
+                    atomic_write_bytes(path, previous)
+            raise
     return {
         "result": "documentation-applied",
         **receipt,
