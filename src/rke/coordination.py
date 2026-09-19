@@ -228,7 +228,8 @@ def validate_coordination(root: Path, manifest: str) -> tuple[dict[str, Any], in
                 for right in right_paths:
                     if _overlaps(left, right):
                         errors.append(f"owned path overlap: {left_slug}:{left} and {right_slug}:{right}")
-    owners = data.get("shared_path_owners") if isinstance(data.get("shared_path_owners"), dict) else {}
+    configured_owners = data.get("shared_path_owners")
+    owners: dict[str, Any] = configured_owners if isinstance(configured_owners, dict) else {}
     for shared_path, users in shared.items():
         if len(users) > 1 and owners.get(shared_path) not in users:
             errors.append(f"shared path {shared_path!r} needs an assigned integration owner")

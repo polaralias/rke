@@ -7,8 +7,6 @@ from typing import Any
 from .documentation import documentation_closure_evidence
 from .okf_adapter import OkfAdapterError, check_bundle, normalise_relative, plan
 from .workflow_state import (
-    PHASES,
-    TASK_MODES,
     SCHEMA_VERSION,
     invalid_state,
     load_validated_state,

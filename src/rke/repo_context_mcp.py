@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from . import __version__
 from .documentation import DocumentationError
 from .host_integration import HostIntegrationError
 from .knowledge import KnowledgeError
@@ -23,7 +24,7 @@ from .errors import ContextError
 LEGACY_PROTOCOL_VERSION = "2025-11-25"
 MODERN_PROTOCOL_VERSION = "2026-07-28"
 SUPPORTED_PROTOCOL_VERSIONS = [MODERN_PROTOCOL_VERSION, LEGACY_PROTOCOL_VERSION]
-SERVER_INFO = {"name": "rke", "version": "0.3.0"}
+SERVER_INFO = {"name": "rke", "version": __version__}
 SERVER_INFO_KEY = "io.modelcontextprotocol/serverInfo"
 PROTOCOL_VERSION_KEY = "io.modelcontextprotocol/protocolVersion"
 CLIENT_CAPABILITIES_KEY = "io.modelcontextprotocol/clientCapabilities"
@@ -71,7 +72,8 @@ def tool_result(
 def modern_request_error(request: dict[str, Any]) -> dict[str, Any] | None:
     params = request.get("params")
     meta = params.get("_meta") if isinstance(params, dict) else None
-    version = meta.get(PROTOCOL_VERSION_KEY) if isinstance(meta, dict) else None
+    meta_values: dict[str, Any] = meta if isinstance(meta, dict) else {}
+    version = meta_values.get(PROTOCOL_VERSION_KEY)
     if request.get("method") == "server/discover" or version is not None:
         if version != MODERN_PROTOCOL_VERSION:
             return protocol_error(
@@ -80,7 +82,7 @@ def modern_request_error(request: dict[str, Any]) -> dict[str, Any] | None:
                 "Unsupported protocol version",
                 data={"supported": SUPPORTED_PROTOCOL_VERSIONS, "requested": version},
             )
-        if not isinstance(meta.get(CLIENT_CAPABILITIES_KEY), dict):
+        if not isinstance(meta_values.get(CLIENT_CAPABILITIES_KEY), dict):
             return protocol_error(
                 request.get("id"),
                 -32602,

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "polaralias-rke"
-version = "0.3.0"
+dynamic = ["version"]
 description = "Repository Knowledge Engineering runtime with shared CLI and MCP operations."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.scripts]
-rke = "rke.engineering:main"
+rke = "rke.cli:main"
 rke-mcp = "rke.repo_context_mcp:main"
 rke-eval = "rke.evaluate_agent:main"
 rke-session-start = "rke.hooks.session_start:main"
@@ -30,5 +30,23 @@ Repository = "https://github.com/polaralias/rke"
 [tool.hatch.build.targets.wheel]
 packages = ["src/rke"]
 
+[tool.hatch.version]
+path = "src/rke/__init__.py"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["F"]
+ignore = ["F811"] # Compatibility facades intentionally rebind legacy public names.
+
+[tool.pyright]
+include = ["src/rke"]
+exclude = ["src/rke/cli.py", "src/rke/repo_context.py"]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+reportMissingTypeStubs = "none"
