@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .io import atomic_write_text
+
 
 HOSTS = ("codex", "claude", "git")
 HOOK_MARKER = "# Polaralias engineering workflow"
@@ -29,9 +31,7 @@ class HostIntegrationError(Exception):
 
 
 def write_text_lf(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="\n") as stream:
-        stream.write(content)
+    atomic_write_text(path, content)
 
 
 def host_recipe(root: Path, *, host: str, base: str) -> dict[str, Any]:

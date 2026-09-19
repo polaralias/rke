@@ -136,6 +136,7 @@ def start(
             }
             state = {
                 "schema_version": SCHEMA_VERSION,
+                "revision": snapshot.value.get("revision", 0),
                 "status": "active",
                 "primary_phase": phase,
                 "active_capabilities": unique(capabilities),

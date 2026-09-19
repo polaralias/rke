@@ -95,6 +95,34 @@ class AbsorbedWorkflowTests(unittest.TestCase):
             self.assertEqual(inspected["visibility"], "shared")
             self.assertTrue(written["commitRequired"])
 
+    def test_same_topic_handoffs_written_in_one_second_both_survive(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.initialise_git(root)
+            (root / ".gitignore").write_text("local-docs/\n", encoding="utf-8")
+
+            first = write_handoff(
+                root,
+                topic="rapid-follow-up",
+                summary="First state.",
+                next_action="Write the next handoff.",
+            )
+            second = write_handoff(
+                root,
+                topic="rapid-follow-up",
+                summary="Second state.",
+                next_action="Continue from the latest state.",
+            )
+
+            self.assertNotEqual(first["path"], second["path"])
+            self.assertTrue((root / first["path"]).is_file())
+            self.assertTrue((root / second["path"]).is_file())
+            self.assertIn(first["path"], second["superseded"])
+            self.assertIn(
+                "**Status:** superseded",
+                (root / first["path"]).read_text(encoding="utf-8"),
+            )
+
     def test_coordination_validates_boundaries_and_returns_non_executing_plan(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir) / "repo"

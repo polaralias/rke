@@ -6,6 +6,10 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+
+from rke import documentation as documentation_module
+from rke.documentation import apply_documentation
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "engineering.py"
@@ -108,6 +112,79 @@ class DocumentationLifecycleTests(unittest.TestCase):
                 payload["generationContext"]["constraints"],
             )
             self.assertTrue(payload["assessmentId"])
+
+    def test_failed_apply_rolls_back_indexes_manifest_cache_and_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.repository(root)
+            (root / "src" / "workflow.py").write_text(
+                "MODE = 'after'\n", encoding="utf-8"
+            )
+            concept = root / "docs" / "knowledge" / "workflow.md"
+            concept.write_text(
+                concept.read_text(encoding="utf-8").replace(
+                    "Documentation is assessed before merge.",
+                    "Documentation impact is assessed and verified before merge.\n\n"
+                    "See [runtime documentation](runtime.md).",
+                ),
+                encoding="utf-8",
+            )
+            runtime_concept = root / "docs" / "knowledge" / "runtime.md"
+            runtime_concept.write_text(
+                "---\n"
+                "type: Architecture Concept\n"
+                "title: Runtime documentation\n"
+                "description: Records runtime documentation verification.\n"
+                "authority: canonical\n"
+                "---\n\n"
+                "# Runtime documentation\n\n"
+                "Runtime verification links to the [documentation lifecycle](workflow.md).\n",
+                encoding="utf-8",
+            )
+            manifest = root / ".rke" / "repo-context.json"
+            manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
+            manifest_payload["knowledge"].append(
+                {
+                    "path": "docs/knowledge/runtime.md",
+                    "sources": ["src/**/*.py"],
+                }
+            )
+            manifest.write_text(
+                json.dumps(manifest_payload, indent=2) + "\n", encoding="utf-8"
+            )
+            original_manifest = manifest.read_bytes()
+            original_verify = documentation_module.verify_knowledge
+            verification_calls = 0
+
+            def fail_after_one_verification(*args: object, **kwargs: object) -> object:
+                nonlocal verification_calls
+                verification_calls += 1
+                if verification_calls == 2:
+                    raise RuntimeError("simulated verification failure")
+                return original_verify(*args, **kwargs)
+
+            with patch(
+                "rke.documentation.verify_knowledge",
+                side_effect=fail_after_one_verification,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "simulated"):
+                    apply_documentation(
+                        root,
+                        base="HEAD",
+                        bundle="docs/knowledge",
+                        knowledge_paths=[
+                            "docs/knowledge/runtime.md",
+                            "docs/knowledge/workflow.md",
+                        ],
+                        evidence="Reviewed source and concept together.",
+                        reader_queries=["how is documentation assessed before merge"],
+                    )
+
+            self.assertEqual(manifest.read_bytes(), original_manifest)
+            self.assertFalse((root / "docs" / "knowledge" / "index.md").exists())
+            self.assertFalse(
+                (root / ".engineering-workflow" / "documentation-receipt.json").exists()
+            )
 
     def test_assess_discovers_nested_repository_rules_for_changed_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

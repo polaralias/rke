@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from copy import deepcopy
 from pathlib import Path
 from unittest.mock import patch
 
@@ -13,6 +14,7 @@ from unittest.mock import patch
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "engineering.py"
 BENCHMARK_ROOT = Path(__file__).resolve().parent / "fixtures" / "retrieval-benchmark" / "repository"
 from rke import repo_context
+from rke.io import ConcurrentWriteError
 
 
 class RepoContextCliTests(unittest.TestCase):
@@ -50,6 +52,28 @@ class RepoContextCliTests(unittest.TestCase):
             self.assertEqual(verified["manifest"], ".rke/repo-context.json")
             self.assertTrue((root / ".rke" / "repo-context.json").is_file())
             self.assertFalse(legacy.exists())
+
+    def test_stale_manifest_writer_cannot_overwrite_a_newer_revision(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            target, _, manifest = repo_context.load_knowledge_manifest(root)
+            repo_context.write_knowledge_manifest(
+                root, target, repo_context.DEFAULT_MANIFEST_PATH, manifest
+            )
+            _, _, current = repo_context.load_knowledge_manifest(root)
+            stale = deepcopy(current)
+            current["knowledge"] = []
+            repo_context.write_knowledge_manifest(
+                root, target, repo_context.DEFAULT_MANIFEST_PATH, current
+            )
+
+            with self.assertRaisesRegex(ConcurrentWriteError, "changed after it was read"):
+                repo_context.write_knowledge_manifest(
+                    root, target, repo_context.DEFAULT_MANIFEST_PATH, stale
+                )
+
+            _, _, persisted = repo_context.load_knowledge_manifest(root)
+            self.assertEqual(persisted["revision"], 2)
 
     def test_dual_manifest_locations_are_refused(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

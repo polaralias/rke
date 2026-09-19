@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .io import ConcurrentWriteError, FileLock, atomic_write_json, sibling_lock
+
 
 INDEX_SCHEMA_VERSION = 6
 INDEX_RELATIVE_PATH = Path(".engineering-workflow") / "cache" / "context-index.json"
@@ -174,7 +176,7 @@ def load_knowledge_manifest(
         if not target.exists() and legacy.exists():
             source = legacy
     if not source.exists():
-        return target, relative, {"schemaVersion": 1, "knowledge": []}
+        return target, relative, {"schemaVersion": 1, "revision": 0, "knowledge": []}
     try:
         payload = json.loads(source.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
@@ -192,6 +194,13 @@ def load_knowledge_manifest(
             "knowledge_manifest_invalid",
             "Knowledge binding manifest requires schemaVersion 1 and a knowledge list.",
         )
+    revision = payload.get("revision", 0)
+    if not isinstance(revision, int) or isinstance(revision, bool) or revision < 0:
+        raise ContextError(
+            "knowledge_manifest_invalid",
+            "Knowledge binding manifest revision must be a non-negative integer.",
+        )
+    payload["revision"] = revision
     seen_paths: set[str] = set()
     for entry in knowledge:
         if (
@@ -280,17 +289,40 @@ def write_knowledge_manifest(
     manifest: str,
     payload: dict[str, Any],
 ) -> None:
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    if manifest != DEFAULT_MANIFEST_PATH:
-        return
+    expected_revision = payload.get("revision", 0)
+    if not isinstance(expected_revision, int) or expected_revision < 0:
+        raise ConcurrentWriteError("Knowledge manifest has an invalid revision.")
     legacy = root.resolve() / LEGACY_MANIFEST_PATH
-    if legacy.exists() and legacy.resolve() != target.resolve():
-        legacy.unlink()
-        try:
-            legacy.parent.rmdir()
-        except OSError:
-            pass
+    with FileLock(sibling_lock(target)):
+        source = target
+        if not target.exists() and manifest == DEFAULT_MANIFEST_PATH and legacy.exists():
+            source = legacy
+        if source.exists():
+            try:
+                current = json.loads(source.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise ConcurrentWriteError(
+                    "Knowledge manifest changed to an unreadable value before it could be written."
+                ) from error
+            current_revision = current.get("revision", 0) if isinstance(current, dict) else -1
+            if current_revision != expected_revision:
+                raise ConcurrentWriteError(
+                    "Knowledge manifest changed after it was read; reload it before writing."
+                )
+        elif expected_revision != 0:
+            raise ConcurrentWriteError(
+                "Knowledge manifest was removed after it was read; reload it before writing."
+            )
+        payload["revision"] = expected_revision + 1
+        atomic_write_json(target, payload)
+        if manifest != DEFAULT_MANIFEST_PATH:
+            return
+        if legacy.exists() and legacy.resolve() != target.resolve():
+            legacy.unlink()
+            try:
+                legacy.parent.rmdir()
+            except OSError:
+                pass
 
 
 def tokenize(value: str) -> list[str]:
@@ -685,8 +717,7 @@ def refresh_index(root: Path) -> tuple[dict[str, Any], bool, dict[str, Any]]:
         "search": build_search_index(documents),
     }
     if refreshed:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(target, index)
     return (
         existing if existing and not refreshed else index,
         refreshed,

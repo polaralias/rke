@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
+from .io import atomic_write_text
+
 from .repo_context import (
     DEFAULT_MANIFEST_PATH,
     load_knowledge_manifest,
@@ -227,8 +229,7 @@ def generated_index(directory: Path, bundle: Path) -> str:
 
 
 def write_utf8_lf(path: Path, content: str) -> None:
-    with path.open("w", encoding="utf-8", newline="\n") as stream:
-        stream.write(content)
+    atomic_write_text(path, content)
 
 
 def build_indexes(root: Path, bundle: str, *, force: bool = False) -> dict[str, Any]:

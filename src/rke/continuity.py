@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import re
+import secrets
 import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from .io import FileLock, atomic_write_text
 from .repo_context import repository_relative_path
 
 
@@ -93,7 +95,8 @@ def write_handoff(
     _reject_secrets([topic, summary, next_action, *references])
     target_dir, relative_dir = _handoff_directory(root, directory)
     now = datetime.now(timezone.utc)
-    filename = f"{now.date().isoformat()}-{_slug(topic)}.md"
+    identity = now.strftime("%Y%m%dT%H%M%S%fZ")
+    filename = f"{identity}-{_slug(topic)}-{secrets.token_hex(4)}.md"
     target = target_dir / filename
     surface = _git_surface(root, target)
     if visibility == "local" and (not surface["ignored"] or surface["tracked"]):
@@ -104,7 +107,6 @@ def write_handoff(
         raise ValueError(
             "shared handoff destination is Git-ignored; choose a commit-capable directory or visibility local"
         )
-    target_dir.mkdir(parents=True, exist_ok=True)
     branch = _git(root, "branch", "--show-current") or "unknown"
     head = _git(root, "rev-parse", "HEAD") or "unknown"
     dirty = (_git(root, "status", "--short") or "").splitlines()
@@ -142,15 +144,23 @@ def write_handoff(
         "Resume through engineering-workflow and use the journey appropriate to the verified next action.\n"
         f"{detail_note}"
     )
-    target.write_text(body, encoding="utf-8")
     superseded: list[str] = []
-    for candidate in sorted(target_dir.glob(f"*-{_slug(topic)}.md")):
-        if candidate == target:
-            continue
-        text = candidate.read_text(encoding="utf-8", errors="replace")
-        if STATUS_PATTERN.search(text) and "active" in STATUS_PATTERN.search(text).group(1).casefold():
-            candidate.write_text(STATUS_PATTERN.sub("**Status:** superseded", text, count=1), encoding="utf-8")
-            superseded.append(candidate.relative_to(root).as_posix())
+    target_dir.mkdir(parents=True, exist_ok=True)
+    with FileLock(target_dir / ".handoff.lock"):
+        atomic_write_text(target, body)
+        for candidate in sorted(target_dir.glob("*.md")):
+            if candidate == target:
+                continue
+            text = candidate.read_text(encoding="utf-8", errors="replace")
+            if not text.startswith(f"# Handoff: {topic}\n"):
+                continue
+            status = STATUS_PATTERN.search(text)
+            if status and "active" in status.group(1).casefold():
+                atomic_write_text(
+                    candidate,
+                    STATUS_PATTERN.sub("**Status:** superseded", text, count=1),
+                )
+                superseded.append(candidate.relative_to(root).as_posix())
     return {
         "result": "handoff-written",
         "path": f"{relative_dir}/{filename}",

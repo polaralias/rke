@@ -5,7 +5,11 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from copy import deepcopy
 from pathlib import Path
+
+from rke.io import ConcurrentWriteError
+from rke.workflow_state import load_validated_state, write_json
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "engineering.py"
@@ -38,6 +42,24 @@ class EngineeringWorkflowCliTests(unittest.TestCase):
             self.assertEqual(state["active_capabilities"], [])
             self.assertEqual(state["outstanding_gates"], [])
             self.assertEqual(state["task_tracking"]["mode"], "none")
+            self.assertEqual(state["revision"], 1)
+
+    def test_stale_workflow_writer_cannot_overwrite_a_newer_revision(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.assertEqual(self.run_cli(root, "start").returncode, 0)
+            first = load_validated_state(root).value
+            stale = deepcopy(first)
+            first["primary_phase"] = "design"
+            write_json(load_validated_state(root).path, first)
+
+            stale["primary_phase"] = "deliver"
+            with self.assertRaisesRegex(ConcurrentWriteError, "changed after it was read"):
+                write_json(load_validated_state(root).path, stale)
+
+            persisted = load_validated_state(root).value
+            self.assertEqual(persisted["primary_phase"], "design")
+            self.assertEqual(persisted["revision"], 2)
 
     def test_activate_is_one_idempotent_entry_for_new_active_and_closed_state(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

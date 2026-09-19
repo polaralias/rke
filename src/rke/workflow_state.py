@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .io import ConcurrentWriteError, FileLock, atomic_write_json, sibling_lock
+
 
 SCHEMA_VERSION = 1
 STATE_DIRECTORY = ".engineering-workflow"
@@ -30,8 +32,28 @@ def state_path(root: Path) -> Path:
 
 
 def write_json(path: Path, value: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
+    expected_revision = value.get("revision", 0)
+    if not isinstance(expected_revision, int) or expected_revision < 0:
+        raise ConcurrentWriteError("Workflow state has an invalid revision.")
+    with FileLock(sibling_lock(path)):
+        if path.exists():
+            try:
+                current = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise ConcurrentWriteError(
+                    "Workflow state changed to an unreadable value before it could be written."
+                ) from error
+            current_revision = current.get("revision", 0) if isinstance(current, dict) else -1
+            if current_revision != expected_revision:
+                raise ConcurrentWriteError(
+                    "Workflow state changed after it was read; reload it before writing."
+                )
+        elif expected_revision != 0:
+            raise ConcurrentWriteError(
+                "Workflow state was removed after it was read; reload it before writing."
+            )
+        value["revision"] = expected_revision + 1
+        atomic_write_json(path, value)
 
 
 def unique(values: list[str]) -> list[str]:
@@ -63,6 +85,9 @@ def validate_state(state: Any) -> list[str]:
         return ["workflow state must be an object"]
     if state.get("schema_version") != SCHEMA_VERSION:
         errors.append("unsupported schema_version")
+    revision = state.get("revision", 0)
+    if not isinstance(revision, int) or isinstance(revision, bool) or revision < 0:
+        errors.append("revision must be a non-negative integer")
     status = state.get("status")
     if status not in {"active", "closed"}:
         errors.append("status must be active or closed")
