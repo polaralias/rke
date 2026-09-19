@@ -189,17 +189,17 @@ def _validate_schema(value: Any, schema: dict[str, Any], path: str = "arguments"
 
 
 def _lifecycle(name: str, root: Path, **arguments: Any) -> tuple[dict[str, Any], int]:
-    # Imported lazily until lifecycle extraction removes the CLI/domain cycle.
-    from . import engineering
+    from . import lifecycle
+    from .workflow_state import state_path
 
-    function = getattr(engineering, name)
+    function = getattr(lifecycle, name)
     try:
         result = function(root, **arguments)
     except FileNotFoundError:
         return (
             {
                 "result": "missing-state",
-                "state_path": str(engineering.state_path(root)),
+                "state_path": str(state_path(root)),
                 "error": {
                     "code": "workflow_state_missing",
                     "message": "Run engineering start before this lifecycle operation.",
@@ -211,7 +211,7 @@ def _lifecycle(name: str, root: Path, **arguments: Any) -> tuple[dict[str, Any],
         return (
             {
                 "result": "invalid-state",
-                "state_path": str(engineering.state_path(root)),
+                "state_path": str(state_path(root)),
                 "error": {
                     "code": "workflow_state_invalid_json",
                     "message": f"Workflow state is not valid JSON at line {exc.lineno}.",
@@ -306,7 +306,7 @@ def workflow_closure_assess(root: Path, arguments: dict[str, Any]) -> tuple[dict
 
 def workflow_legacy_route(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
     del root
-    from .engineering import route_legacy
+    from .lifecycle import route_legacy
 
     return route_legacy(string(arguments, "name"))
 

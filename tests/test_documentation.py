@@ -343,6 +343,42 @@ class DocumentationLifecycleTests(unittest.TestCase):
             self.assertEqual(payload["lanes"]["change"]["status"], "receipt-current")
             self.assertEqual(payload["lanes"]["knowledge"]["status"], "receipt-current")
 
+            pending_gate = self.run_cli(
+                root,
+                "gate",
+                "add",
+                "--gate",
+                "knowledge-impact-review",
+            )
+            self.assertEqual(
+                pending_gate.returncode,
+                0,
+                pending_gate.stderr or pending_gate.stdout,
+            )
+            blocked = self.run_cli(root, "closure", "assess", "--base", "HEAD")
+            self.assertEqual(blocked.returncode, 3, blocked.stderr or blocked.stdout)
+            blocked_payload = json.loads(blocked.stdout)
+            self.assertFalse(blocked_payload["ready"])
+            self.assertEqual(blocked_payload["lanes"]["knowledge"]["status"], "pending")
+            self.assertEqual(
+                blocked_payload["lanes"]["knowledge"]["receiptStatus"],
+                "receipt-current",
+            )
+            resolved_gate = self.run_cli(
+                root,
+                "gate",
+                "resolve",
+                "--gate",
+                "knowledge-impact-review",
+                "--evidence",
+                "Current receipt reviewed against the implementation delta.",
+            )
+            self.assertEqual(
+                resolved_gate.returncode,
+                0,
+                resolved_gate.stderr or resolved_gate.stdout,
+            )
+
             (root / "AGENTS.md").write_text(
                 "# Repository rules\n\nCanonical documentation now requires a new review rule.\n",
                 encoding="utf-8",
