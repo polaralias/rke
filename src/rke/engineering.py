@@ -1124,75 +1124,103 @@ def main() -> int:
     root = args.root.resolve()
     try:
         if args.command == "activate":
-            payload, exit_code = activate(root, phase=args.phase, task_mode=args.task_mode)
+            payload, exit_code = invoke_operation(
+                root,
+                "workflow_activate",
+                {"phase": args.phase, "taskMode": args.task_mode},
+            )
         elif args.command == "start":
-            payload = start(
+            payload, exit_code = invoke_operation(
                 root,
-                phase=args.phase,
-                capabilities=args.capability,
-                gates=args.gate,
-                task_mode=args.task_mode,
-                new_cycle=args.new_cycle,
+                "workflow_start",
+                {
+                    "phase": args.phase,
+                    "capabilities": args.capability,
+                    "gates": args.gate,
+                    "taskMode": args.task_mode,
+                    "newCycle": args.new_cycle,
+                },
             )
-            exit_code = 0
         elif args.command == "checkpoint":
-            payload = checkpoint(
+            payload, exit_code = invoke_operation(
                 root,
-                summary=args.summary,
-                next_action=args.next_action,
+                "workflow_checkpoint",
+                {"summary": args.summary, "nextAction": args.next_action},
             )
-            exit_code = 0
         elif args.command == "resume":
-            payload, exit_code = resume(root)
+            payload, exit_code = invoke_operation(root, "workflow_resume", {})
         elif args.command == "close":
-            payload, exit_code = close(root, base=args.base)
+            values = {"base": args.base} if args.base is not None else {}
+            payload, exit_code = invoke_operation(root, "workflow_close", values)
         elif args.command == "gate" and args.gate_command == "resolve":
-            payload, exit_code = resolve_gate(
+            payload, exit_code = invoke_operation(
                 root,
-                gate=args.gate,
-                evidence=args.evidence,
+                "workflow_gate_resolve",
+                {"gate": args.gate, "evidence": args.evidence},
             )
         elif args.command == "gate" and args.gate_command == "add":
-            payload, exit_code = add_gates(root, gates=args.gate)
-        elif args.command == "journey" and args.journey_command == "enter":
-            payload, exit_code = enter_journey(root, journey=args.journey)
-        elif args.command == "task" and args.task_command == "configure":
-            payload, exit_code = configure_tasks(
-                root,
-                mode=args.mode,
-                task_ref=args.task_ref,
-                bundle=args.bundle,
-                force=args.force,
+            payload, exit_code = invoke_operation(
+                root, "workflow_gate_add", {"gates": args.gate}
             )
+        elif args.command == "journey" and args.journey_command == "enter":
+            payload, exit_code = invoke_operation(
+                root, "workflow_journey_enter", {"journey": args.journey}
+            )
+        elif args.command == "task" and args.task_command == "configure":
+            values = {
+                "mode": args.mode,
+                "bundle": args.bundle,
+                "force": args.force,
+            }
+            if args.task_ref is not None:
+                values["taskRef"] = args.task_ref
+            payload, exit_code = invoke_operation(root, "workflow_task_configure", values)
         elif args.command == "task" and args.task_command == "check":
-            payload, exit_code = check_tasks(root, cli=args.cli)
+            values = {"cli": args.cli} if args.cli is not None else {}
+            payload, exit_code = invoke_operation(root, "workflow_task_check", values)
         elif args.command == "capability" and args.capability_command == "enable":
-            payload, exit_code = enable_capability(root, capability=args.capability)
+            payload, exit_code = invoke_operation(
+                root,
+                "workflow_capability_enable",
+                {"capability": args.capability},
+            )
         elif args.command == "closure" and args.closure_command == "assess":
-            payload, exit_code = closure_assessment(root, base=args.base)
+            values = {"base": args.base} if args.base is not None else {}
+            payload, exit_code = invoke_operation(
+                root, "workflow_closure_assess", values
+            )
         elif args.command == "legacy" and args.legacy_command == "route":
-            payload, exit_code = route_legacy(args.legacy_name)
+            payload, exit_code = invoke_operation(
+                root, "workflow_legacy_route", {"name": args.legacy_name}
+            )
         elif args.command == "dissection" and args.dissection_command == "assess":
             payload, exit_code = invoke_operation(root, "repo_dissection_assess", {})
         elif args.command == "handoff" and args.handoff_command == "write":
+            values = {
+                "topic": args.topic,
+                "summary": args.summary,
+                "nextAction": args.next_action,
+                "mode": args.mode,
+                "visibility": args.visibility,
+                "references": args.reference,
+            }
+            if args.directory is not None:
+                values["directory"] = args.directory
             payload, exit_code = invoke_operation(
                 root,
                 "repo_handoff_write",
-                {
-                    "topic": args.topic,
-                    "summary": args.summary,
-                    "nextAction": args.next_action,
-                    "mode": args.mode,
-                    "visibility": args.visibility,
-                    "directory": args.directory,
-                    "references": args.reference,
-                },
+                values,
             )
         elif args.command == "handoff" and args.handoff_command == "inspect":
+            values = {"visibility": args.visibility}
+            if args.path is not None:
+                values["path"] = args.path
+            if args.directory is not None:
+                values["directory"] = args.directory
             payload, exit_code = invoke_operation(
                 root,
                 "repo_handoff_inspect",
-                {"path": args.path, "visibility": args.visibility, "directory": args.directory},
+                values,
             )
         elif args.command == "coordination" and args.coordination_command == "validate":
             payload, exit_code = invoke_operation(
@@ -1205,18 +1233,22 @@ def main() -> int:
         elif args.command == "publication" and args.publication_command == "scan":
             payload, exit_code = invoke_operation(root, "repo_publication_scan", {})
         elif args.command == "context" and args.context_command == "find":
+            values = {"query": args.query, "limit": args.limit}
+            if args.scope is not None:
+                values["scope"] = args.scope
             payload, exit_code = invoke_operation(
                 root,
                 "repo_find_context",
-                {"query": args.query, "limit": args.limit, "scope": args.scope},
+                values,
             )
         elif args.command == "context" and args.context_command == "check":
             payload, exit_code = invoke_operation(
                 root, "repo_context_check", {"manifest": args.manifest}
             )
         elif args.command == "context" and args.context_command == "benchmark":
-            payload = benchmark_context(root, args.corpus)
-            exit_code = 0
+            payload, exit_code = invoke_operation(
+                root, "repo_context_benchmark", {"corpus": args.corpus}
+            )
         elif args.command == "context" and args.context_command == "impact":
             payload, exit_code = invoke_operation(
                 root,
@@ -1331,13 +1363,17 @@ def main() -> int:
                 {"base": args.base, "summary": args.summary},
             )
         elif args.command == "host" and args.host_command == "recipe":
-            payload = host_recipe(root, host=args.host, base=args.base)
-            exit_code = 0
-        elif args.command == "host" and args.host_command == "install":
-            payload = install_host(
-                root, host=args.host, base=args.base, force=args.force
+            payload, exit_code = invoke_operation(
+                root,
+                "repo_host_recipe",
+                {"host": args.host, "base": args.base},
             )
-            exit_code = 0
+        elif args.command == "host" and args.host_command == "install":
+            payload, exit_code = invoke_operation(
+                root,
+                "repo_host_install",
+                {"host": args.host, "base": args.base, "force": args.force},
+            )
         else:  # pragma: no cover - argparse owns command validation.
             raise AssertionError(f"unsupported command: {args.command}")
     except FileNotFoundError:

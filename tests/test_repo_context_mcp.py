@@ -166,6 +166,22 @@ class RepoContextMcpTests(unittest.TestCase):
             self.assertEqual(
                 {tool["name"] for tool in tools},
                 {
+                    "workflow_activate",
+                    "workflow_start",
+                    "workflow_checkpoint",
+                    "workflow_resume",
+                    "workflow_close",
+                    "workflow_gate_add",
+                    "workflow_gate_resolve",
+                    "workflow_journey_enter",
+                    "workflow_task_configure",
+                    "workflow_task_check",
+                    "workflow_capability_enable",
+                    "workflow_closure_assess",
+                    "workflow_legacy_route",
+                    "repo_host_recipe",
+                    "repo_host_install",
+                    "repo_context_benchmark",
                     "repo_dissection_assess",
                     "repo_handoff_write",
                     "repo_handoff_inspect",
@@ -196,6 +212,8 @@ class RepoContextMcpTests(unittest.TestCase):
             self.assertTrue(read_only["repo_find_context"])
             self.assertTrue(read_only["repo_dissection_assess"])
             self.assertFalse(read_only["repo_handoff_write"])
+            idempotent = {tool["name"]: tool["annotations"]["idempotentHint"] for tool in tools}
+            self.assertFalse(idempotent["repo_handoff_write"])
             self.assertTrue(read_only["repo_handoff_inspect"])
             self.assertTrue(read_only["repo_coordination_validate"])
             self.assertTrue(read_only["repo_coordination_plan"])
@@ -442,8 +460,95 @@ class RepoContextMcpTests(unittest.TestCase):
             responses = [json.loads(line) for line in result.stdout.splitlines()]
             self.assertTrue(responses[0]["result"]["isError"])
             error_payload = json.loads(responses[0]["result"]["content"][0]["text"])
-            self.assertEqual(error_payload["code"], "context_limit_invalid")
+            self.assertEqual(error_payload["code"], "invalid_operation_arguments")
             self.assertEqual(responses[1]["error"]["code"], -32602)
+
+    def test_nonzero_lifecycle_outcomes_are_mcp_tool_errors_with_original_payloads(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            result = self.run_server(
+                root,
+                [
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "tools/call",
+                        "params": {"name": "workflow_resume", "arguments": {}},
+                    },
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 2,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "workflow_start",
+                            "arguments": {"gates": ["implementation-validation"]},
+                        },
+                    },
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 3,
+                        "method": "tools/call",
+                        "params": {"name": "workflow_close", "arguments": {}},
+                    },
+                ],
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            responses = [json.loads(line) for line in result.stdout.splitlines()]
+            self.assertTrue(responses[0]["result"]["isError"])
+            self.assertEqual(
+                responses[0]["result"]["structuredContent"]["result"], "missing-state"
+            )
+            self.assertFalse(responses[1]["result"]["isError"])
+            self.assertTrue(responses[2]["result"]["isError"])
+            self.assertEqual(
+                responses[2]["result"]["structuredContent"]["result"],
+                "closure-blocked",
+            )
+
+    def test_schema_and_domain_failures_do_not_terminate_the_stdio_server(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "coordination.json").write_text("{not-json", encoding="utf-8")
+            result = self.run_server(
+                root,
+                [
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "workflow_activate",
+                            "arguments": {"phase": "unsupported"},
+                        },
+                    },
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 2,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "repo_coordination_validate",
+                            "arguments": {"manifest": "coordination.json"},
+                        },
+                    },
+                    {"jsonrpc": "2.0", "id": 3, "method": "ping"},
+                ],
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            responses = [json.loads(line) for line in result.stdout.splitlines()]
+            self.assertEqual(len(responses), 3)
+            self.assertTrue(responses[0]["result"]["isError"])
+            self.assertEqual(
+                responses[0]["result"]["structuredContent"]["code"],
+                "invalid_operation_arguments",
+            )
+            self.assertTrue(responses[1]["result"]["isError"])
+            self.assertEqual(
+                responses[1]["result"]["structuredContent"]["code"],
+                "invalid_operation_data",
+            )
+            self.assertEqual(responses[2]["result"], {})
 
 
 if __name__ == "__main__":

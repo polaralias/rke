@@ -8,8 +8,15 @@ from pathlib import Path
 from typing import Any
 
 from .documentation import DocumentationError
+from .host_integration import HostIntegrationError
 from .knowledge import KnowledgeError
-from .operations import OperationError, invoke_operation, mcp_tools
+from .okf_adapter import OkfAdapterError
+from .operations import (
+    OperationError,
+    UnknownOperationError,
+    invoke_operation,
+    mcp_tools,
+)
 from .repo_context import ContextError
 
 
@@ -84,7 +91,14 @@ def modern_request_error(request: dict[str, Any]) -> dict[str, Any] | None:
 
 def domain_error(
     identifier: Any,
-    exc: ContextError | KnowledgeError | DocumentationError | OperationError,
+    exc: (
+        ContextError
+        | KnowledgeError
+        | DocumentationError
+        | HostIntegrationError
+        | OkfAdapterError
+        | OperationError
+    ),
     *,
     modern: bool,
 ) -> dict[str, Any]:
@@ -212,15 +226,41 @@ def dispatch(
         repository, arguments = resolve_repository(
             root, params.get("arguments", {}), allowed_roots
         )
-        payload, _ = invoke_operation(repository, params["name"], arguments)
-    except KeyError:
+        outcome = invoke_operation(repository, params["name"], arguments)
+    except UnknownOperationError:
         return protocol_error(identifier, -32602, f"Unknown tool: {params['name']}")
-    except (ContextError, KnowledgeError, DocumentationError, OperationError) as exc:
+    except (
+        ContextError,
+        KnowledgeError,
+        DocumentationError,
+        HostIntegrationError,
+        OkfAdapterError,
+        OperationError,
+    ) as exc:
         return domain_error(identifier, exc, modern=modern)
+    except Exception as exc:  # Keep one malformed request from terminating stdio.
+        print(
+            f"rke-mcp internal tool failure: {type(exc).__name__}",
+            file=sys.stderr,
+            flush=True,
+        )
+        payload = {
+            "code": "internal_operation_error",
+            "message": "The operation failed unexpectedly; the MCP server remains available.",
+        }
+        return {
+            "jsonrpc": "2.0",
+            "id": identifier,
+            "result": tool_result(payload, is_error=True, modern=modern),
+        }
     return {
         "jsonrpc": "2.0",
         "id": identifier,
-        "result": tool_result(payload, modern=modern),
+        "result": tool_result(
+            outcome.payload,
+            is_error=outcome.exit_code != 0,
+            modern=modern,
+        ),
     }
 
 
