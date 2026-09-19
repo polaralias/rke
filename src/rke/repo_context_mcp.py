@@ -17,7 +17,7 @@ from .operations import (
     invoke_operation,
     mcp_tools,
 )
-from .repo_context import ContextError
+from .errors import ContextError
 
 
 LEGACY_PROTOCOL_VERSION = "2025-11-25"

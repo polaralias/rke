@@ -9,8 +9,8 @@ from typing import Any
 
 from .io import FileLock, atomic_write_bytes, atomic_write_json
 from .knowledge import build_indexes, inspect_bundle
+from .manifest import DEFAULT_MANIFEST_PATH
 from .repo_context import (
-    DEFAULT_MANIFEST_PATH,
     check_context,
     find_context,
     impact_context,

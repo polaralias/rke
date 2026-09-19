@@ -11,15 +11,18 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from .chunking import bounded_line_chunks
+from .errors import ContextError
+from .freshness import eligible_files, read_text
 from .io import atomic_write_json
-from .repo_context import (
-    ContextError,
-    bounded_line_chunks,
-    eligible_files,
-    read_text,
-    repository_relative_path,
-)
+from .paths import repository_relative_path
 from .security import is_sensitive_path
+from .structural_scopes import (
+    discover_scopes as _discover_scopes,
+    normalize_scopes as _focused_normalize_scopes,
+    paths_in_scopes as _focused_paths_in_scopes,
+)
+from .structural_search import isolated_regex_search
 
 
 MAX_RESULTS = 100
@@ -709,6 +712,13 @@ def _paths_in_scopes(
     return sorted(paths)
 
 
+# Compatibility names keep the graph builder stable while focused scope policy
+# remains independently testable and reusable.
+discover_scopes = _discover_scopes
+_normalize_scopes = _focused_normalize_scopes
+_paths_in_scopes = _focused_paths_in_scopes
+
+
 def _batch_size() -> int:
     raw = os.environ.get("RKE_STRUCTURE_BATCH_SIZE", "128")
     try:
@@ -1096,37 +1106,12 @@ def search_structure(
     for symbol in graph["symbols"]:
         symbols_by_path[symbol.path].append(symbol)
     inaccessible = list(graph["inaccessibleFilesSkipped"])
-    request = json.dumps(
-        {
-            "root": str(root.resolve()),
-            "pattern": pattern,
-            "paths": graph["sourceFiles"],
-        }
+    worker_payload = isolated_regex_search(
+        root,
+        pattern,
+        graph["sourceFiles"],
+        timeout_seconds=REGEX_TIMEOUT_SECONDS,
     )
-    try:
-        worker = subprocess.run(
-            [sys.executable, "-m", "rke.regex_worker"],
-            input=request,
-            text=True,
-            capture_output=True,
-            check=False,
-            timeout=REGEX_TIMEOUT_SECONDS,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise ContextError(
-            "structure_pattern_timeout",
-            f"Pattern search exceeded the {REGEX_TIMEOUT_SECONDS}-second isolation limit.",
-        ) from exc
-    try:
-        worker_payload = json.loads(worker.stdout) if worker.returncode == 0 else None
-    except json.JSONDecodeError:
-        worker_payload = None
-    if not isinstance(worker_payload, dict) or not isinstance(
-        worker_payload.get("matches"), list
-    ):
-        raise ContextError(
-            "structure_search_failed", "The isolated pattern worker did not return valid results."
-        )
     matches: list[dict[str, Any]] = []
     for item in worker_payload["matches"]:
         relative = str(item["path"])

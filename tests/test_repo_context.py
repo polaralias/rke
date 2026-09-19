@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "engineering.py"
 BENCHMARK_ROOT = Path(__file__).resolve().parent / "fixtures" / "retrieval-benchmark" / "repository"
-from rke import repo_context
+from rke import freshness, repo_context
 from rke.io import ConcurrentWriteError
 
 
@@ -144,7 +144,7 @@ class RepoContextCliTests(unittest.TestCase):
 
             with (
                 patch.object(
-                    repo_context,
+                    freshness,
                     "git_visible_files",
                     return_value=[readable, unreadable],
                 ),

@@ -11,14 +11,37 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .errors import ContextError
+from .freshness import (
+    clean_git_blob_identities as _clean_git_blob_identities,
+    decode_text as _decode_fresh_text,
+    eligible_files as _eligible_files,
+    git_visible_files as _git_visible_files,
+    read_text as _read_fresh_text,
+)
 from .io import ConcurrentWriteError, FileLock, atomic_write_json, sibling_lock
+from .index import (
+    build_search_index as _build_focused_search_index,
+    tokenize as _focused_tokenize,
+)
+from .manifest import (
+    DEFAULT_MANIFEST_PATH,
+    LEGACY_MANIFEST_PATH,
+    load_knowledge_manifest as _load_manifest,
+    write_knowledge_manifest as _write_manifest,
+)
+from .paths import glob_matches, repository_relative_path, validate_source_pattern
+from .retrieval import (
+    bm25f_scores as _focused_bm25f_scores,
+    diversify_results as _focused_diversify_results,
+    matched_excerpt as _focused_matched_excerpt,
+    ranked_result as _focused_ranked_result,
+)
 from .security import is_sensitive_path, redact_secrets
 
 
 INDEX_SCHEMA_VERSION = 7
 INDEX_RELATIVE_PATH = Path(".engineering-workflow") / "cache" / "context-index.json"
-DEFAULT_MANIFEST_PATH = ".rke/repo-context.json"
-LEGACY_MANIFEST_PATH = ".polaralias/repo-context.json"
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9]+")
 MARKDOWN_LINK_PATTERN = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 IDENTIFIER_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
@@ -94,64 +117,6 @@ CANDIDATE_PATH_STOPWORDS = CANDIDATE_STOPWORDS | {
     "yaml",
     "yml",
 }
-
-
-class ContextError(Exception):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
-        self.code = code
-        self.message = message
-
-
-def repository_relative_path(
-    root: Path,
-    value: str,
-    *,
-    escape_code: str,
-    missing_code: str | None = None,
-) -> tuple[Path, str]:
-    candidate = Path(value)
-    if candidate.is_absolute():
-        raise ContextError(escape_code, "Path must be repository-relative.")
-    resolved_root = root.resolve()
-    resolved = (root / candidate).resolve()
-    if not resolved.is_relative_to(resolved_root):
-        raise ContextError(escape_code, "Path must remain inside the repository root.")
-    if missing_code and not resolved.exists():
-        raise ContextError(missing_code, f"Repository path does not exist: {value}")
-    return resolved, resolved.relative_to(resolved_root).as_posix()
-
-
-def validate_source_pattern(value: str) -> str:
-    candidate = Path(value)
-    if candidate.is_absolute() or ".." in candidate.parts:
-        raise ContextError(
-            "knowledge_manifest_invalid",
-            "Knowledge source patterns must remain repository-relative.",
-        )
-    return candidate.as_posix()
-
-
-def glob_matches(path: str, pattern: str) -> bool:
-    expression = ""
-    index = 0
-    while index < len(pattern):
-        if pattern[index : index + 3] == "**/":
-            expression += "(?:.*/)?"
-            index += 3
-        elif pattern[index : index + 2] == "**":
-            expression += ".*"
-            index += 2
-        elif pattern[index] == "*":
-            expression += "[^/]*"
-            index += 1
-        elif pattern[index] == "?":
-            expression += "[^/]"
-            index += 1
-        else:
-            expression += re.escape(pattern[index])
-            index += 1
-    return re.fullmatch(expression, path) is not None
 
 
 def load_knowledge_manifest(
@@ -326,10 +291,18 @@ def write_knowledge_manifest(
                 pass
 
 
+# Public compatibility names delegate to the focused manifest owner.
+load_knowledge_manifest = _load_manifest
+write_knowledge_manifest = _write_manifest
+
+
 def tokenize(value: str) -> list[str]:
     expanded = IDENTIFIER_BOUNDARY.sub(" ", value.replace("_", " ").replace("-", " "))
     tokens = [match.group(0).lower() for match in TOKEN_PATTERN.finditer(expanded)]
     return [TOKEN_ALIASES.get(token, token) for token in tokens]
+
+
+tokenize = _focused_tokenize
 
 
 def utc_now() -> str:
@@ -651,6 +624,14 @@ def _decode_text(data: bytes) -> str | None:
         return None
 
 
+# Public compatibility names delegate to the focused freshness owner.
+git_visible_files = _git_visible_files
+eligible_files = _eligible_files
+read_text = _read_fresh_text
+clean_git_blob_identities = _clean_git_blob_identities
+_decode_text = _decode_fresh_text
+
+
 def build_file_documents(
     root: Path, path: Path, text: str, digest: str
 ) -> list[dict[str, Any]]:
@@ -728,6 +709,9 @@ def build_search_index(documents: list[dict[str, Any]]) -> dict[str, Any]:
         "documentFrequencies": dict(document_frequencies),
         "postings": postings,
     }
+
+
+build_search_index = _build_focused_search_index
 
 
 def refresh_index(root: Path) -> tuple[dict[str, Any], bool, dict[str, Any]]:
@@ -1095,6 +1079,12 @@ def diversify_results(ranked: list[dict[str, Any]], limit: int) -> list[dict[str
         item["score"] = round(item["score"], 6)
         item.pop("documentId", None)
     return selected
+
+
+bm25f_scores = _focused_bm25f_scores
+matched_excerpt = _focused_matched_excerpt
+ranked_result = _focused_ranked_result
+diversify_results = _focused_diversify_results
 
 
 def resolve_scope(root: Path, scope: str | None) -> str | None:

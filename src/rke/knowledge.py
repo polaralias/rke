@@ -8,14 +8,12 @@ from typing import Any
 from urllib.parse import unquote, urlparse
 
 from .io import atomic_write_text
-
-from .repo_context import (
+from .manifest import (
     DEFAULT_MANIFEST_PATH,
     load_knowledge_manifest,
-    repository_relative_path,
-    validate_source_pattern,
     write_knowledge_manifest,
 )
+from .paths import repository_relative_path, validate_source_pattern
 
 try:
     import yaml

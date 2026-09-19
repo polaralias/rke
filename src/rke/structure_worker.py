@@ -4,7 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
-from .repo_context import ContextError, repository_relative_path
+from .errors import ContextError
+from .paths import repository_relative_path
 from .structure import (
     NON_CODE_LANGUAGES,
     _extract_file,

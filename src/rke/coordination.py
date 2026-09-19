@@ -6,7 +6,7 @@ import re
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from .repo_context import repository_relative_path
+from .paths import repository_relative_path
 
 
 TOPOLOGIES = {"parallel", "integration-branch", "stacked"}

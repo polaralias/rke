@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .io import FileLock, atomic_write_text
-from .repo_context import repository_relative_path
+from .paths import repository_relative_path
 from .security import contains_secret
 
 

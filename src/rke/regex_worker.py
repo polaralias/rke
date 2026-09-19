@@ -5,7 +5,7 @@ import re
 import sys
 from pathlib import Path
 
-from .repo_context import repository_relative_path
+from .paths import repository_relative_path
 from .security import redact_secrets
 
 

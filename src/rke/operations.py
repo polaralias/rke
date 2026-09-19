@@ -12,9 +12,9 @@ from .coordination import plan_coordination, validate_coordination
 from .dissection import assess_dissection
 from .host_integration import host_recipe, install_host
 from .knowledge import build_indexes, inspect_bundle, register_knowledge
+from .manifest import DEFAULT_MANIFEST_PATH
 from .publication import scan_publication
 from .repo_context import (
-    DEFAULT_MANIFEST_PATH,
     benchmark_context,
     check_context,
     find_context,
