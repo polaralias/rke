@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "polaralias-rke"
+version = "0.3.0"
+description = "Repository Knowledge Engineering runtime with shared CLI and MCP operations."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "James Whelan / Polaralias" }]
+dependencies = [
+  "PyYAML>=6,<7",
+  "tree-sitter>=0.26,<0.27",
+  "tree-sitter-language-pack>=1.20,<2",
+]
+
+[project.scripts]
+rke = "rke.engineering:main"
+rke-mcp = "rke.repo_context_mcp:main"
+rke-eval = "rke.evaluate_agent:main"
+rke-session-start = "rke.hooks.session_start:main"
+rke-pre-compaction = "rke.hooks.pre_compaction:main"
+rke-pre-push = "rke.hooks.pre_merge:main"
+
+[project.urls]
+Repository = "https://github.com/polaralias/rke"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rke"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

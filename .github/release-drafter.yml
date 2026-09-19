@@ -1,0 +1,25 @@
+change-template: '- $TITLE (#$NUMBER) @$AUTHOR'
+no-changes-template: '- No user-facing changes'
+
+categories:
+  - title: 'Features'
+    labels:
+      - 'feature'
+      - 'feat'
+  - title: 'Fixes'
+    labels:
+      - 'fix'
+      - 'bugfix'
+  - title: 'Docs'
+    labels:
+      - 'docs'
+  - title: 'Maintenance'
+    labels:
+      - 'chore'
+      - 'refactor'
+      - 'test'
+
+template: |
+  ## What's Changed
+
+  $CHANGES
