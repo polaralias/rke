@@ -12,8 +12,9 @@ verified_against:
   - src/rke/repo_context_mcp.py
   - src/rke/host_integration.py
   - skills/engineering-workflow/SKILL.md
-  - "112 deterministic tests passed"
-  - "polaralias-rke 0.2.0 wheel built"
+  - skills/engineering-workflow/references/**/*
+  - "116 deterministic tests passed"
+  - "polaralias-rke 0.3.0 wheel built"
 owner: polaralias
 tags:
   - rke
@@ -38,15 +39,19 @@ The `polaralias-rke` package is the sole executable implementation. It exposes t
 - `rke` maps shell arguments to registered handlers and is authoritative for hooks, CI and automation.
 - `rke-mcp` maps MCP tool calls to the same handlers and schemas. It adds no domain implementation.
 
-The runtime exposes retrieval, structure, documentation, lifecycle, dissection, continuity, coordination, and publication operations through the shared registry. Its current contract is covered by 112 deterministic tests; release validation also requires a successful wheel build.
+The runtime exposes retrieval, structure, documentation, lifecycle, dissection, continuity, coordination, and publication operations through the shared registry. Its current contract is covered by the deterministic suite; release validation also requires a successful wheel build.
 
-The EWF skill is co-versioned in `skill/engineering-workflow`. The Polaralias skills repository carries a synchronized catalogue mirror for agent discovery. A mirror may not contain a divergent runtime copy.
+The EWF skill is co-versioned in `skills/engineering-workflow`. Its operating contracts live only under the skill's `references/` directory: shared contracts are flat, phase-specific guidance is under `journeys/`, and opt-in capability guidance is under `extensions/`. The repository's `docs/knowledge/` directory is reserved for canonical RKE project knowledge and must not mirror those skill instructions.
+
+The Polaralias skills repository carries a synchronized catalogue mirror for agent discovery. A mirror may not contain a divergent runtime copy.
 
 ## Repository selection
 
 CLI calls supply `--root`. Machine-wide MCP calls supply `repository` for each tool invocation. The server canonicalises the OS path, verifies that dynamic targets are Git repositories, optionally constrains them beneath configured `--allow-root` boundaries, and passes one resolved root to the handler.
 
-Each repository owns its own `.engineering-workflow/` state, disposable indexes and receipts. Cross-repository work must retain source provenance and must never merge canonical knowledge or freshness claims implicitly.
+Each repository owns tracked RKE knowledge bindings under `.rke/` and separate EWF lifecycle state, disposable indexes and receipts under `.engineering-workflow/`. The legacy `.polaralias/` manifest path is migration input rather than current identity. Cross-repository work must retain source provenance and must never merge canonical knowledge or freshness claims implicitly.
+
+Continuation defaults to ignored, untracked `local-docs/handoff/` artefacts. When the user deliberately needs durable collaboration, the same handoff core can write a commit-capable shared artefact under `.rke/handoffs/`; shared handoffs remain coordination evidence rather than canonical knowledge.
 
 ## Methodology
 

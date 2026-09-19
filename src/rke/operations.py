@@ -12,6 +12,7 @@ from .dissection import assess_dissection
 from .knowledge import build_indexes, inspect_bundle, register_knowledge
 from .publication import scan_publication
 from .repo_context import (
+    DEFAULT_MANIFEST_PATH,
     check_context,
     find_context,
     impact_context,
@@ -29,7 +30,7 @@ from .structure import (
 )
 
 
-DEFAULT_MANIFEST = ".polaralias/repo-context.json"
+DEFAULT_MANIFEST = DEFAULT_MANIFEST_PATH
 OperationHandler = Callable[[Path, dict[str, Any]], tuple[dict[str, Any], int]]
 
 
@@ -290,7 +291,8 @@ def handoff_write(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any]
             summary=string(arguments, "summary"),
             next_action=string(arguments, "nextAction"),
             mode=string(arguments, "mode", default="standard"),
-            directory=string(arguments, "directory", default="local-docs/handoff"),
+            visibility=string(arguments, "visibility", default="local"),
+            directory=optional_string(arguments, "directory"),
             references=references,
         ),
         0,
@@ -301,7 +303,8 @@ def handoff_inspect(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, An
     return inspect_handoff(
         root,
         path=optional_string(arguments, "path"),
-        directory=string(arguments, "directory", default="local-docs/handoff"),
+        visibility=string(arguments, "visibility", default="auto"),
+        directory=optional_string(arguments, "directory"),
     )
 
 
@@ -354,6 +357,7 @@ OPERATIONS = (
                 "summary": STRING,
                 "nextAction": STRING,
                 "mode": {"type": "string", "enum": ["standard", "max"], "default": "standard"},
+                "visibility": {"type": "string", "enum": ["local", "shared"], "default": "local"},
                 "directory": STRING,
                 "references": {"type": "array", "items": STRING},
             },
@@ -367,7 +371,11 @@ OPERATIONS = (
         "repo_handoff_inspect",
         "Inspect a continuation handoff",
         "Select one active handoff and return the claims that must be re-verified before work resumes.",
-        object_schema({"path": STRING, "directory": STRING}),
+        object_schema({
+            "path": STRING,
+            "visibility": {"type": "string", "enum": ["auto", "local", "shared"], "default": "auto"},
+            "directory": STRING,
+        }),
         True,
         True,
         handoff_inspect,

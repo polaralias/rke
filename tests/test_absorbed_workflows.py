@@ -39,6 +39,7 @@ class AbsorbedWorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self.initialise_git(root)
+            (root / ".gitignore").write_text("local-docs/\n", encoding="utf-8")
             written = write_handoff(
                 root,
                 topic="runtime-alignment",
@@ -51,6 +52,8 @@ class AbsorbedWorkflowTests(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertEqual(inspected["result"], "handoff-inspected")
             self.assertEqual(inspected["path"], written["path"])
+            self.assertEqual(written["visibility"], "local")
+            self.assertEqual(inspected["visibility"], "local")
             self.assertEqual(inspected["suggestedNextStep"], "Run the bounded integration test.")
             with self.assertRaisesRegex(ValueError, "resembles a secret"):
                 write_handoff(
@@ -59,6 +62,38 @@ class AbsorbedWorkflowTests(unittest.TestCase):
                     summary="api_key=abcdefghijklmnopqrstuvwxyz",
                     next_action="Continue.",
                 )
+
+    def test_handoff_steers_local_storage_but_supports_deliberate_shared_pickup(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.initialise_git(root)
+            with self.assertRaisesRegex(ValueError, "choose visibility shared"):
+                write_handoff(
+                    root,
+                    topic="not-ignored",
+                    summary="This must stay local.",
+                    next_action="Continue.",
+                )
+
+            written = write_handoff(
+                root,
+                topic="shared-runtime",
+                summary="This handoff is intended for Git collaboration.",
+                next_action="Commit and pick it up from another session.",
+                visibility="shared",
+            )
+            pending, pending_code = inspect_handoff(root)
+            self.assertEqual(pending_code, 3)
+            self.assertEqual(pending["result"], "handoff-shared-pending-commit")
+
+            subprocess.run(["git", "add", written["path"]], cwd=root, check=True)
+
+            inspected, exit_code = inspect_handoff(root)
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(inspected["result"], "handoff-inspected")
+            self.assertEqual(inspected["visibility"], "shared")
+            self.assertTrue(written["commitRequired"])
 
     def test_coordination_validates_boundaries_and_returns_non_executing_plan(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

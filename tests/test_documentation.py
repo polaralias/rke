@@ -61,7 +61,7 @@ class DocumentationLifecycleTests(unittest.TestCase):
             "Documentation is assessed before merge.\n",
             encoding="utf-8",
         )
-        manifest = root / ".polaralias" / "repo-context.json"
+        manifest = root / ".rke" / "repo-context.json"
         manifest.parent.mkdir(parents=True)
         manifest.write_text(
             json.dumps(
@@ -263,7 +263,7 @@ class DocumentationLifecycleTests(unittest.TestCase):
             self.assertEqual(receipt["deltaFingerprint"], payload["deltaFingerprint"])
             self.assertEqual(receipt["generationContext"]["rulePaths"], ["AGENTS.md"])
             manifest = json.loads(
-                (root / ".polaralias" / "repo-context.json").read_text(
+                (root / ".rke" / "repo-context.json").read_text(
                     encoding="utf-8"
                 )
             )

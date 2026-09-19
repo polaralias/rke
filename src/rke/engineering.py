@@ -110,8 +110,8 @@ LEGACY_ROUTES: dict[str, dict[str, Any]] = {
     "WTC": {"name": "worktree-task-coordinator", "destination": "parallel-delivery", "command": ["coordination", "validate"]},
     "RCC": {"name": "repo-change-comprehension", "destination": "close", "command": ["journey", "enter", "close"]},
     "RSA": {"name": "repo-session-alignment", "destination": "close", "command": ["closure", "assess"]},
-    "LHO": {"name": "local-handoff", "destination": "handoff-write", "command": ["handoff", "write"]},
-    "LPK": {"name": "local-pickup", "destination": "handoff-inspect", "command": ["handoff", "inspect"]},
+    "LHO": {"name": "local-handoff", "destination": "handoff-write", "command": ["handoff", "write", "--visibility", "local"]},
+    "LPK": {"name": "local-pickup", "destination": "handoff-inspect", "command": ["handoff", "inspect", "--visibility", "local"]},
     "RPF": {"name": "repo-publish-finaliser", "destination": "publication", "command": ["capability", "enable", "publication"]},
     "RST": {"name": "repo-setup", "destination": "repository-setup", "command": ["use-separate-bootstrap-capability"], "separate": True},
 }
@@ -891,7 +891,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     dissection_assess_parser.add_argument("--root", type=Path, default=Path.cwd())
     handoff_parser = subparsers.add_parser(
-        "handoff", help="Write or inspect project-local continuation artefacts."
+        "handoff", help="Write or inspect local or shared continuation artefacts."
     )
     handoff_subparsers = handoff_parser.add_subparsers(
         dest="handoff_command", required=True
@@ -904,14 +904,16 @@ def build_parser() -> argparse.ArgumentParser:
     handoff_write_parser.add_argument("--summary", required=True)
     handoff_write_parser.add_argument("--next-action", required=True)
     handoff_write_parser.add_argument("--mode", choices=("standard", "max"), default="standard")
-    handoff_write_parser.add_argument("--directory", default="local-docs/handoff")
+    handoff_write_parser.add_argument("--visibility", choices=("local", "shared"), default="local")
+    handoff_write_parser.add_argument("--directory")
     handoff_write_parser.add_argument("--reference", action="append", default=[])
     handoff_inspect_parser = handoff_subparsers.add_parser(
         "inspect", help="Select and verify one active continuation handoff."
     )
     handoff_inspect_parser.add_argument("--root", type=Path, default=Path.cwd())
     handoff_inspect_parser.add_argument("--path")
-    handoff_inspect_parser.add_argument("--directory", default="local-docs/handoff")
+    handoff_inspect_parser.add_argument("--visibility", choices=("auto", "local", "shared"), default="auto")
+    handoff_inspect_parser.add_argument("--directory")
     coordination_parser = subparsers.add_parser(
         "coordination", help="Validate and plan parallel or stacked worktree delivery."
     )
@@ -956,7 +958,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     check_parser.add_argument("--root", type=Path, default=Path.cwd())
     check_parser.add_argument(
-        "--manifest", default=".polaralias/repo-context.json"
+        "--manifest", default=".rke/repo-context.json"
     )
     benchmark_parser = context_subparsers.add_parser(
         "benchmark", help="Measure retrieval against a versioned query corpus."
@@ -969,7 +971,7 @@ def build_parser() -> argparse.ArgumentParser:
     impact_parser.add_argument("--root", type=Path, default=Path.cwd())
     impact_parser.add_argument("--changed", action="append", required=True)
     impact_parser.add_argument(
-        "--manifest", default=".polaralias/repo-context.json"
+        "--manifest", default=".rke/repo-context.json"
     )
     verify_parser = context_subparsers.add_parser(
         "verify", help="Record a review receipt for one bound knowledge document."
@@ -978,7 +980,7 @@ def build_parser() -> argparse.ArgumentParser:
     verify_parser.add_argument("--knowledge", required=True)
     verify_parser.add_argument("--evidence", required=True)
     verify_parser.add_argument(
-        "--manifest", default=".polaralias/repo-context.json"
+        "--manifest", default=".rke/repo-context.json"
     )
     structure_parser = subparsers.add_parser(
         "structure", help="Inspect live source APIs, dependencies, and blast radius."
@@ -1057,7 +1059,7 @@ def build_parser() -> argparse.ArgumentParser:
     knowledge_register_parser.add_argument("--knowledge", required=True)
     knowledge_register_parser.add_argument("--source", action="append", required=True)
     knowledge_register_parser.add_argument(
-        "--manifest", default=".polaralias/repo-context.json"
+        "--manifest", default=".rke/repo-context.json"
     )
     documentation_parser = subparsers.add_parser(
         "documentation", help="Assess and complete event-driven documentation work."
@@ -1071,7 +1073,7 @@ def build_parser() -> argparse.ArgumentParser:
     documentation_assess_parser.add_argument("--root", type=Path, default=Path.cwd())
     documentation_assess_parser.add_argument("--base", required=True)
     documentation_assess_parser.add_argument(
-        "--manifest", default=".polaralias/repo-context.json"
+        "--manifest", default=".rke/repo-context.json"
     )
     documentation_apply_parser = documentation_subparsers.add_parser(
         "apply", help="Validate authored documentation, reader retrieval, and freshness."
@@ -1083,7 +1085,7 @@ def build_parser() -> argparse.ArgumentParser:
     documentation_apply_parser.add_argument("--evidence", required=True)
     documentation_apply_parser.add_argument("--reader-query", action="append", required=True)
     documentation_apply_parser.add_argument(
-        "--manifest", default=".polaralias/repo-context.json"
+        "--manifest", default=".rke/repo-context.json"
     )
     change_parser = subparsers.add_parser(
         "change", help="Record bounded causal change comprehension."
@@ -1181,6 +1183,7 @@ def main() -> int:
                     "summary": args.summary,
                     "nextAction": args.next_action,
                     "mode": args.mode,
+                    "visibility": args.visibility,
                     "directory": args.directory,
                     "references": args.reference,
                 },
@@ -1189,7 +1192,7 @@ def main() -> int:
             payload, exit_code = invoke_operation(
                 root,
                 "repo_handoff_inspect",
-                {"path": args.path, "directory": args.directory},
+                {"path": args.path, "visibility": args.visibility, "directory": args.directory},
             )
         elif args.command == "coordination" and args.coordination_command == "validate":
             payload, exit_code = invoke_operation(

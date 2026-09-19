@@ -144,7 +144,7 @@ class KnowledgeCliTests(unittest.TestCase):
             self.assertEqual(payload["knowledgePath"], "docs/knowledge/documentation.md")
             self.assertFalse(payload["verificationInvalidated"])
             manifest = json.loads(
-                (root / ".polaralias" / "repo-context.json").read_text(encoding="utf-8")
+                (root / ".rke" / "repo-context.json").read_text(encoding="utf-8")
             )
             self.assertEqual(
                 manifest["knowledge"],

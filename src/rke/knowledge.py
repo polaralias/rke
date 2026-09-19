@@ -12,6 +12,7 @@ from .repo_context import (
     load_knowledge_manifest,
     repository_relative_path,
     validate_source_pattern,
+    write_knowledge_manifest,
 )
 
 try:
@@ -305,8 +306,7 @@ def register_knowledge(
             existing.pop("verified", None)
         existing["sources"] = normalised_sources
     payload["knowledge"].sort(key=lambda entry: entry["path"])
-    target.parent.mkdir(parents=True, exist_ok=True)
-    write_utf8_lf(target, json.dumps(payload, indent=2) + "\n")
+    write_knowledge_manifest(root, target, manifest, payload)
     return {
         "result": "knowledge-registered",
         "manifest": manifest_relative,

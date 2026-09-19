@@ -24,6 +24,49 @@ class RepoContextCliTests(unittest.TestCase):
             check=False,
         )
 
+    def test_legacy_manifest_is_read_then_migrated_on_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "docs").mkdir()
+            (root / "src").mkdir()
+            (root / ".polaralias").mkdir()
+            (root / "docs" / "security.md").write_text("# Security\n", encoding="utf-8")
+            (root / "src" / "auth.py").write_text("AUTH = True\n", encoding="utf-8")
+            legacy = root / ".polaralias" / "repo-context.json"
+            legacy.write_text(
+                json.dumps({
+                    "schemaVersion": 1,
+                    "knowledge": [{"path": "docs/security.md", "sources": ["src/auth.py"]}],
+                }),
+                encoding="utf-8",
+            )
+
+            _, relative, loaded = repo_context.load_knowledge_manifest(root)
+            self.assertEqual(relative, ".rke/repo-context.json")
+            self.assertEqual(loaded["knowledge"][0]["path"], "docs/security.md")
+
+            verified = repo_context.verify_knowledge(root, "docs/security.md", "Reviewed source.")
+
+            self.assertEqual(verified["manifest"], ".rke/repo-context.json")
+            self.assertTrue((root / ".rke" / "repo-context.json").is_file())
+            self.assertFalse(legacy.exists())
+
+    def test_dual_manifest_locations_are_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            for directory in (".rke", ".polaralias"):
+                target = root / directory
+                target.mkdir()
+                (target / "repo-context.json").write_text(
+                    json.dumps({"schemaVersion": 1, "knowledge": []}),
+                    encoding="utf-8",
+                )
+
+            with self.assertRaises(repo_context.ContextError) as raised:
+                repo_context.load_knowledge_manifest(root)
+
+            self.assertEqual(raised.exception.code, "knowledge_manifest_ambiguous")
+
     def test_find_auto_indexes_and_ranks_relevant_repository_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -402,7 +445,7 @@ class RepoContextCliTests(unittest.TestCase):
             root = Path(temp_dir)
             (root / "src").mkdir()
             (root / "docs").mkdir()
-            (root / ".polaralias").mkdir()
+            (root / ".rke").mkdir()
             (root / "src" / "auth.py").write_text(
                 "def authenticate_request(token):\n    return token is not None\n",
                 encoding="utf-8",
@@ -420,7 +463,7 @@ class RepoContextCliTests(unittest.TestCase):
                     }
                 ],
             }
-            (root / ".polaralias" / "repo-context.json").write_text(
+            (root / ".rke" / "repo-context.json").write_text(
                 json.dumps(manifest), encoding="utf-8"
             )
 
@@ -450,7 +493,7 @@ class RepoContextCliTests(unittest.TestCase):
             root = Path(temp_dir)
             (root / "src").mkdir()
             (root / "docs").mkdir()
-            (root / ".polaralias").mkdir()
+            (root / ".rke").mkdir()
             (root / "src" / "auth.py").write_text(
                 "def authenticate_request(token):\n    return bool(token)\n",
                 encoding="utf-8",
@@ -458,7 +501,7 @@ class RepoContextCliTests(unittest.TestCase):
             (root / "docs" / "security.md").write_text(
                 "# Authentication\n\nRequests require a token.\n", encoding="utf-8"
             )
-            manifest_path = root / ".polaralias" / "repo-context.json"
+            manifest_path = root / ".rke" / "repo-context.json"
             manifest_path.write_text(
                 json.dumps(
                     {
@@ -514,11 +557,11 @@ class RepoContextCliTests(unittest.TestCase):
             root = Path(temp_dir)
             (root / "src").mkdir()
             (root / "docs").mkdir()
-            (root / ".polaralias").mkdir()
+            (root / ".rke").mkdir()
             (root / "src" / "auth.py").write_text("AUTH_REQUIRED = True\n", encoding="utf-8")
             knowledge = root / "docs" / "security.md"
             knowledge.write_text("# Authentication\n\nAuthentication is required.\n", encoding="utf-8")
-            (root / ".polaralias" / "repo-context.json").write_text(
+            (root / ".rke" / "repo-context.json").write_text(
                 json.dumps(
                     {
                         "schemaVersion": 1,
@@ -563,13 +606,13 @@ class RepoContextCliTests(unittest.TestCase):
             root = Path(temp_dir)
             (root / "src").mkdir()
             (root / "docs").mkdir()
-            (root / ".polaralias").mkdir()
+            (root / ".rke").mkdir()
             source = root / "src" / "auth.py"
             source.write_text("AUTH_REQUIRED = True\n", encoding="utf-8")
             (root / "docs" / "security.md").write_text(
                 "# Authentication\n\nAuthentication is required.\n", encoding="utf-8"
             )
-            (root / ".polaralias" / "repo-context.json").write_text(
+            (root / ".rke" / "repo-context.json").write_text(
                 json.dumps(
                     {
                         "schemaVersion": 1,
@@ -613,7 +656,7 @@ class RepoContextCliTests(unittest.TestCase):
             (root / "config").mkdir()
             (root / "src").mkdir()
             (root / "docs").mkdir()
-            (root / ".polaralias").mkdir()
+            (root / ".rke").mkdir()
             (root / "config" / "providers.toml").write_text(
                 "[github]\ntoken_key = 'github.token'\nprovider = 'gateway'\n",
                 encoding="utf-8",
@@ -636,7 +679,7 @@ class RepoContextCliTests(unittest.TestCase):
                 "The gateway reads the GitHub token key from provider configuration.\n",
                 encoding="utf-8",
             )
-            (root / ".polaralias" / "repo-context.json").write_text(
+            (root / ".rke" / "repo-context.json").write_text(
                 json.dumps(
                     {
                         "schemaVersion": 1,
@@ -694,13 +737,13 @@ class RepoContextCliTests(unittest.TestCase):
             root = Path(temp_dir)
             (root / "src").mkdir()
             (root / "docs").mkdir()
-            (root / ".polaralias").mkdir()
+            (root / ".rke").mkdir()
             source = root / "src" / "auth.py"
             source.write_text("AUTH_REQUIRED = True\n", encoding="utf-8")
             (root / "docs" / "security.md").write_text(
                 "# Authentication\n\nAuthentication is required.\n", encoding="utf-8"
             )
-            (root / ".polaralias" / "repo-context.json").write_text(
+            (root / ".rke" / "repo-context.json").write_text(
                 json.dumps(
                     {
                         "schemaVersion": 1,
@@ -747,7 +790,7 @@ class RepoContextCliTests(unittest.TestCase):
             root = Path(temp_dir)
             (root / "src" / "nested").mkdir(parents=True)
             (root / "docs").mkdir()
-            (root / ".polaralias").mkdir()
+            (root / ".rke").mkdir()
             (root / "src" / "direct.py").write_text("DIRECT = True\n", encoding="utf-8")
             (root / "src" / "nested" / "deep.py").write_text(
                 "DEEP = True\n", encoding="utf-8"
@@ -755,7 +798,7 @@ class RepoContextCliTests(unittest.TestCase):
             (root / "docs" / "sources.md").write_text(
                 "# Sources\n\nPython source behaviour.\n", encoding="utf-8"
             )
-            (root / ".polaralias" / "repo-context.json").write_text(
+            (root / ".rke" / "repo-context.json").write_text(
                 json.dumps(
                     {
                         "schemaVersion": 1,
@@ -791,11 +834,11 @@ class RepoContextCliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             (root / "docs").mkdir()
-            (root / ".polaralias").mkdir()
+            (root / ".rke").mkdir()
             (root / "docs" / "security.md").write_text(
                 "# Security\n", encoding="utf-8"
             )
-            (root / ".polaralias" / "repo-context.json").write_text(
+            (root / ".rke" / "repo-context.json").write_text(
                 json.dumps(
                     {
                         "schemaVersion": 1,
@@ -828,12 +871,12 @@ class RepoContextCliTests(unittest.TestCase):
             root = Path(temp_dir)
             (root / "src").mkdir()
             (root / "docs").mkdir()
-            (root / ".polaralias").mkdir()
+            (root / ".rke").mkdir()
             (root / "src" / "auth.py").write_text("AUTH = True\n", encoding="utf-8")
             (root / "docs" / "security.md").write_text(
                 "# Security\n", encoding="utf-8"
             )
-            (root / ".polaralias" / "repo-context.json").write_text(
+            (root / ".rke" / "repo-context.json").write_text(
                 json.dumps(
                     {
                         "schemaVersion": 1,

@@ -34,6 +34,23 @@ def _git(root: Path, *arguments: str) -> str | None:
     return result.stdout.strip() if result.returncode == 0 else None
 
 
+def _git_surface(root: Path, target: Path) -> dict[str, bool]:
+    relative = target.relative_to(root).as_posix()
+    tracked = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "--error-unmatch", "--", relative],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    ignored = subprocess.run(
+        ["git", "-C", str(root), "check-ignore", "--quiet", "--", relative],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return {"tracked": tracked.returncode == 0, "ignored": ignored.returncode == 0}
+
+
 def _reject_secrets(values: list[str]) -> None:
     combined = "\n".join(values)
     if any(pattern.search(combined) for pattern in SECRET_PATTERNS):
@@ -60,19 +77,34 @@ def write_handoff(
     summary: str,
     next_action: str,
     mode: str = "standard",
-    directory: str = "local-docs/handoff",
+    visibility: str = "local",
+    directory: str | None = None,
     references: list[str] | None = None,
 ) -> dict[str, Any]:
     root = root.resolve()
     if mode not in {"standard", "max"}:
         raise ValueError("handoff mode must be standard or max")
+    if visibility not in {"local", "shared"}:
+        raise ValueError("handoff visibility must be local or shared")
+    directory = directory or (
+        "local-docs/handoff" if visibility == "local" else ".rke/handoffs"
+    )
     references = references or []
     _reject_secrets([topic, summary, next_action, *references])
     target_dir, relative_dir = _handoff_directory(root, directory)
-    target_dir.mkdir(parents=True, exist_ok=True)
     now = datetime.now(timezone.utc)
     filename = f"{now.date().isoformat()}-{_slug(topic)}.md"
     target = target_dir / filename
+    surface = _git_surface(root, target)
+    if visibility == "local" and (not surface["ignored"] or surface["tracked"]):
+        raise ValueError(
+            "local handoff destination is not Git-ignored and untracked; add it to .gitignore or choose visibility shared"
+        )
+    if visibility == "shared" and surface["ignored"]:
+        raise ValueError(
+            "shared handoff destination is Git-ignored; choose a commit-capable directory or visibility local"
+        )
+    target_dir.mkdir(parents=True, exist_ok=True)
     branch = _git(root, "branch", "--show-current") or "unknown"
     head = _git(root, "rev-parse", "HEAD") or "unknown"
     dirty = (_git(root, "status", "--short") or "").splitlines()
@@ -89,6 +121,7 @@ def write_handoff(
         "**Status:** active\n"
         f"**Review after:** {(now + timedelta(days=14)).date().isoformat()}\n"
         f"**Mode:** {mode}\n\n"
+        f"**Visibility:** {visibility}\n\n"
         "## Session Goal\n\n"
         f"{summary}\n\n"
         "## Current State\n\n"
@@ -122,6 +155,8 @@ def write_handoff(
         "result": "handoff-written",
         "path": f"{relative_dir}/{filename}",
         "mode": mode,
+        "visibility": visibility,
+        "commitRequired": visibility == "shared",
         "superseded": superseded,
         "asOf": now.isoformat().replace("+00:00", "Z"),
     }
@@ -131,9 +166,12 @@ def inspect_handoff(
     root: Path,
     *,
     path: str | None = None,
-    directory: str = "local-docs/handoff",
+    visibility: str = "auto",
+    directory: str | None = None,
 ) -> tuple[dict[str, Any], int]:
     root = root.resolve()
+    if visibility not in {"auto", "local", "shared"}:
+        raise ValueError("handoff visibility must be auto, local, or shared")
     if path:
         target, relative = repository_relative_path(
             root,
@@ -143,8 +181,17 @@ def inspect_handoff(
         )
         candidates = [target]
     else:
-        target_dir, _ = _handoff_directory(root, directory)
-        candidates = sorted(target_dir.glob("*.md"), reverse=True) if target_dir.exists() else []
+        directories = [directory] if directory else (
+            ["local-docs/handoff"] if visibility == "local" else
+            [".rke/handoffs"] if visibility == "shared" else
+            ["local-docs/handoff", ".rke/handoffs"]
+        )
+        candidates = []
+        for candidate_directory in directories:
+            target_dir, _ = _handoff_directory(root, candidate_directory)
+            if target_dir.exists():
+                candidates.extend(target_dir.glob("*.md"))
+        candidates = sorted(candidates, reverse=True)
         relative = ""
     active: list[tuple[Path, str]] = []
     for candidate in candidates:
@@ -158,6 +205,29 @@ def inspect_handoff(
             "activeCandidates": [item[0].relative_to(root).as_posix() for item in active],
         }, 3)
     selected, text = active[0]
+    surface = _git_surface(root, selected)
+    actual_visibility = (
+        "local" if surface["ignored"] and not surface["tracked"] else
+        "shared" if surface["tracked"] and not surface["ignored"] else
+        "shared-pending-commit" if not surface["ignored"] and not surface["tracked"] else
+        "ambiguous"
+    )
+    if actual_visibility == "shared-pending-commit":
+        return ({
+            "result": "handoff-shared-pending-commit",
+            "path": selected.relative_to(root).as_posix(),
+            "visibility": actual_visibility,
+            "reason": "shared handoff must be added to Git before non-local pickup",
+        }, 3)
+    if actual_visibility == "ambiguous" or (
+        visibility != "auto" and visibility != actual_visibility
+    ):
+        return ({
+            "result": "handoff-visibility-mismatch",
+            "path": selected.relative_to(root).as_posix(),
+            "requestedVisibility": visibility,
+            "actualVisibility": actual_visibility,
+        }, 3)
     review = REVIEW_PATTERN.search(text)
     review_after = review.group(1) if review else None
     stale = bool(review_after and datetime.now(timezone.utc).date() > datetime.fromisoformat(review_after).date())
@@ -167,6 +237,7 @@ def inspect_handoff(
     return ({
         "result": "handoff-inspected",
         "path": selected.relative_to(root).as_posix() if not relative else relative,
+        "visibility": actual_visibility,
         "stale": stale,
         "reviewAfter": review_after,
         "suggestedNextStep": next_match.group(1).strip() if next_match else None,

@@ -53,6 +53,8 @@ class LegacyRouteTests(unittest.TestCase):
                     self.assertEqual(payload["alias"], alias)
                     self.assertEqual(payload["destination"], destination)
                     self.assertNotIn(alias, payload["command"])
+                    if alias in {"LHO", "LPK"}:
+                        self.assertEqual(payload["command"][-2:], ["--visibility", "local"])
 
     def test_legacy_full_name_routes_case_insensitively(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

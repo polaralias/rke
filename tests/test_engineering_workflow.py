@@ -504,6 +504,15 @@ class EngineeringWorkflowCliTests(unittest.TestCase):
             self.assertTrue(payload["ready"])
             self.assertEqual(payload["state"]["status"], "closed")
 
+    def test_skill_contracts_are_not_duplicated_as_repository_docs(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        duplicated_contracts = repository / "docs" / "contracts"
+        skill_references = repository / "skills" / "engineering-workflow" / "references"
+
+        self.assertFalse(any(path.is_file() for path in duplicated_contracts.rglob("*")))
+        self.assertTrue((skill_references / "workflow-contract.md").is_file())
+        self.assertTrue((repository / "docs" / "knowledge" / "rke-architecture.md").is_file())
+
 
 if __name__ == "__main__":
     unittest.main()

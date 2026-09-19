@@ -11,7 +11,7 @@ RKE follows a documentation-driven-development principle: accepted behaviour and
 - **OKF Tasks** remains an independent execution-record specification and CLI. RKE delegates strict task validation rather than copying its schema or lifecycle.
 - **Doc-driven development** is the guiding principle. RKE is the methodology and toolchain that operationalises it.
 
-The runtime is installed once per machine. Every operation selects its repository explicitly; state, indexes and receipts remain inside that repository. One MCP process can serve multiple repositories without merging their evidence.
+The runtime is installed once per machine. Every operation selects its repository explicitly; state, indexes and receipts remain inside that repository. Tracked RKE knowledge bindings live under `.rke/`; EWF lifecycle state remains separate under `.engineering-workflow/`. One MCP process can serve multiple repositories without merging their evidence.
 
 ## Install
 
@@ -48,6 +48,7 @@ rke context find "where are credentials hydrated" --root C:\repos\service
 rke structure trace hydrateCredentials --direction both --root C:\repos\service
 rke dissection assess --root C:\repos\service
 rke handoff write --topic credential-runtime --summary "Provider path is mapped." --next-action "Run the integration test." --root C:\repos\service
+rke handoff write --visibility shared --topic credential-runtime --summary "Provider path is mapped." --next-action "Run the integration test." --root C:\repos\service
 rke coordination validate --manifest local-docs/worktrees.json --root C:\repos\service
 rke publication scan --root C:\repos\service
 rke documentation assess --base main --root C:\repos\service
@@ -75,7 +76,8 @@ The formerly separate repository-dissection, design/decomposition, session-align
 
 - `src/rke/` — canonical runtime and shared operation registry.
 - `skills/engineering-workflow/` — canonical EWF skill source, directly discoverable by standard skill installers.
-- `docs/contracts/` — runtime and methodology contracts.
+- `skills/engineering-workflow/references/` — skill-only operating contracts, journeys, and opt-in extensions loaded through progressive disclosure.
+- `docs/knowledge/` — canonical RKE project knowledge; it does not duplicate skill instructions.
 - `tests/` — transport parity, retrieval, structure, lifecycle, documentation and security tests.
 - `scripts/` — compatibility wrappers for the original source layout; installed consumers should use the console commands.
 

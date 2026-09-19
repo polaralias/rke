@@ -14,7 +14,8 @@ from typing import Any
 
 INDEX_SCHEMA_VERSION = 6
 INDEX_RELATIVE_PATH = Path(".engineering-workflow") / "cache" / "context-index.json"
-DEFAULT_MANIFEST_PATH = ".polaralias/repo-context.json"
+DEFAULT_MANIFEST_PATH = ".rke/repo-context.json"
+LEGACY_MANIFEST_PATH = ".polaralias/repo-context.json"
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9]+")
 MARKDOWN_LINK_PATTERN = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 IDENTIFIER_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
@@ -158,10 +159,24 @@ def load_knowledge_manifest(
         manifest,
         escape_code="knowledge_manifest_escape",
     )
-    if not target.exists():
+    source = target
+    if manifest == DEFAULT_MANIFEST_PATH:
+        legacy, _ = repository_relative_path(
+            root,
+            LEGACY_MANIFEST_PATH,
+            escape_code="knowledge_manifest_escape",
+        )
+        if target.exists() and legacy.exists():
+            raise ContextError(
+                "knowledge_manifest_ambiguous",
+                f"Both {DEFAULT_MANIFEST_PATH} and {LEGACY_MANIFEST_PATH} exist; reconcile them before continuing.",
+            )
+        if not target.exists() and legacy.exists():
+            source = legacy
+    if not source.exists():
         return target, relative, {"schemaVersion": 1, "knowledge": []}
     try:
-        payload = json.loads(target.read_text(encoding="utf-8"))
+        payload = json.loads(source.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise ContextError(
             "knowledge_manifest_invalid",
@@ -257,6 +272,25 @@ def load_knowledge_manifest(
                 normalized_hashes[normalized_source] = digest
             verified["sourceHashes"] = normalized_hashes
     return target, relative, payload
+
+
+def write_knowledge_manifest(
+    root: Path,
+    target: Path,
+    manifest: str,
+    payload: dict[str, Any],
+) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    if manifest != DEFAULT_MANIFEST_PATH:
+        return
+    legacy = root.resolve() / LEGACY_MANIFEST_PATH
+    if legacy.exists() and legacy.resolve() != target.resolve():
+        legacy.unlink()
+        try:
+            legacy.parent.rmdir()
+        except OSError:
+            pass
 
 
 def tokenize(value: str) -> list[str]:
@@ -1132,8 +1166,7 @@ def verify_knowledge(
         "evidence": evidence,
         "sourceHashes": source_hashes,
     }
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(binding_manifest, indent=2) + "\n", encoding="utf-8")
+    write_knowledge_manifest(root, target, manifest, binding_manifest)
     return {
         "result": "knowledge-verified",
         "manifest": manifest_relative,
