@@ -93,6 +93,8 @@ def run_freshness_performance_benchmark(
             _git(root, "config", "user.email", "benchmark.invalid")
             _git(root, "config", "user.name", "RKE Benchmark")
             _git(root, "config", "core.autocrlf", "false")
+            _git(root, "config", "core.trustctime", "false")
+            _git(root, "config", "core.checkStat", "minimal")
             target, paths = _write_fixture(root, file_count)
             _stage_fixture(root, paths)
             _finalize_fixture_head(root)
@@ -127,6 +129,10 @@ def run_freshness_performance_benchmark(
     return {
         "result": "freshness-performance-benchmarked",
         "correctnessBoundary": "all eligible clean tracked worktree blobs are content-verified",
+        "gitStatConfiguration": {
+            "core.trustctime": False,
+            "core.checkStat": "minimal",
+        },
         "platform": platform.platform(),
         "python": sys.version.split()[0],
         "trials": trials,

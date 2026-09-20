@@ -14,7 +14,7 @@ class ConcurrentWriteError(ValueError):
 
 
 class FileLock:
-    """Cross-platform lock file with ownership-safe stale-lock recovery."""
+    """Cross-platform lock with atomically published ownership metadata."""
 
     def __init__(
         self,
@@ -26,8 +26,37 @@ class FileLock:
         self.path = path
         self.timeout = timeout
         self.malformed_grace = malformed_grace
-        self._descriptor: int | None = None
         self._token: str | None = None
+
+    def _publish_lock(self) -> bool:
+        """Publish one complete owner record without exposing a partial lock path."""
+        self._token = secrets.token_hex(16)
+        record = {
+            "pid": os.getpid(),
+            "createdAt": time.time(),
+            "token": self._token,
+        }
+        descriptor, candidate_name = tempfile.mkstemp(
+            prefix=f".{self.path.name}.candidate-",
+            dir=self.path.parent,
+        )
+        candidate = Path(candidate_name)
+        try:
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write((json.dumps(record) + "\n").encode("utf-8"))
+                stream.flush()
+                os.fsync(stream.fileno())
+            try:
+                os.link(candidate, self.path)
+            except FileExistsError:
+                self._token = None
+                return False
+            return True
+        finally:
+            try:
+                candidate.unlink()
+            except FileNotFoundError:
+                pass
 
     @staticmethod
     def _process_alive(pid: int) -> bool:
@@ -100,44 +129,17 @@ class FileLock:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         deadline = time.monotonic() + self.timeout
         while True:
-            try:
-                descriptor = os.open(
-                    self.path,
-                    os.O_CREAT | os.O_EXCL | os.O_WRONLY,
-                    0o600,
-                )
-                try:
-                    self._token = secrets.token_hex(16)
-                    record = {
-                        "pid": os.getpid(),
-                        "createdAt": time.time(),
-                        "token": self._token,
-                    }
-                    os.write(descriptor, (json.dumps(record) + "\n").encode("utf-8"))
-                    os.fsync(descriptor)
-                except Exception:
-                    os.close(descriptor)
-                    self._token = None
-                    try:
-                        self.path.unlink()
-                    except FileNotFoundError:
-                        pass
-                    raise
-                self._descriptor = descriptor
+            if self._publish_lock():
                 return self
-            except FileExistsError:
-                if self._reclaim_stale_lock():
-                    continue
-                if time.monotonic() >= deadline:
-                    raise ConcurrentWriteError(
-                        f"Timed out waiting for durable-write lock: {self.path}"
-                    ) from None
-                time.sleep(0.025)
+            if self._reclaim_stale_lock():
+                continue
+            if time.monotonic() >= deadline:
+                raise ConcurrentWriteError(
+                    f"Timed out waiting for durable-write lock: {self.path}"
+                ) from None
+            time.sleep(0.025)
 
     def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
-        if self._descriptor is not None:
-            os.close(self._descriptor)
-            self._descriptor = None
         try:
             record = json.loads(self.path.read_text(encoding="utf-8"))
             if isinstance(record, dict) and record.get("token") == self._token:

@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -88,6 +89,57 @@ class DurableIoTests(unittest.TestCase):
                 with FileLock(path, timeout=0.03, malformed_grace=60):
                     pass
             self.assertTrue(path.exists())
+
+    def test_paused_creator_cannot_publish_over_an_existing_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "resource.lock"
+            original_link = os.link
+            creator_ready = threading.Event()
+            release_publish = threading.Event()
+            creator_entered = threading.Event()
+            release_creator = threading.Event()
+            delayed = False
+            errors: list[BaseException] = []
+
+            def controlled_link(source: str, target: str) -> None:
+                nonlocal delayed
+                if threading.current_thread().name == "paused-lock-creator" and not delayed:
+                    delayed = True
+                    creator_ready.set()
+                    if not release_publish.wait(2):
+                        raise TimeoutError("test did not release the paused lock publication")
+                original_link(source, target)
+
+            def acquire_as_creator() -> None:
+                try:
+                    with FileLock(path, timeout=2):
+                        creator_entered.set()
+                        release_creator.wait(2)
+                except BaseException as exc:  # Preserve background failures for the assertion.
+                    errors.append(exc)
+
+            with patch("rke.io.os.link", side_effect=controlled_link):
+                creator = threading.Thread(
+                    target=acquire_as_creator,
+                    name="paused-lock-creator",
+                )
+                creator.start()
+                self.assertTrue(creator_ready.wait(1))
+                self.assertFalse(path.exists())
+
+                with FileLock(path, timeout=1):
+                    release_publish.set()
+                    time.sleep(0.05)
+                    self.assertFalse(creator_entered.is_set())
+
+                self.assertTrue(creator_entered.wait(1))
+                release_creator.set()
+                creator.join(1)
+
+            self.assertFalse(creator.is_alive())
+            self.assertEqual(errors, [])
+            self.assertFalse(path.exists())
+            self.assertEqual(list(path.parent.glob(".resource.lock.candidate-*")), [])
 
     def test_fresh_live_lock_is_not_reclaimed(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

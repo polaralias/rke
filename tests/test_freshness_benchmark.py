@@ -10,6 +10,10 @@ class FreshnessPerformanceBenchmarkTests(unittest.TestCase):
         payload = run_freshness_performance_benchmark((20,))
 
         self.assertEqual(payload["result"], "freshness-performance-benchmarked")
+        self.assertEqual(
+            payload["gitStatConfiguration"],
+            {"core.trustctime": False, "core.checkStat": "minimal"},
+        )
         trial = payload["trials"][0]
         self.assertEqual(trial["fileCount"], 20)
         self.assertFalse(trial["warmRefreshed"])
