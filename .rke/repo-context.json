@@ -25,8 +25,8 @@
         "tests/prompts.md"
       ],
       "verified": {
-        "verifiedAt": "2026-09-20T14:33:00.931751Z",
-        "evidence": "RKE reports version 0.9.0 consistently through package, installed metadata, MCP identity, and tag validation.",
+        "verifiedAt": "2026-09-20T14:39:41.919582Z",
+        "evidence": "RKE reports version 0.9.0 consistently through package, installed metadata, MCP identity, and tag validation; 171 tests passed and both distributions passed clean-install smoke tests.",
         "sourceHashes": {
           ".github/workflows/ci.yml": "d645d99256cbab4ca8027140a4b490049a2e63a8e242596ef2087ea7ba902132",
           ".github/workflows/publish-release.yml": "4e105cb3941cf7c6ed01fc57006e0561f500a06d18583baaa8d77805fc8737bf",
@@ -132,12 +132,12 @@
           "tests/test_okf_adapter.py": "76d747d308054a7fc4277e7b15085cfb438374e60cef52cc0b9fe7471049b42e",
           "tests/test_release_contract.py": "c58e30172e9ec5112d747eaf719b5c5dff9a88f9b96f3328c194cee8e8ddf47b",
           "tests/test_repo_context.py": "3700d72f2e0f415102e03356493b949bf0468206c39d2eebd88addf91664c745",
-          "tests/test_repo_context_mcp.py": "b90d33a216835f0cca5234b94d3f1a13bc9e951f96d64e3e49c6f815ac5e78eb",
+          "tests/test_repo_context_mcp.py": "cdda332e83f646d11949eaf205e535e68b0f05572dd0458e00fa981d9bc76bc0",
           "tests/test_structure.py": "432e73ceaad260916f5c1e2314ebe90c62c592ffdd6ba9ce555f20daf01f81f5",
           "tests/test_versioning.py": "9e637bcc7e2b3226d6733ccfd31d7ccfa8c1a6779985d82eeb6b385d7dcf050b"
         }
       }
     }
   ],
-  "revision": 20
+  "revision": 21
 }

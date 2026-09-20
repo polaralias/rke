@@ -287,7 +287,7 @@ class RepoContextMcpTests(unittest.TestCase):
             self.assertIn("ttlMs", listed)
             self.assertEqual(
                 listed["_meta"]["io.modelcontextprotocol/serverInfo"]["version"],
-            "0.9.0",
+                "0.9.0",
             )
 
     def test_modern_tool_calls_include_result_discriminator_and_server_identity(self) -> None:
