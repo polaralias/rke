@@ -1264,6 +1264,39 @@ def entry_freshness(entry: dict[str, Any], file_hashes: dict[str, str]) -> str:
     return "fresh" if current_hashes == verified["sourceHashes"] else "stale"
 
 
+def inspect_binding_freshness(
+    root: Path, entries: list[dict[str, Any]]
+) -> dict[str, list[str]]:
+    """Compare binding receipts with current content without writing an index."""
+    relevant_paths = {
+        entry["path"] for entry in entries if isinstance(entry.get("path"), str)
+    }
+    source_patterns = [
+        pattern
+        for entry in entries
+        for pattern in entry.get("sources", [])
+        if isinstance(pattern, str)
+    ]
+    file_hashes: dict[str, str] = {}
+    visible_files, _, _ = eligible_files(root)
+    for path in visible_files:
+        relative = path.relative_to(root).as_posix()
+        if relative not in relevant_paths and not any(
+            glob_matches(relative, pattern) for pattern in source_patterns
+        ):
+            continue
+        try:
+            file_hashes[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError:
+            continue
+    result = {"fresh": [], "stale": [], "unverified": []}
+    for entry in entries:
+        status = entry_freshness(entry, file_hashes)
+        key = "unverified" if status == "unknown" else status
+        result[key].append(entry["path"])
+    return {key: sorted(paths) for key, paths in result.items()}
+
+
 def verify_knowledge(
     root: Path,
     knowledge: str,

@@ -2,10 +2,10 @@
 type: Architecture Concept
 title: RKE architecture
 description: Defines the independently installed Repository Knowledge Engineering runtime, its shared CLI and MCP operation layer, repository boundaries, and relationship with EWF and OKF Tasks.
-timestamp: 2026-09-20T12:07:43+01:00
+timestamp: 2026-09-20T14:42:56+01:00
 authority: canonical
 verification: verified-working
-reviewed_at: 2026-09-20T12:09:29+01:00
+reviewed_at: 2026-09-20T14:42:56+01:00
 verified_against:
   - src/rke/operations.py
   - src/rke/cli.py
@@ -63,7 +63,7 @@ At 1.0, that contract stabilises CLI operation names and principal arguments, MC
 
 ## Documentation bootstrap
 
-`rke documentation bootstrap` is the read-only deterministic entry point for “document this repository.” It classifies a repository as `no-rke`, `partial-rke`, or `mature-rke`; inventories existing canonical knowledge and instructions; identifies foundation gaps; and returns preserve, review, recommendation, evidence, and reader-query sets. It never authors prose or automatically supersedes existing documentation.
+`rke documentation bootstrap` is the read-only deterministic entry point for “document this repository.” It classifies a repository as `no-rke`, `partial-rke`, or `mature-rke`; inventories existing canonical knowledge and instructions; identifies foundation gaps; and returns preserve, review, recommendation, evidence, reader-query, and `fresh`/`stale`/`unverified` binding sets. It hashes current eligible files covered by registered bindings and compares them directly with receipt hashes without writing the disposable context index. Receipt presence alone does not establish freshness, and stale or unverified canonical knowledge produces targeted repair rather than a mature no-op. It never authors prose or automatically supersedes existing documentation.
 
 The model or EWF journey traces real runtime evidence, writes only the necessary human-readable content, then uses knowledge registration, documentation apply, and context verification. A mature repository may correctly return `no-op`; bootstrap does not create a fixed set of files on every run.
 

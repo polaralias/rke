@@ -16,6 +16,7 @@ from .repo_context import (
     check_context,
     find_context,
     impact_context,
+    inspect_binding_freshness,
     verify_knowledge,
 )
 
@@ -102,9 +103,7 @@ def assess_documentation_bootstrap(
     actual_manifest = LEGACY_MANIFEST_PATH if using_legacy_manifest else manifest_relative
     entries = manifest_payload["knowledge"]
     bound = {entry["path"] for entry in entries}
-    verified = {
-        entry["path"] for entry in entries if isinstance(entry.get("verified"), dict)
-    }
+    knowledge_freshness = inspect_binding_freshness(root, entries)
     readme_path = root / "README.md"
     readme = "README.md" if readme_path.is_file() else None
     readme_text = _read_text(readme_path)
@@ -148,7 +147,9 @@ def assess_documentation_bootstrap(
         gaps.append("no-operating-guide")
     if canonical and not bound.issuperset(canonical):
         gaps.append("no-source-bindings")
-    if bound and verified != bound:
+    if knowledge_freshness["stale"]:
+        gaps.append("stale-canonical-knowledge")
+    if knowledge_freshness["unverified"]:
         gaps.append("unverified-canonical-knowledge")
     if canonical and not generated_indexes:
         gaps.append("no-generated-knowledge-index")
@@ -201,6 +202,7 @@ def assess_documentation_bootstrap(
         "preserve": preserve,
         "review": sorted(review),
         "supersede": [],
+        "knowledgeFreshness": knowledge_freshness,
         "evidenceRequired": [
             "trace-and-exercise-the-real-runtime-path",
             "compare-declared-documentation-with-implementation-and-tests",
