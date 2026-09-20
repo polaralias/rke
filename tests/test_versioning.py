@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_version_has_one_runtime_identity() -> None:
-    assert rke.__version__ == "0.4.0"
+    assert rke.__version__ == "0.9.0"
     assert importlib.metadata.version("polaralias-rke") == rke.__version__
     assert SERVER_INFO["version"] == rke.__version__
 

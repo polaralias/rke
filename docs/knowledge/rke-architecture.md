@@ -87,6 +87,8 @@ Structural analysis discovers package and source scopes, caches graph shards and
 
 ## Installation and release
 
+RKE `0.9.x` is the pre-1.0 dogfood series. It represents a feature-complete candidate for the documented 1.x stability surface while preserving the ability to correct compatibility findings before that promise becomes binding. Dogfood fixes remain on `0.9.x`; `1.0.0` follows successful validation of the stability contract in real repositories.
+
 `rke host install` places the pre-push gate at `.githooks/pre-push`, configures repository-local `core.hooksPath=.githooks`, and preserves independently owned hook paths unless `--force` is explicit. The packaged `rke-eval` corpus is loaded with `importlib.resources`, so installed and source invocations use the same cases.
 
 `rke.__version__` is the sole release version source. Hatch package metadata and MCP server identity derive from it. CI covers Linux Python 3.11–3.14, Windows at the oldest and current supported versions, deterministic tests, static analysis, distribution content and separate clean-install smoke tests for wheel and sdist. A matching `vX.Y.Z` tag builds and attests both artifacts, validates package/MCP/tag identity, publishes them to PyPI through the protected trusted-publishing environment, and only then promotes or creates the single public GitHub release. The checkout-free publication job receives `GH_REPO` explicitly, so the GitHub CLI never depends on local repository discovery after PyPI has succeeded.

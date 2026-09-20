@@ -90,6 +90,8 @@ Structural operations detect package and source scopes automatically, cache grap
 
 ## Evaluation and release
 
+The `0.9.x` line is the pre-1.0 dogfood series: its implementation and proposed public contract are feature-complete enough for real repository use, while compatibility findings may still produce pre-1.0 changes. RKE moves to `1.0.0` only after dogfood validates the stability contract; fixes discovered during that period ship as `0.9.x` releases.
+
 `rke-eval` loads its packaged corpus without a repository-relative data dependency. It invokes a configured model and consumes model usage, so deterministic tests remain the default inner loop.
 
 Run `python scripts/benchmark_freshness.py` to measure cold indexing, warm retrieval and one changed file across 1k, 10k and 50k tracked-file fixtures. Override the matrix with `--sizes`; the full default benchmark is intentionally kept out of routine CI.

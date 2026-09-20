@@ -25,17 +25,17 @@
         "tests/prompts.md"
       ],
       "verified": {
-        "verifiedAt": "2026-09-20T13:48:29.238371Z",
-        "evidence": "Reviewed non-persisting bootstrap freshness inspection, genuine current-hash mature no-op, changed-source stale targeted repair, missing-receipt targeted repair, EWF 4.4.1 guidance, and 171 passing deterministic tests.",
+        "verifiedAt": "2026-09-20T14:33:00.931751Z",
+        "evidence": "RKE reports version 0.9.0 consistently through package, installed metadata, MCP identity, and tag validation.",
         "sourceHashes": {
           ".github/workflows/ci.yml": "d645d99256cbab4ca8027140a4b490049a2e63a8e242596ef2087ea7ba902132",
           ".github/workflows/publish-release.yml": "4e105cb3941cf7c6ed01fc57006e0561f500a06d18583baaa8d77805fc8737bf",
           ".github/workflows/release-drafter.yml": "e52919f1cd346a7db1899734d885deefc8e436d90ce85d82bfd621c1856793a9",
           "AGENTS.md": "24b649fdce6a1886d952ccbb70c3bf3ad5d2bcadafc7ae132ceddddd11e0620e",
           "docs/compatibility.md": "414da96062c104537263f76526d63e99227fb62161ba7c2e6622e15173f58928",
-          "docs/knowledge/rke-architecture.md": "dc5757812f1bef48ba029375bb6de8bc52e05c4edf61cfb362b34fb609056dc6",
+          "docs/knowledge/rke-architecture.md": "3634a96d1c2fe0090ad63535fce6b6eb89feb6afc619ab4d4170ade0115bb0bc",
           "pyproject.toml": "faa8e946d4a57cc74f5ca780a5d86791adf609c667ab46480db52ee04268ec9e",
-          "README.md": "fb754fc0d476dac1467a1326bee13cbf777ff55e5d6a7df48022afdc08110e3c",
+          "README.md": "c003c1fcc3e01162e76e405fe6c9ed9d4bca769fb92e92988b2b017d9c01b981",
           "scripts/benchmark_freshness.py": "acd1e423a4d26a197b82df40c6287149aeba5a731804b359eebca1b09e187802",
           "scripts/smoke_distribution.py": "f021ac3cb66a902a2dbbb052302cc86b1b14265e60c54776fe7ed0544f9fa16b",
           "scripts/validate_release.py": "e8cb5bbd72a20068668fb11fc52c2617646a5f0a9fd47d51fd935e091f177943",
@@ -59,7 +59,7 @@
           "skills/engineering-workflow/references/workflow-contract.md": "9438c840a3f20014221340bd1700e3931da727d9fc2f7f2b235d0113e571733f",
           "skills/engineering-workflow/SKILL.md": "7d959f2ed48811e4529181dff2619a530920fed9d9a08cf35e37802a316fd670",
           "skills/engineering-workflow/tests/prompts.md": "ad22261ee2af701d05eabfb5272a4e197352164295119a78d24cdfd6c945352e",
-          "src/rke/__init__.py": "86e93cc4e693e5900d0dad7cda79f9cd799ea36e19df37d03be174fefff9630a",
+          "src/rke/__init__.py": "742356693a38ce607a36ec2a860cc64010b688a56c7687b17c4bfc1140f7ebbd",
           "src/rke/__main__.py": "e51811e27d3e03674d37a0d029698f5f7f7648ab2736af38d599cf50645a6ef8",
           "src/rke/chunking.py": "c14034fda67dfaaa5b11e36052433a278a6b520f42e929f68f4693bfe924987f",
           "src/rke/cli.py": "cd710567ec457197b9371decdfd09101ba35f4446cb0a60c7c559704edbc2061",
@@ -132,12 +132,12 @@
           "tests/test_okf_adapter.py": "76d747d308054a7fc4277e7b15085cfb438374e60cef52cc0b9fe7471049b42e",
           "tests/test_release_contract.py": "c58e30172e9ec5112d747eaf719b5c5dff9a88f9b96f3328c194cee8e8ddf47b",
           "tests/test_repo_context.py": "3700d72f2e0f415102e03356493b949bf0468206c39d2eebd88addf91664c745",
-          "tests/test_repo_context_mcp.py": "e88569b4e8af2fef16d098e83bd113fc133303747b105eb42493d1ad5cd6e512",
+          "tests/test_repo_context_mcp.py": "b90d33a216835f0cca5234b94d3f1a13bc9e951f96d64e3e49c6f815ac5e78eb",
           "tests/test_structure.py": "432e73ceaad260916f5c1e2314ebe90c62c592ffdd6ba9ce555f20daf01f81f5",
-          "tests/test_versioning.py": "8ba0842fe5d18cd979707a1e19310afc0c720607cff07af30c2388d10935a19a"
+          "tests/test_versioning.py": "9e637bcc7e2b3226d6733ccfd31d7ccfa8c1a6779985d82eeb6b385d7dcf050b"
         }
       }
     }
   ],
-  "revision": 19
+  "revision": 20
 }
