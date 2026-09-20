@@ -5,7 +5,11 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from copy import deepcopy
 from pathlib import Path
+
+from rke.io import ConcurrentWriteError
+from rke.workflow_state import load_validated_state, write_json
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "engineering.py"
@@ -38,6 +42,24 @@ class EngineeringWorkflowCliTests(unittest.TestCase):
             self.assertEqual(state["active_capabilities"], [])
             self.assertEqual(state["outstanding_gates"], [])
             self.assertEqual(state["task_tracking"]["mode"], "none")
+            self.assertEqual(state["revision"], 1)
+
+    def test_stale_workflow_writer_cannot_overwrite_a_newer_revision(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.assertEqual(self.run_cli(root, "start").returncode, 0)
+            first = load_validated_state(root).value
+            stale = deepcopy(first)
+            first["primary_phase"] = "design"
+            write_json(load_validated_state(root).path, first)
+
+            stale["primary_phase"] = "deliver"
+            with self.assertRaisesRegex(ConcurrentWriteError, "changed after it was read"):
+                write_json(load_validated_state(root).path, stale)
+
+            persisted = load_validated_state(root).value
+            self.assertEqual(persisted["primary_phase"], "design")
+            self.assertEqual(persisted["revision"], 2)
 
     def test_activate_is_one_idempotent_entry_for_new_active_and_closed_state(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -76,6 +98,74 @@ class EngineeringWorkflowCliTests(unittest.TestCase):
             self.assertEqual(
                 preserved["outstanding_gates"], ["knowledge-impact-review"]
             )
+
+    def test_existing_state_is_validated_before_start_or_checkpoint_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            state_path = root / ".engineering-workflow" / "state.json"
+            state_path.parent.mkdir()
+            malformed = {
+                "schema_version": 1,
+                "status": "active",
+                "primary_phase": "deliver",
+                "active_capabilities": [],
+                "outstanding_gates": [],
+                "task_tracking": {"mode": "none", "task_ref": None},
+                "created_at": "2026-09-19T09:00:00Z",
+                "updated_at": "2026-09-19T09:00:00Z",
+            }
+            state_path.write_text(json.dumps(malformed), encoding="utf-8")
+
+            started = self.run_cli(root, "start")
+            checkpointed = self.run_cli(
+                root,
+                "checkpoint",
+                "--summary",
+                "unsafe",
+                "--next-action",
+                "must not be written",
+            )
+
+            self.assertEqual(started.returncode, 2)
+            self.assertEqual(checkpointed.returncode, 2)
+            for result in (started, checkpointed):
+                payload = json.loads(result.stdout)
+                self.assertEqual(payload["result"], "invalid-state")
+                self.assertIn("continuity must be an object", payload["verification"]["errors"])
+            self.assertEqual(json.loads(state_path.read_text(encoding="utf-8")), malformed)
+
+    def test_closed_workflow_rejects_every_lifecycle_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.assertEqual(self.run_cli(root, "start").returncode, 0)
+            self.assertEqual(self.run_cli(root, "close").returncode, 0)
+            state_path = root / ".engineering-workflow" / "state.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["outstanding_gates"] = ["implementation-validation"]
+            state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+
+            results = [
+                self.run_cli(root, "checkpoint", "--summary", "x", "--next-action", "y"),
+                self.run_cli(root, "gate", "add", "--gate", "knowledge-impact-review"),
+                self.run_cli(
+                    root,
+                    "gate",
+                    "resolve",
+                    "--gate",
+                    "implementation-validation",
+                    "--evidence",
+                    "must not resolve",
+                ),
+                self.run_cli(root, "journey", "enter", "understand"),
+                self.run_cli(root, "task", "configure", "--mode", "lightweight"),
+                self.run_cli(root, "capability", "enable", "publication"),
+            ]
+
+            for result in results:
+                self.assertEqual(result.returncode, 3, result.stderr or result.stdout)
+                self.assertEqual(json.loads(result.stdout)["result"], "workflow-closed")
+            preserved = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(preserved["outstanding_gates"], ["implementation-validation"])
 
     def test_new_cycle_reopens_only_closed_state_and_preserves_compact_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

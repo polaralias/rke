@@ -1,0 +1,87 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Test and build distributions
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip build
+          python -m pip install -e . pytest
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q
+          python scripts/validate_release.py --tag "${GITHUB_REF_NAME}"
+          python -m build
+          python scripts/validate_release.py --tag "${GITHUB_REF_NAME}" --dist dist
+          python scripts/smoke_distribution.py dist/*.whl
+          python scripts/smoke_distribution.py dist/*.tar.gz
+
+      - name: Attest distributions
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: "dist/*"
+
+      - name: Preserve distributions for publication
+        uses: actions/upload-artifact@v6
+        with:
+          name: python-package-distributions
+          path: dist/*
+
+  publish-pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: python-package-distributions
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-github:
+    needs: publish-pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: python-package-distributions
+          path: dist
+      - name: Promote the existing draft or create one release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/* --clobber
+            gh release edit "$tag" --draft=false --latest --verify-tag --title "$tag"
+          else
+            gh release create "$tag" dist/* --verify-tag --generate-notes --latest --title "$tag"
+          fi

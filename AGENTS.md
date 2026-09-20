@@ -6,7 +6,7 @@ RKE is the canonical executable implementation and methodology used by the `engi
 
 - Keep CLI and MCP as thin adapters over `src/rke/operations.py`; domain behaviour may not be implemented in only one transport.
 - Treat every repository path as an explicit data boundary. Dynamic MCP targets must be validated as Git repositories and may be constrained by configured allowed roots.
-- Keep `pyproject.toml`, `VERSION`, `src/rke/__init__.py`, and MCP server identity versions aligned.
+- Treat `rke.__version__` in `src/rke/__init__.py` as the sole version source. Hatch project metadata and MCP server identity must derive from it.
 - Keep `skills/engineering-workflow` as the canonical skill package paired with this runtime.
 - Publish the skill into the Polaralias skills catalogue as a synchronized mirror; do not maintain an independent runtime copy there.
 - Verify a local catalogue checkout with `python scripts/sync_skill.py --target <skills-repo>/skills/engineering/engineering-workflow --check` before coordinated release.

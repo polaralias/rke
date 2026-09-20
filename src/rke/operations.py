@@ -1,18 +1,27 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from copy import deepcopy
+from dataclasses import dataclass
+import json
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterator
 
-from .documentation import apply_documentation, assess_documentation, explain_change
+from .documentation import (
+    apply_documentation,
+    assess_documentation,
+    assess_documentation_bootstrap,
+    explain_change,
+)
 from .continuity import inspect_handoff, write_handoff
 from .coordination import plan_coordination, validate_coordination
 from .dissection import assess_dissection
+from .host_integration import host_recipe, install_host
+from .io import LockAtomicPublishUnsupported
 from .knowledge import build_indexes, inspect_bundle, register_knowledge
+from .manifest import DEFAULT_MANIFEST_PATH
 from .publication import scan_publication
 from .repo_context import (
-    DEFAULT_MANIFEST_PATH,
+    benchmark_context,
     check_context,
     find_context,
     impact_context,
@@ -39,6 +48,22 @@ class OperationError(Exception):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+class UnknownOperationError(OperationError):
+    def __init__(self, name: str) -> None:
+        super().__init__(f"Unknown operation: {name}", code="unknown_operation")
+        self.name = name
+
+
+@dataclass(frozen=True)
+class OperationOutcome:
+    payload: dict[str, Any]
+    exit_code: int = 0
+
+    def __iter__(self) -> Iterator[Any]:
+        yield self.payload
+        yield self.exit_code
 
 
 @dataclass(frozen=True)
@@ -113,11 +138,219 @@ def strings(arguments: dict[str, Any], name: str) -> list[str]:
     return value
 
 
+def optional_strings(arguments: dict[str, Any], name: str) -> list[str]:
+    value = arguments.get(name, [])
+    if not isinstance(value, list) or not all(
+        isinstance(item, str) and item.strip() for item in value
+    ):
+        raise OperationError(f"Argument '{name}' must be a string array.")
+    return value
+
+
 def mapping(arguments: dict[str, Any], name: str) -> dict[str, Any]:
     value = arguments.get(name)
     if not isinstance(value, dict):
         raise OperationError(f"Argument '{name}' must be an object.")
     return value
+
+
+def _validate_schema(value: Any, schema: dict[str, Any], path: str = "arguments") -> None:
+    expected = schema.get("type")
+    if expected == "object":
+        if not isinstance(value, dict):
+            raise OperationError(f"{path} must be an object.")
+        properties = schema.get("properties", {})
+        for required in schema.get("required", []):
+            if required not in value:
+                raise OperationError(f"{path}.{required} is required.")
+        if schema.get("additionalProperties") is False:
+            extras = sorted(set(value) - set(properties))
+            if extras:
+                raise OperationError(
+                    f"{path} contains unsupported properties: {', '.join(extras)}."
+                )
+        for name, item in value.items():
+            item_schema = properties.get(name)
+            if item_schema is not None:
+                _validate_schema(item, item_schema, f"{path}.{name}")
+        return
+    if expected == "string":
+        if not isinstance(value, str) or not value.strip():
+            raise OperationError(f"{path} must be a non-empty string.")
+    elif expected == "integer":
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise OperationError(f"{path} must be an integer.")
+        if "minimum" in schema and value < schema["minimum"]:
+            raise OperationError(f"{path} must be at least {schema['minimum']}.")
+        if "maximum" in schema and value > schema["maximum"]:
+            raise OperationError(f"{path} must be at most {schema['maximum']}.")
+    elif expected == "boolean":
+        if not isinstance(value, bool):
+            raise OperationError(f"{path} must be a boolean.")
+    elif expected == "array":
+        if not isinstance(value, list):
+            raise OperationError(f"{path} must be an array.")
+        if len(value) < schema.get("minItems", 0):
+            raise OperationError(
+                f"{path} must contain at least {schema['minItems']} item(s)."
+            )
+        item_schema = schema.get("items")
+        if item_schema:
+            for index, item in enumerate(value):
+                _validate_schema(item, item_schema, f"{path}[{index}]")
+    if "enum" in schema and value not in schema["enum"]:
+        choices = ", ".join(str(choice) for choice in schema["enum"])
+        raise OperationError(f"{path} must be one of: {choices}.")
+
+
+def _lifecycle(name: str, root: Path, **arguments: Any) -> tuple[dict[str, Any], int]:
+    from . import lifecycle
+    from .workflow_state import state_path
+
+    function = getattr(lifecycle, name)
+    try:
+        result = function(root, **arguments)
+    except FileNotFoundError:
+        return (
+            {
+                "result": "missing-state",
+                "state_path": str(state_path(root)),
+                "error": {
+                    "code": "workflow_state_missing",
+                    "message": "Run engineering start before this lifecycle operation.",
+                },
+            },
+            2,
+        )
+    except json.JSONDecodeError as exc:
+        return (
+            {
+                "result": "invalid-state",
+                "state_path": str(state_path(root)),
+                "error": {
+                    "code": "workflow_state_invalid_json",
+                    "message": f"Workflow state is not valid JSON at line {exc.lineno}.",
+                },
+            },
+            2,
+        )
+    return result if isinstance(result, tuple) else (result, 0)
+
+
+def workflow_activate(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return _lifecycle(
+        "activate",
+        root,
+        phase=string(arguments, "phase", default="deliver"),
+        task_mode=string(arguments, "taskMode", default="none"),
+    )
+
+
+def workflow_start(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return _lifecycle(
+        "start",
+        root,
+        phase=string(arguments, "phase", default="understand"),
+        capabilities=arguments.get("capabilities", []),
+        gates=arguments.get("gates", []),
+        task_mode=string(arguments, "taskMode", default="none"),
+        new_cycle=boolean(arguments, "newCycle"),
+    )
+
+
+def workflow_checkpoint(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return _lifecycle(
+        "checkpoint",
+        root,
+        summary=string(arguments, "summary"),
+        next_action=string(arguments, "nextAction"),
+    )
+
+
+def workflow_resume(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return _lifecycle("resume", root)
+
+
+def workflow_close(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return _lifecycle("close", root, base=optional_string(arguments, "base"))
+
+
+def workflow_gate_add(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return _lifecycle("add_gates", root, gates=strings(arguments, "gates"))
+
+
+def workflow_gate_resolve(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return _lifecycle(
+        "resolve_gate",
+        root,
+        gate=string(arguments, "gate"),
+        evidence=string(arguments, "evidence"),
+    )
+
+
+def workflow_journey_enter(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return _lifecycle("enter_journey", root, journey=string(arguments, "journey"))
+
+
+def workflow_task_configure(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return _lifecycle(
+        "configure_tasks",
+        root,
+        mode=string(arguments, "mode"),
+        task_ref=optional_string(arguments, "taskRef"),
+        bundle=string(arguments, "bundle", default="docs/tasks"),
+        force=boolean(arguments, "force"),
+    )
+
+
+def workflow_task_check(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return _lifecycle("check_tasks", root, cli=optional_string(arguments, "cli"))
+
+
+def workflow_capability_enable(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return _lifecycle(
+        "enable_capability", root, capability=string(arguments, "capability")
+    )
+
+
+def workflow_closure_assess(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return _lifecycle(
+        "closure_assessment", root, base=optional_string(arguments, "base")
+    )
+
+
+def workflow_legacy_route(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    del root
+    from .lifecycle import route_legacy
+
+    return route_legacy(string(arguments, "name"))
+
+
+def host_recipe_operation(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return (
+        host_recipe(
+            root,
+            host=string(arguments, "host"),
+            base=string(arguments, "base", default="main"),
+        ),
+        0,
+    )
+
+
+def host_install_operation(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return (
+        install_host(
+            root,
+            host=string(arguments, "host"),
+            base=string(arguments, "base", default="main"),
+            force=boolean(arguments, "force"),
+        ),
+        0,
+    )
+
+
+def context_benchmark(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return benchmark_context(root, string(arguments, "corpus")), 0
 
 
 def context_find(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
@@ -194,6 +427,17 @@ def documentation_assess(root: Path, arguments: dict[str, Any]) -> tuple[dict[st
     )
 
 
+def documentation_bootstrap(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return (
+        assess_documentation_bootstrap(
+            root,
+            bundle=string(arguments, "bundle", default="docs/knowledge"),
+            manifest=string(arguments, "manifest", default=DEFAULT_MANIFEST),
+        ),
+        0,
+    )
+
+
 def documentation_apply(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
     return (
         apply_documentation(
@@ -239,13 +483,18 @@ def structure_trace(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, An
             string(arguments, "symbol"),
             direction=string(arguments, "direction", default="in"),
             depth=integer(arguments, "depth", default=2),
+            scopes=optional_strings(arguments, "scopes") or None,
         ),
         0,
     )
 
 
 def structure_map(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
-    return repository_map(root, limit=integer(arguments, "limit", default=20)), 0
+    return repository_map(
+        root,
+        limit=integer(arguments, "limit", default=20),
+        scopes=optional_strings(arguments, "scopes") or None,
+    ), 0
 
 
 def structure_change_impact(
@@ -256,6 +505,7 @@ def structure_change_impact(
             root,
             strings(arguments, "changedPaths"),
             depth=integer(arguments, "depth", default=2),
+            scopes=optional_strings(arguments, "scopes") or None,
         ),
         0,
     )
@@ -271,6 +521,7 @@ def structure_search(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, A
             root,
             string(arguments, "pattern"),
             limit=integer(arguments, "limit", default=50),
+            scopes=optional_strings(arguments, "scopes") or None,
         ),
         0,
     )
@@ -335,9 +586,172 @@ def object_schema(
 
 STRING = {"type": "string"}
 STRING_ARRAY = {"type": "array", "items": STRING, "minItems": 1}
+OPTIONAL_STRING_ARRAY = {"type": "array", "items": STRING}
+PHASE = {"type": "string", "enum": ["understand", "design", "deliver", "close", "pause", "resume"]}
+TASK_MODE = {"type": "string", "enum": ["none", "lightweight", "full"]}
+HOST = {"type": "string", "enum": ["codex", "claude", "git"]}
 
 
 OPERATIONS = (
+    Operation(
+        "workflow_activate",
+        "Activate an engineering workflow",
+        "Create, validate, or reopen repository-local workflow state through the idempotent agent entrypoint.",
+        object_schema({"phase": {**PHASE, "default": "deliver"}, "taskMode": {**TASK_MODE, "default": "none"}}),
+        False,
+        True,
+        workflow_activate,
+    ),
+    Operation(
+        "workflow_start",
+        "Start an engineering workflow",
+        "Create workflow state or return the valid existing workflow without resetting it.",
+        object_schema({
+            "phase": {**PHASE, "default": "understand"},
+            "capabilities": {"type": "array", "items": STRING},
+            "gates": {"type": "array", "items": STRING},
+            "taskMode": {**TASK_MODE, "default": "none"},
+            "newCycle": {"type": "boolean", "default": False},
+        }),
+        False,
+        True,
+        workflow_start,
+    ),
+    Operation(
+        "workflow_checkpoint",
+        "Checkpoint workflow continuity",
+        "Store a compact verified summary and next action without copying stronger records.",
+        object_schema({"summary": STRING, "nextAction": STRING}, ["summary", "nextAction"]),
+        False,
+        False,
+        workflow_checkpoint,
+    ),
+    Operation(
+        "workflow_resume",
+        "Resume workflow state",
+        "Validate and return repository-local workflow state for re-verification.",
+        object_schema({}),
+        True,
+        True,
+        workflow_resume,
+    ),
+    Operation(
+        "workflow_close",
+        "Close an engineering workflow",
+        "Close only when gates and optional exact-delta documentation evidence are clear.",
+        object_schema({"base": STRING}),
+        False,
+        False,
+        workflow_close,
+    ),
+    Operation(
+        "workflow_gate_add",
+        "Add workflow gates",
+        "Register explicit unresolved obligations without resetting existing workflow state.",
+        object_schema({"gates": STRING_ARRAY}, ["gates"]),
+        False,
+        True,
+        workflow_gate_add,
+    ),
+    Operation(
+        "workflow_gate_resolve",
+        "Resolve a workflow gate",
+        "Resolve one outstanding obligation with bounded evidence from its owning surface.",
+        object_schema({"gate": STRING, "evidence": STRING}, ["gate", "evidence"]),
+        False,
+        False,
+        workflow_gate_resolve,
+    ),
+    Operation(
+        "workflow_journey_enter",
+        "Enter a workflow journey",
+        "Transition into understand, design, or close and return the one reference to load.",
+        object_schema({"journey": {"type": "string", "enum": ["understand", "design", "close"]}}, ["journey"]),
+        False,
+        False,
+        workflow_journey_enter,
+    ),
+    Operation(
+        "workflow_task_configure",
+        "Configure task persistence",
+        "Configure proportionate OKF Tasks delegation without copying its execution schema.",
+        object_schema({
+            "mode": TASK_MODE,
+            "taskRef": STRING,
+            "bundle": {"type": "string", "default": "docs/tasks"},
+            "force": {"type": "boolean", "default": False},
+        }, ["mode"]),
+        False,
+        False,
+        workflow_task_configure,
+    ),
+    Operation(
+        "workflow_task_check",
+        "Check configured task state",
+        "Delegate validation to OKF Tasks when durable task mode is enabled.",
+        object_schema({"cli": STRING}),
+        True,
+        True,
+        workflow_task_check,
+    ),
+    Operation(
+        "workflow_capability_enable",
+        "Enable a workflow capability",
+        "Enable one bounded extension and register only its required evidence gates.",
+        object_schema({"capability": {"type": "string", "enum": ["query-to-knowledge", "parallel-delivery", "publication"]}}, ["capability"]),
+        False,
+        True,
+        workflow_capability_enable,
+    ),
+    Operation(
+        "workflow_closure_assess",
+        "Assess workflow closure",
+        "Report independent closure lanes without closing or waiving any obligation.",
+        object_schema({"base": STRING}),
+        True,
+        True,
+        workflow_closure_assess,
+    ),
+    Operation(
+        "workflow_legacy_route",
+        "Resolve a legacy engineering route",
+        "Map a documented legacy alias or package name to one current workflow surface.",
+        object_schema({"name": STRING}, ["name"]),
+        True,
+        True,
+        workflow_legacy_route,
+    ),
+    Operation(
+        "repo_host_recipe",
+        "Describe host integration",
+        "Return supported MCP, Git hook, and project-routing integration without mutation.",
+        object_schema({"host": HOST, "base": {"type": "string", "default": "main"}}, ["host"]),
+        True,
+        True,
+        host_recipe_operation,
+    ),
+    Operation(
+        "repo_host_install",
+        "Install host integration",
+        "Install repository-local routing and pre-push integration while preserving independent ownership.",
+        object_schema({
+            "host": HOST,
+            "base": {"type": "string", "default": "main"},
+            "force": {"type": "boolean", "default": False},
+        }, ["host"]),
+        False,
+        False,
+        host_install_operation,
+    ),
+    Operation(
+        "repo_context_benchmark",
+        "Benchmark repository retrieval",
+        "Run a repository-local query corpus and report deterministic retrieval metrics.",
+        object_schema({"corpus": STRING}, ["corpus"]),
+        True,
+        True,
+        context_benchmark,
+    ),
     Operation(
         "repo_dissection_assess",
         "Assess repository dissection",
@@ -364,7 +778,7 @@ OPERATIONS = (
             ["topic", "summary", "nextAction"],
         ),
         False,
-        True,
+        False,
         handoff_write,
     ),
     Operation(
@@ -487,6 +901,15 @@ OPERATIONS = (
         knowledge_register,
     ),
     Operation(
+        "repo_documentation_bootstrap",
+        "Assess documentation foundation",
+        "Discover the minimum evidence-backed documentation foundation without authoring prose.",
+        object_schema({"bundle": STRING, "manifest": STRING}),
+        True,
+        True,
+        documentation_bootstrap,
+    ),
+    Operation(
         "repo_documentation_assess",
         "Assess documentation impact",
         "Classify a material Git delta as no-op, update, or decision-required.",
@@ -559,6 +982,7 @@ OPERATIONS = (
                 "symbol": STRING,
                 "direction": {"type": "string", "enum": ["in", "out", "both"], "default": "in"},
                 "depth": {"type": "integer", "minimum": 1, "maximum": 5, "default": 2},
+                "scopes": OPTIONAL_STRING_ARRAY,
             },
             ["symbol"],
         ),
@@ -570,7 +994,7 @@ OPERATIONS = (
         "repo_structure_map",
         "Summarise repository structure",
         "Return source clusters and dependency hubs for orientation without rendering a graph.",
-        object_schema({"limit": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}}),
+        object_schema({"limit": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}, "scopes": OPTIONAL_STRING_ARRAY}),
         True,
         True,
         structure_map,
@@ -583,6 +1007,7 @@ OPERATIONS = (
             {
                 "changedPaths": STRING_ARRAY,
                 "depth": {"type": "integer", "minimum": 1, "maximum": 5, "default": 2},
+                "scopes": OPTIONAL_STRING_ARRAY,
             },
             ["changedPaths"],
         ),
@@ -607,6 +1032,7 @@ OPERATIONS = (
             {
                 "pattern": STRING,
                 "limit": {"type": "integer", "minimum": 1, "maximum": 100, "default": 50},
+                "scopes": OPTIONAL_STRING_ARRAY,
             },
             ["pattern"],
         ),
@@ -628,10 +1054,21 @@ def mcp_tools(*, repository_required: bool = False) -> list[dict[str, Any]]:
 
 def invoke_operation(
     root: Path, name: str, raw_arguments: Any
-) -> tuple[dict[str, Any], int]:
+) -> OperationOutcome:
     if not isinstance(raw_arguments, dict):
         raise OperationError("Operation arguments must be an object.")
     operation = OPERATION_BY_NAME.get(name)
     if operation is None:
-        raise KeyError(name)
-    return operation.handler(root, raw_arguments)
+        raise UnknownOperationError(name)
+    _validate_schema(raw_arguments, operation.input_schema)
+    try:
+        payload, exit_code = operation.handler(root, raw_arguments)
+    except OperationError:
+        raise
+    except LockAtomicPublishUnsupported as exc:
+        raise OperationError(str(exc), code=exc.code) from exc
+    except Exception as exc:
+        if isinstance(exc, (ValueError, json.JSONDecodeError)):
+            raise OperationError(str(exc), code="invalid_operation_data") from exc
+        raise
+    return OperationOutcome(payload=payload, exit_code=exit_code)

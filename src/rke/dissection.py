@@ -4,7 +4,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from .repo_context import is_secret_path
+from .filesystem import has_excluded_directory, pruned_repository_files
+from .security import is_sensitive_path
 
 
 INSTRUCTION_NAMES = {"AGENTS.md", "CLAUDE.md"}
@@ -22,6 +23,7 @@ MANIFEST_NAMES = {
 ENTRYPOINT_NAMES = {
     "main.py",
     "app.py",
+    "api.py",
     "server.py",
     "__main__.py",
     "main.ts",
@@ -48,15 +50,40 @@ def _git(root: Path, *arguments: str) -> str | None:
 
 def _eligible_files(root: Path) -> list[Path]:
     files: list[Path] = []
-    for path in root.rglob("*"):
-        if not path.is_file():
+    visible = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(root),
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "-z",
+        ],
+        capture_output=True,
+        check=False,
+    )
+    if visible.returncode == 0:
+        candidates = [
+            Path(value.decode("utf-8", errors="surrogateescape"))
+            for value in visible.stdout.split(b"\0")
+            if value
+        ]
+    else:
+        walked, _ = pruned_repository_files(root)
+        candidates = [path.relative_to(root) for path in walked]
+    for relative in candidates:
+        path = root / relative
+        if has_excluded_directory(relative):
             continue
-        relative = path.relative_to(root)
-        if {".git", ".engineering-workflow", ".rke-cache", "node_modules", "vendor"}.intersection(relative.parts):
+        if is_sensitive_path(relative):
             continue
-        if is_secret_path(relative):
+        try:
+            if path.is_file():
+                files.append(relative)
+        except OSError:
             continue
-        files.append(relative)
     return sorted(files, key=lambda value: value.as_posix().casefold())
 
 

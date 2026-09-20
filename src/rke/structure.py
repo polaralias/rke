@@ -4,26 +4,32 @@ import hashlib
 import json
 import os
 import re
-import tempfile
+import subprocess
+import sys
 from collections import Counter, defaultdict, deque
 from dataclasses import asdict, dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from .repo_context import (
-    ContextError,
-    eligible_files,
-    is_secret_path,
-    read_text,
-    repository_relative_path,
+from .chunking import bounded_line_chunks
+from .errors import ContextError
+from .freshness import eligible_files, read_text
+from .io import atomic_write_json
+from .paths import repository_relative_path
+from .security import is_sensitive_path
+from .structural_scopes import (
+    discover_scopes as _discover_scopes,
+    normalize_scopes as _focused_normalize_scopes,
+    paths_in_scopes as _focused_paths_in_scopes,
 )
+from .structural_search import isolated_regex_search
 
 
-MAX_GRAPH_FILES = 5_000
 MAX_RESULTS = 100
 MAX_PATTERN_LENGTH = 500
+REGEX_TIMEOUT_SECONDS = 2
 MAX_REVIEW_BYTES = 48_000
-CACHE_SCHEMA = 5
+CACHE_SCHEMA = 6
 CACHE_PATH = Path(".engineering-workflow/cache/structure-index.json")
 REVIEW_SCHEMA = 1
 REVIEW_CACHE = Path(".engineering-workflow/cache/agent-reviews")
@@ -34,6 +40,15 @@ NON_CODE_LANGUAGES = {
 CALL_NODE_TYPES = {
     "call", "call_expression", "function_call", "invocation_expression",
     "method_invocation", "method_call", "command", "new_expression",
+}
+PACKAGE_MARKERS = {
+    "Cargo.toml",
+    "Directory.Build.props",
+    "go.mod",
+    "package.json",
+    "pom.xml",
+    "pyproject.toml",
+    "setup.cfg",
 }
 
 
@@ -108,7 +123,7 @@ def detect_language(path: Path) -> str | None:
 
 def _assert_reviewable(root: Path, target: Path) -> None:
     relative = target.relative_to(root)
-    if is_secret_path(relative) or {".git", ".engineering-workflow", "archive"}.intersection(relative.parts):
+    if is_sensitive_path(relative) or {".git", ".engineering-workflow", "archive"}.intersection(relative.parts):
         raise ContextError("structure_path_excluded", "The requested path is outside the structural-analysis boundary.")
     try:
         if target.stat().st_size > 1_000_000:
@@ -450,15 +465,7 @@ def record_agent_review(root: Path, relative: str, review: dict[str, Any]) -> di
         "uncertainties": uncertainties,
     }
     destination = _review_path(root, normalized)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary = tempfile.mkstemp(prefix="review-", suffix=".json", dir=destination.parent)
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-            json.dump(value, stream, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-        os.replace(temporary, destination)
-    finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
+    atomic_write_json(destination, value)
     return {"result": "agent-review-recorded", "path": normalized, "sourceDigest": digest, "symbolCount": len(symbols), "dependencyCount": sum(len(item["calls"]) for item in symbols), "uncertaintyCount": len(uncertainties)}
 
 
@@ -561,15 +568,7 @@ def _read_cache(root: Path) -> dict[str, Any]:
 
 def _write_cache(root: Path, value: dict[str, Any]) -> None:
     target = root / CACHE_PATH
-    target.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary = tempfile.mkstemp(prefix="structure-", suffix=".json", dir=target.parent)
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-            json.dump(value, stream, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-        os.replace(temporary, target)
-    finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
+    atomic_write_json(target, value)
 
 
 def _module_candidates(source_path: str, module: str) -> set[str]:
@@ -640,7 +639,7 @@ def _resolve_call(caller: Symbol, raw: str, graph: dict[str, Any]) -> Symbol | N
 
 
 def _source_candidates(root: Path) -> tuple[list[Path], list[str]]:
-    files, inaccessible = eligible_files(root)
+    files, inaccessible, _ = eligible_files(root)
     candidates: list[Path] = []
     for path in files:
         relative = path.relative_to(root)
@@ -649,16 +648,126 @@ def _source_candidates(root: Path) -> tuple[list[Path], list[str]]:
         language = detect_language(path)
         if (language and language not in NON_CODE_LANGUAGES) or _review_path(root, relative.as_posix()).is_file():
             candidates.append(path)
-    if len(candidates) > MAX_GRAPH_FILES:
-        raise ContextError("structure_repository_too_large", f"Structural analysis is limited to {MAX_GRAPH_FILES} eligible source files.")
     return candidates, inaccessible
 
 
+def discover_scopes(root: Path, candidates: list[Path]) -> dict[str, list[Path]]:
+    marker_cache: dict[Path, bool] = {}
+    scopes: dict[str, list[Path]] = defaultdict(list)
+    for path in candidates:
+        relative = path.relative_to(root)
+        selected: Path | None = None
+        for parent in path.parents:
+            if parent == root:
+                break
+            has_marker = marker_cache.get(parent)
+            if has_marker is None:
+                has_marker = any((parent / marker).is_file() for marker in PACKAGE_MARKERS)
+                marker_cache[parent] = has_marker
+            if has_marker:
+                selected = parent
+                break
+        if selected is not None:
+            scope = selected.relative_to(root).as_posix()
+        elif len(relative.parts) > 1:
+            scope = relative.parts[0]
+        else:
+            scope = "."
+        scopes[scope].append(path)
+    return {scope: sorted(paths) for scope, paths in sorted(scopes.items())}
+
+
+def _normalize_scopes(root: Path, scopes: list[str] | None) -> list[str] | None:
+    if not scopes:
+        return None
+    normalized: list[str] = []
+    for value in scopes:
+        target, relative = repository_relative_path(
+            root,
+            value,
+            escape_code="structure_scope_escape",
+            missing_code="structure_scope_missing",
+        )
+        if not target.is_dir():
+            raise ContextError("structure_scope_invalid", f"Structural scope is not a directory: {value}")
+        normalized.append(relative or ".")
+    return list(dict.fromkeys(normalized))
+
+
+def _paths_in_scopes(
+    scope_shards: dict[str, list[Path]], selected: list[str] | None
+) -> list[Path]:
+    if selected is None:
+        return sorted({path for paths in scope_shards.values() for path in paths})
+    paths: set[Path] = set()
+    for scope, candidates in scope_shards.items():
+        if any(
+            requested == "."
+            or scope == requested
+            or scope.startswith(requested + "/")
+            or requested.startswith(scope + "/")
+            for requested in selected
+        ):
+            paths.update(candidates)
+    return sorted(paths)
+
+
+# Compatibility names keep the graph builder stable while focused scope policy
+# remains independently testable and reusable.
+discover_scopes = _discover_scopes
+_normalize_scopes = _focused_normalize_scopes
+_paths_in_scopes = _focused_paths_in_scopes
+
+
+def _batch_size() -> int:
+    raw = os.environ.get("RKE_STRUCTURE_BATCH_SIZE", "128")
+    try:
+        return max(1, min(256, int(raw)))
+    except ValueError:
+        return 128
+
+
+def _extract_batches(root: Path, paths: list[Path]) -> dict[str, ParsedFile]:
+    parsed: dict[str, ParsedFile] = {}
+    size = _batch_size()
+    for offset in range(0, len(paths), size):
+        batch = paths[offset : offset + size]
+        relative = [path.relative_to(root).as_posix() for path in batch]
+        command = [sys.executable, "-m", "rke.structure_worker", "--root", str(root), "--extract"]
+        for value in relative:
+            command.extend(["--path", value])
+        try:
+            result = subprocess.run(
+                command,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=max(20, len(batch)),
+            )
+            payload = json.loads(result.stdout) if result.returncode == 0 else {}
+            files = payload.get("files") if isinstance(payload, dict) else None
+            if not isinstance(files, dict) or set(files) != set(relative):
+                raise ValueError("incomplete parser batch")
+            parsed.update({name: _deserialize(value) for name, value in files.items()})
+        except (json.JSONDecodeError, OSError, subprocess.TimeoutExpired, ValueError):
+            for path in batch:
+                item = _extract_file(path, root)
+                item.warnings.append("batch-parser-fallback")
+                parsed[item.path] = item
+    return parsed
+
+
 def build_structure(
-    root: Path, *, include_paths: set[str] | None = None
+    root: Path,
+    *,
+    include_paths: set[str] | None = None,
+    scopes: list[str] | None = None,
 ) -> dict[str, Any]:
     if include_paths is None:
-        candidates, inaccessible = _source_candidates(root)
+        all_candidates, inaccessible = _source_candidates(root)
+        scope_shards = discover_scopes(root, all_candidates)
+        selected_scopes = _normalize_scopes(root, scopes)
+        candidates = _paths_in_scopes(scope_shards, selected_scopes)
     else:
         candidates = []
         inaccessible = []
@@ -675,11 +784,14 @@ def build_structure(
                     candidates.append(target)
             except (ContextError, OSError, RuntimeError):
                 inaccessible.append(relative)
+        scope_shards = discover_scopes(root, candidates)
+        selected_scopes = None
     cache = _read_cache(root)
     cached_files = cache.get("files", {})
     parsed_files: list[ParsedFile] = []
     hits = misses = 0
-    new_cache: dict[str, Any] = {}
+    new_cache: dict[str, Any] = dict(cached_files) if scopes else {}
+    missing: list[Path] = []
     for path in candidates:
         relative = path.relative_to(root).as_posix()
         try:
@@ -692,12 +804,42 @@ def build_structure(
             parsed = _deserialize(cached)
             hits += 1
         else:
-            parsed = _extract_file(path, root)
-            misses += 1
+            missing.append(path)
+            continue
         parsed_files.append(parsed)
         new_cache[relative] = _serialize(parsed)
+    extracted = _extract_batches(root, missing)
+    for path in missing:
+        relative = path.relative_to(root).as_posix()
+        parsed = extracted.get(relative) or _extract_file(path, root)
+        misses += 1
+        parsed_files.append(parsed)
+        new_cache[relative] = _serialize(parsed)
+    if scopes:
+        selected_paths = {path.relative_to(root).as_posix() for path in candidates}
+        for relative in list(new_cache):
+            if any(
+                requested == "."
+                or relative == requested
+                or relative.startswith(requested + "/")
+                for requested in selected_scopes or []
+            ) and relative not in selected_paths:
+                del new_cache[relative]
     if include_paths is None:
-        _write_cache(root, {"schema": CACHE_SCHEMA, "files": new_cache})
+        _write_cache(
+            root,
+            {
+                "schema": CACHE_SCHEMA,
+                "files": new_cache,
+                "graphShards": {
+                    scope: {
+                        "files": [path.relative_to(root).as_posix() for path in paths],
+                        "fileCount": len(paths),
+                    }
+                    for scope, paths in scope_shards.items()
+                },
+            },
+        )
     symbols = [symbol for parsed in parsed_files for symbol in parsed.symbols]
     by_name: dict[str, list[Symbol]] = defaultdict(list)
     for symbol in symbols:
@@ -717,6 +859,12 @@ def build_structure(
         "unresolvedCalls": Counter(),
         "cache": {"hits": hits, "misses": misses, "entries": len(new_cache)},
         "languages": dict(Counter(parsed.language for parsed in parsed_files)),
+        "scopeSelection": {
+            "mode": "explicit" if selected_scopes else "automatic",
+            "selected": selected_scopes or list(scope_shards),
+            "available": list(scope_shards),
+            "shardCount": len(scope_shards),
+        },
     }
     for caller in symbols:
         for raw in caller.calls:
@@ -736,18 +884,24 @@ def prepare_agent_review(root: Path, relative: str) -> dict[str, Any]:
     if text is None:
         raise ContextError("structure_review_unavailable", "Agent review requires a UTF-8 text file.")
     encoded = text.encode("utf-8")
+    lines = text.splitlines() or [""]
+    available = bounded_line_chunks(lines, 1, len(lines), None)
     chunks: list[dict[str, Any]] = []
-    cursor = 0
-    lines = text.splitlines(keepends=True)
-    while cursor < len(lines) and len(chunks) < 8:
-        start = cursor
-        size = 0
-        while cursor < len(lines) and size + len(lines[cursor].encode("utf-8")) <= 6_000:
-            size += len(lines[cursor].encode("utf-8"))
-            cursor += 1
-        if cursor == start:
-            cursor += 1
-        chunks.append({"startLine": start + 1, "endLine": cursor, "content": "".join(lines[start:cursor])})
+    emitted_bytes = 0
+    for start, end, start_column, end_column, _, content in available:
+        size = len(content.encode("utf-8"))
+        if emitted_bytes + size > MAX_REVIEW_BYTES:
+            break
+        chunks.append(
+            {
+                "startLine": start,
+                "endLine": end,
+                "startColumn": start_column,
+                "endColumn": end_column,
+                "content": content,
+            }
+        )
+        emitted_bytes += size
     return {
         "result": "agent-review-prepared",
         "path": normalized,
@@ -763,7 +917,7 @@ def prepare_agent_review(root: Path, relative: str) -> dict[str, Any]:
         },
         "chunks": chunks,
         "sourceBytes": len(encoded),
-        "truncated": len(encoded) > MAX_REVIEW_BYTES or cursor < len(lines),
+        "truncated": len(encoded) > MAX_REVIEW_BYTES or len(chunks) < len(available),
     }
 
 
@@ -796,13 +950,65 @@ def resolve_symbols(graph: dict[str, Any], query: str) -> list[Symbol]:
     return [symbol for symbol in graph["symbols"] if symbol.qualname.endswith(query) or symbol.identifier.endswith(query)]
 
 
-def trace_symbol(root: Path, symbol_query: str, *, direction: str = "in", depth: int = 2) -> dict[str, Any]:
+def _ordered_scope_names(root: Path, query: str) -> list[str]:
+    candidates, _ = _source_candidates(root)
+    scopes = list(discover_scopes(root, candidates))
+    query_terms = set(re.findall(r"[a-z0-9]+", query.casefold()))
+
+    def score(scope: str) -> tuple[int, str]:
+        terms = set(re.findall(r"[a-z0-9]+", scope.casefold()))
+        return (-len(query_terms.intersection(terms)), scope)
+
+    return sorted(scopes, key=score)
+
+
+def trace_symbol(
+    root: Path,
+    symbol_query: str,
+    *,
+    direction: str = "in",
+    depth: int = 2,
+    scopes: list[str] | None = None,
+) -> dict[str, Any]:
     if direction not in {"in", "out", "both"}:
         raise ContextError("structure_direction_invalid", "Direction must be in, out, or both.")
     if depth < 1 or depth > 5:
         raise ContextError("structure_depth_invalid", "Depth must be between 1 and 5.")
-    graph = build_structure(root)
-    matches = resolve_symbols(graph, symbol_query)
+    if scopes:
+        graph = build_structure(root, scopes=scopes)
+        matches = resolve_symbols(graph, symbol_query)
+    else:
+        ordered_scopes = _ordered_scope_names(root, symbol_query)
+        selected: list[str] = []
+        if len(ordered_scopes) <= 1:
+            graph = build_structure(root)
+            matches = resolve_symbols(graph, symbol_query)
+        else:
+            graph = {}
+            matches = []
+            for scope in ordered_scopes:
+                selected.append(scope)
+                graph = build_structure(root, scopes=selected)
+                matches = resolve_symbols(graph, symbol_query)
+                if not matches:
+                    continue
+                if direction == "out":
+                    sufficient = any(graph["outgoing"].get(item.identifier) for item in matches)
+                elif direction == "in":
+                    sufficient = any(graph["incoming"].get(item.identifier) for item in matches)
+                else:
+                    sufficient = any(
+                        graph["outgoing"].get(item.identifier)
+                        or graph["incoming"].get(item.identifier)
+                        for item in matches
+                    )
+                if sufficient or len(selected) == len(ordered_scopes):
+                    break
+            graph["scopeSelection"]["progressiveWidening"] = {
+                "attempted": ordered_scopes,
+                "selected": selected,
+            }
+            graph["scopeSelection"]["mode"] = "automatic-progressive"
     if not matches:
         raise ContextError("structure_symbol_missing", f"No symbol matched: {symbol_query}")
     if len(matches) > 20:
@@ -826,13 +1032,15 @@ def trace_symbol(root: Path, symbol_query: str, *, direction: str = "in", depth:
                         queue.append((neighbour, level + 1))
                         nodes.append(graph["byId"][neighbour].public())
             traces.append({"symbol": match.public(), "direction": current_direction, "nodes": nodes, "edges": edges[:MAX_RESULTS], "truncated": len(nodes) >= MAX_RESULTS or len(edges) > MAX_RESULTS})
-    return {"result": "symbol-traced", "query": symbol_query, "depth": depth, "matches": len(matches), "traces": traces, "parseWarnings": graph["parseWarnings"], "cache": graph["cache"]}
+    return {"result": "symbol-traced", "query": symbol_query, "depth": depth, "matches": len(matches), "traces": traces, "parseWarnings": graph["parseWarnings"], "cache": graph["cache"], "scopeSelection": graph["scopeSelection"]}
 
 
-def repository_map(root: Path, *, limit: int = 20) -> dict[str, Any]:
+def repository_map(
+    root: Path, *, limit: int = 20, scopes: list[str] | None = None
+) -> dict[str, Any]:
     if limit < 1 or limit > 100:
         raise ContextError("structure_limit_invalid", "Limit must be between 1 and 100.")
-    graph = build_structure(root)
+    graph = build_structure(root, scopes=scopes)
     directory_counts = Counter(str(Path(path).parent).replace("\\", "/") for path in graph["sourceFiles"])
     hubs = sorted(graph["symbols"], key=lambda symbol: (-len(graph["incoming"].get(symbol.identifier, set())), -len(graph["outgoing"].get(symbol.identifier, set())), symbol.identifier))[:limit]
     return {
@@ -841,15 +1049,21 @@ def repository_map(root: Path, *, limit: int = 20) -> dict[str, Any]:
         "languages": graph["languages"], "parserCatalogCount": len(_pack().manifest_languages()),
         "directories": [{"path": path, "sourceFiles": count} for path, count in directory_counts.most_common(limit)],
         "hubs": [{**symbol.public(), "incoming": len(graph["incoming"].get(symbol.identifier, set())), "outgoing": len(graph["outgoing"].get(symbol.identifier, set()))} for symbol in hubs],
-        "parseWarnings": graph["parseWarnings"], "inaccessibleFilesSkipped": graph["inaccessibleFilesSkipped"], "cache": graph["cache"],
+        "parseWarnings": graph["parseWarnings"], "inaccessibleFilesSkipped": graph["inaccessibleFilesSkipped"], "cache": graph["cache"], "scopeSelection": graph["scopeSelection"],
     }
 
 
-def change_impact(root: Path, changed_paths: list[str], *, depth: int = 2) -> dict[str, Any]:
+def change_impact(
+    root: Path,
+    changed_paths: list[str],
+    *,
+    depth: int = 2,
+    scopes: list[str] | None = None,
+) -> dict[str, Any]:
     if depth < 1 or depth > 5:
         raise ContextError("structure_depth_invalid", "Depth must be between 1 and 5.")
     normalized = [repository_relative_path(root, value, escape_code="structure_path_escape")[1] for value in changed_paths]
-    graph = build_structure(root)
+    graph = build_structure(root, scopes=scopes)
     changed = [symbol for symbol in graph["symbols"] if symbol.path in normalized]
     affected: dict[str, tuple[Symbol, int]] = {}
     queue = deque((symbol.identifier, 0) for symbol in changed)
@@ -868,40 +1082,65 @@ def change_impact(root: Path, changed_paths: list[str], *, depth: int = 2) -> di
         "changedSymbols": [symbol.public() for symbol in changed[:MAX_RESULTS]], "changedSymbolCount": len(changed),
         "affectedCallers": [{**symbol.public(), "distance": distance} for symbol, distance in sorted(affected.values(), key=lambda item: (item[1], item[0].identifier))],
         "affectedCallerCount": len(affected), "detailsTruncated": len(changed) > MAX_RESULTS or len(affected) >= MAX_RESULTS,
-        "parseWarnings": graph["parseWarnings"], "cache": graph["cache"],
+        "parseWarnings": graph["parseWarnings"], "cache": graph["cache"], "scopeSelection": graph["scopeSelection"],
     }
 
 
-def search_structure(root: Path, pattern: str, *, limit: int = 50) -> dict[str, Any]:
+def search_structure(
+    root: Path,
+    pattern: str,
+    *,
+    limit: int = 50,
+    scopes: list[str] | None = None,
+) -> dict[str, Any]:
     if not pattern or len(pattern) > MAX_PATTERN_LENGTH:
         raise ContextError("structure_pattern_invalid", f"Pattern must contain 1 to {MAX_PATTERN_LENGTH} characters.")
     if limit < 1 or limit > MAX_RESULTS:
         raise ContextError("structure_limit_invalid", f"Limit must be between 1 and {MAX_RESULTS}.")
     try:
-        expression = re.compile(pattern)
+        re.compile(pattern)
     except re.error as exc:
         raise ContextError("structure_pattern_invalid", f"Pattern is invalid: {exc.msg}.") from exc
-    graph = build_structure(root)
+    graph = build_structure(root, scopes=scopes)
     symbols_by_path: dict[str, list[Symbol]] = defaultdict(list)
     for symbol in graph["symbols"]:
         symbols_by_path[symbol.path].append(symbol)
-    matches: list[dict[str, Any]] = []
     inaccessible = list(graph["inaccessibleFilesSkipped"])
-    for relative in graph["sourceFiles"]:
-        text = read_text(root / relative)
-        if text is None:
-            inaccessible.append(relative)
-            continue
-        file_symbols = sorted(symbols_by_path[relative], key=lambda item: (item.start_line, -item.end_line))
-        for line_number, line in enumerate(text.splitlines(), start=1):
-            if not expression.search(line):
-                continue
-            enclosing = [symbol for symbol in file_symbols if symbol.start_line <= line_number <= symbol.end_line]
-            symbol = max(enclosing, key=lambda item: item.start_line) if enclosing else None
-            coupling = len(graph["incoming"].get(symbol.identifier, set())) + len(graph["outgoing"].get(symbol.identifier, set())) if symbol else 0
-            matches.append({"path": relative, "line": line_number, "snippet": line.strip()[:300], "symbol": symbol.public() if symbol else None, "coupling": coupling})
+    worker_payload = isolated_regex_search(
+        root,
+        pattern,
+        graph["sourceFiles"],
+        timeout_seconds=REGEX_TIMEOUT_SECONDS,
+    )
+    matches: list[dict[str, Any]] = []
+    for item in worker_payload["matches"]:
+        relative = str(item["path"])
+        line_number = int(item["line"])
+        file_symbols = sorted(
+            symbols_by_path[relative], key=lambda symbol: (symbol.start_line, -symbol.end_line)
+        )
+        enclosing = [
+            symbol
+            for symbol in file_symbols
+            if symbol.start_line <= line_number <= symbol.end_line
+        ]
+        symbol = max(enclosing, key=lambda value: value.start_line) if enclosing else None
+        coupling = (
+            len(graph["incoming"].get(symbol.identifier, set()))
+            + len(graph["outgoing"].get(symbol.identifier, set()))
+            if symbol
+            else 0
+        )
+        matches.append(
+            {
+                **item,
+                "symbol": symbol.public() if symbol else None,
+                "coupling": coupling,
+            }
+        )
     ranked = sorted(matches, key=lambda item: (-item["coupling"], item["path"], item["line"]))
-    return {"result": "structure-searched", "pattern": pattern, "matchCount": len(matches), "matches": ranked[:limit], "detailsTruncated": len(matches) > limit, "parseWarnings": graph["parseWarnings"], "inaccessibleFilesSkipped": sorted(set(inaccessible)), "cache": graph["cache"]}
+    match_count = int(worker_payload.get("matchCount", len(matches)))
+    return {"result": "structure-searched", "pattern": pattern, "matchCount": match_count, "matches": ranked[:limit], "detailsTruncated": bool(worker_payload.get("workerTruncated")) or match_count > limit, "parseWarnings": graph["parseWarnings"], "inaccessibleFilesSkipped": sorted(set(inaccessible)), "cache": graph["cache"], "scopeSelection": graph["scopeSelection"], "regexWorker": {"isolated": True, "timeoutSeconds": REGEX_TIMEOUT_SECONDS}}
 
 
 def benchmark_structure(root: Path, corpus: str) -> dict[str, Any]:

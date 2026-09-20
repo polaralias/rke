@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "knowledge": [
+    {
+      "path": "docs/knowledge/system-overview.md",
+      "sources": ["src/**/*.py"]
+    }
+  ]
+}

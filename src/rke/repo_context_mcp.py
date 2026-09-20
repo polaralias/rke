@@ -7,16 +7,24 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from . import __version__
 from .documentation import DocumentationError
+from .host_integration import HostIntegrationError
 from .knowledge import KnowledgeError
-from .operations import OperationError, invoke_operation, mcp_tools
-from .repo_context import ContextError
+from .okf_adapter import OkfAdapterError
+from .operations import (
+    OperationError,
+    UnknownOperationError,
+    invoke_operation,
+    mcp_tools,
+)
+from .errors import ContextError
 
 
 LEGACY_PROTOCOL_VERSION = "2025-11-25"
 MODERN_PROTOCOL_VERSION = "2026-07-28"
 SUPPORTED_PROTOCOL_VERSIONS = [MODERN_PROTOCOL_VERSION, LEGACY_PROTOCOL_VERSION]
-SERVER_INFO = {"name": "rke", "version": "0.3.0"}
+SERVER_INFO = {"name": "rke", "version": __version__}
 SERVER_INFO_KEY = "io.modelcontextprotocol/serverInfo"
 PROTOCOL_VERSION_KEY = "io.modelcontextprotocol/protocolVersion"
 CLIENT_CAPABILITIES_KEY = "io.modelcontextprotocol/clientCapabilities"
@@ -64,7 +72,8 @@ def tool_result(
 def modern_request_error(request: dict[str, Any]) -> dict[str, Any] | None:
     params = request.get("params")
     meta = params.get("_meta") if isinstance(params, dict) else None
-    version = meta.get(PROTOCOL_VERSION_KEY) if isinstance(meta, dict) else None
+    meta_values: dict[str, Any] = meta if isinstance(meta, dict) else {}
+    version = meta_values.get(PROTOCOL_VERSION_KEY)
     if request.get("method") == "server/discover" or version is not None:
         if version != MODERN_PROTOCOL_VERSION:
             return protocol_error(
@@ -73,7 +82,7 @@ def modern_request_error(request: dict[str, Any]) -> dict[str, Any] | None:
                 "Unsupported protocol version",
                 data={"supported": SUPPORTED_PROTOCOL_VERSIONS, "requested": version},
             )
-        if not isinstance(meta.get(CLIENT_CAPABILITIES_KEY), dict):
+        if not isinstance(meta_values.get(CLIENT_CAPABILITIES_KEY), dict):
             return protocol_error(
                 request.get("id"),
                 -32602,
@@ -84,7 +93,14 @@ def modern_request_error(request: dict[str, Any]) -> dict[str, Any] | None:
 
 def domain_error(
     identifier: Any,
-    exc: ContextError | KnowledgeError | DocumentationError | OperationError,
+    exc: (
+        ContextError
+        | KnowledgeError
+        | DocumentationError
+        | HostIntegrationError
+        | OkfAdapterError
+        | OperationError
+    ),
     *,
     modern: bool,
 ) -> dict[str, Any]:
@@ -212,15 +228,41 @@ def dispatch(
         repository, arguments = resolve_repository(
             root, params.get("arguments", {}), allowed_roots
         )
-        payload, _ = invoke_operation(repository, params["name"], arguments)
-    except KeyError:
+        outcome = invoke_operation(repository, params["name"], arguments)
+    except UnknownOperationError:
         return protocol_error(identifier, -32602, f"Unknown tool: {params['name']}")
-    except (ContextError, KnowledgeError, DocumentationError, OperationError) as exc:
+    except (
+        ContextError,
+        KnowledgeError,
+        DocumentationError,
+        HostIntegrationError,
+        OkfAdapterError,
+        OperationError,
+    ) as exc:
         return domain_error(identifier, exc, modern=modern)
+    except Exception as exc:  # Keep one malformed request from terminating stdio.
+        print(
+            f"rke-mcp internal tool failure: {type(exc).__name__}",
+            file=sys.stderr,
+            flush=True,
+        )
+        payload = {
+            "code": "internal_operation_error",
+            "message": "The operation failed unexpectedly; the MCP server remains available.",
+        }
+        return {
+            "jsonrpc": "2.0",
+            "id": identifier,
+            "result": tool_result(payload, is_error=True, modern=modern),
+        }
     return {
         "jsonrpc": "2.0",
         "id": identifier,
-        "result": tool_result(payload, modern=modern),
+        "result": tool_result(
+            outcome.payload,
+            is_error=outcome.exit_code != 0,
+            modern=modern,
+        ),
     }
 
 
