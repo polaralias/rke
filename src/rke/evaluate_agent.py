@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from .host_integration import install_codex_routing
+from .manifest import load_knowledge_manifest
+from .repo_context import check_context, find_context
 
 
 class TextResource(Protocol):
@@ -47,6 +49,13 @@ def _grade(case: dict[str, Any], root: Path, final: str, returncode: int) -> dic
         state_detail = f"state could not be inspected: {type(exc).__name__}: {exc}"
     expected_state = bool(case.get("expectWorkflowState"))
     check("workflow-activation", activated == expected_state, state_detail)
+    if "stateStatus" in case:
+        actual_status = state.get("status") if isinstance(state, dict) else None
+        check(
+            "workflow-status",
+            actual_status == case["stateStatus"],
+            f"status={actual_status!r}, expected={case['stateStatus']!r}",
+        )
     if case.get("mustActivateBefore"):
         try:
             activation = state.get("activation", {})
@@ -73,6 +82,52 @@ def _grade(case: dict[str, Any], root: Path, final: str, returncode: int) -> dic
         check(f"file-contains:{relative}", text in content, detail)
     for relative in case.get("forbiddenPaths", []):
         check(f"path-absent:{relative}", not (root / relative).exists(), "forbidden artefact")
+    if case.get("manifestKnowledgePaths"):
+        try:
+            _, _, manifest = load_knowledge_manifest(root)
+            actual_paths = {entry["path"] for entry in manifest["knowledge"]}
+            expected_paths = set(case["manifestKnowledgePaths"])
+            passed = expected_paths.issubset(actual_paths)
+            detail = f"registered={sorted(actual_paths)}"
+        except Exception as exc:
+            passed = False
+            detail = f"manifest unavailable: {type(exc).__name__}: {exc}"
+        check("manifest-knowledge-paths", passed, detail)
+    for query_case in case.get("readerQueries", []):
+        query = query_case["query"]
+        try:
+            result = find_context(root, query, limit=5)
+            actual_paths = {item["path"] for item in result["results"]}
+            expected_paths = set(query_case["expectedPaths"])
+            passed = bool(actual_paths.intersection(expected_paths))
+            detail = f"top-five paths={sorted(actual_paths)}"
+        except Exception as exc:
+            passed = False
+            detail = f"retrieval failed: {type(exc).__name__}: {exc}"
+        check(f"reader-query:{query}", passed, detail)
+    if "knowledgeFreshness" in case:
+        try:
+            context = check_context(root)
+            actual_freshness = context["knowledgeFreshness"]
+            passed = actual_freshness == case["knowledgeFreshness"]
+            detail = f"knowledgeFreshness={actual_freshness!r}"
+        except Exception as exc:
+            passed = False
+            detail = f"freshness check failed: {type(exc).__name__}: {exc}"
+        check("knowledge-freshness", passed, detail)
+    for relative in case.get("supersededPaths", []):
+        path = root / relative
+        content = ""
+        try:
+            content = path.read_text(encoding="utf-8").casefold() if path.is_file() else ""
+        except OSError:
+            pass
+        passed = not path.exists() or "superseded" in content or "deprecated" in content
+        check(
+            f"truth-surface-superseded:{relative}",
+            passed,
+            "old truth is absent or explicitly marked non-current",
+        )
     return {
         "id": case["id"],
         "category": case["category"],

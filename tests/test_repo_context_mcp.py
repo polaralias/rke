@@ -195,6 +195,7 @@ class RepoContextMcpTests(unittest.TestCase):
                     "repo_knowledge_bundle_check",
                     "repo_knowledge_build_indexes",
                     "repo_knowledge_register",
+                    "repo_documentation_bootstrap",
                     "repo_documentation_assess",
                     "repo_documentation_apply",
                     "repo_change_explain",
@@ -224,6 +225,7 @@ class RepoContextMcpTests(unittest.TestCase):
             self.assertTrue(read_only["repo_knowledge_bundle_check"])
             self.assertFalse(read_only["repo_knowledge_build_indexes"])
             self.assertFalse(read_only["repo_knowledge_register"])
+            self.assertTrue(read_only["repo_documentation_bootstrap"])
             self.assertTrue(read_only["repo_documentation_assess"])
             self.assertFalse(read_only["repo_documentation_apply"])
             self.assertFalse(read_only["repo_change_explain"])
@@ -389,6 +391,46 @@ class RepoContextMcpTests(unittest.TestCase):
             payload = json.loads(result.stdout)["result"]
             self.assertFalse(payload["isError"])
             self.assertEqual(payload["structuredContent"]["outcome"], "no-op")
+
+    def test_cli_and_mcp_share_the_documentation_bootstrap_operation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "README.md").write_text("# Inherited\n\nA service.\n", encoding="utf-8")
+            (root / "src").mkdir()
+            (root / "src" / "api.py").write_text("def handle():\n    return True\n", encoding="utf-8")
+            cli = subprocess.run(
+                [
+                    sys.executable,
+                    str(CLI),
+                    "documentation",
+                    "bootstrap",
+                    "--root",
+                    str(root),
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            mcp = self.run_server(
+                root,
+                [
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "repo_documentation_bootstrap",
+                            "arguments": {},
+                        },
+                    }
+                ],
+            )
+            self.assertEqual(cli.returncode, 0, cli.stderr)
+            self.assertEqual(mcp.returncode, 0, mcp.stderr)
+            cli_payload = json.loads(cli.stdout)
+            mcp_payload = json.loads(mcp.stdout)["result"]["structuredContent"]
+            self.assertEqual(mcp_payload, cli_payload)
+            self.assertEqual(cli_payload["startingState"], "no-rke")
 
     def test_cli_and_mcp_are_shims_over_the_same_structural_operation(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

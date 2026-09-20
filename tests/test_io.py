@@ -11,7 +11,13 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from rke.io import ConcurrentWriteError, FileLock, atomic_write_text
+from rke.io import (
+    ConcurrentWriteError,
+    FileLock,
+    LockAtomicPublishUnsupported,
+    atomic_write_text,
+)
+from rke.operations import OperationError, invoke_operation
 
 
 class DurableIoTests(unittest.TestCase):
@@ -140,6 +146,78 @@ class DurableIoTests(unittest.TestCase):
             self.assertEqual(errors, [])
             self.assertFalse(path.exists())
             self.assertEqual(list(path.parent.glob(".resource.lock.candidate-*")), [])
+
+    def test_dead_complete_candidate_is_cleaned_before_acquisition(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "resource.lock"
+            candidate = path.parent / ".resource.lock.candidate-abandoned"
+            candidate.write_text(
+                json.dumps({"pid": 123456789, "createdAt": time.time(), "token": "dead"}),
+                encoding="utf-8",
+            )
+            with patch.object(FileLock, "_process_alive", return_value=False):
+                with FileLock(path, timeout=0.1):
+                    self.assertFalse(candidate.exists())
+
+    def test_hard_exit_after_publication_leaves_only_recoverable_garbage(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "resource.lock"
+            child = (
+                "import os, sys; "
+                "from pathlib import Path; "
+                "from rke.io import FileLock; "
+                "original = Path.unlink; "
+                "Path.unlink = lambda self, *args, **kwargs: "
+                "os._exit(0) if '.candidate-' in self.name else original(self, *args, **kwargs); "
+                "FileLock(Path(sys.argv[1])).__enter__()"
+            )
+            process = subprocess.Popen([sys.executable, "-c", child, str(path)])
+            self.assertEqual(process.wait(), 0)
+            self.assertTrue(path.exists())
+            self.assertEqual(len(list(path.parent.glob(".resource.lock.candidate-*"))), 1)
+
+            process_alive = FileLock._process_alive
+            with patch.object(
+                FileLock,
+                "_process_alive",
+                side_effect=lambda pid: False if pid == process.pid else process_alive(pid),
+            ):
+                with FileLock(path, timeout=1):
+                    self.assertEqual(list(path.parent.glob(".resource.lock.candidate-*")), [])
+
+    def test_live_or_malformed_candidates_are_never_cleaned(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "resource.lock"
+            live = path.parent / ".resource.lock.candidate-live"
+            malformed = path.parent / ".resource.lock.candidate-malformed"
+            live.write_text(
+                json.dumps({"pid": os.getpid(), "createdAt": time.time(), "token": "live"}),
+                encoding="utf-8",
+            )
+            malformed.write_text("", encoding="utf-8")
+            with FileLock(path, timeout=0.1):
+                self.assertTrue(live.exists())
+                self.assertTrue(malformed.exists())
+
+    def test_unsupported_atomic_publication_has_a_specific_error(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "resource.lock"
+            with patch("rke.io.os.link", side_effect=OSError("not supported")):
+                with self.assertRaises(LockAtomicPublishUnsupported) as caught:
+                    with FileLock(path):
+                        pass
+            self.assertEqual(caught.exception.code, "lock_atomic_publish_unsupported")
+            self.assertIn("atomic hard links", str(caught.exception))
+            self.assertEqual(list(path.parent.glob(".resource.lock.candidate-*")), [])
+
+    def test_shared_operation_returns_the_atomic_publication_error_code(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            error = LockAtomicPublishUnsupported(root / "resource.lock", OSError("no link"))
+            with patch("rke.operations.assess_documentation_bootstrap", side_effect=error):
+                with self.assertRaises(OperationError) as caught:
+                    invoke_operation(root, "repo_documentation_bootstrap", {})
+            self.assertEqual(caught.exception.code, "lock_atomic_publish_unsupported")
 
     def test_fresh_live_lock_is_not_reclaimed(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

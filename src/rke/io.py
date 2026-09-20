@@ -13,6 +13,21 @@ class ConcurrentWriteError(ValueError):
     """Raised when a bounded durable-write lock cannot be acquired."""
 
 
+class LockAtomicPublishUnsupported(OSError):
+    """Raised when the repository filesystem cannot publish locks atomically."""
+
+    code = "lock_atomic_publish_unsupported"
+
+    def __init__(self, path: Path, cause: OSError):
+        super().__init__(
+            f"Cannot publish durable-write lock at {path}: the repository filesystem "
+            "must support atomic hard links. Move the repository to a compatible "
+            "filesystem or use a compatible mount configuration."
+        )
+        self.path = path
+        self.cause = cause
+
+
 class FileLock:
     """Cross-platform lock with atomically published ownership metadata."""
 
@@ -51,11 +66,41 @@ class FileLock:
             except FileExistsError:
                 self._token = None
                 return False
+            except OSError as error:
+                self._token = None
+                raise LockAtomicPublishUnsupported(self.path, error) from error
             return True
         finally:
             try:
                 candidate.unlink()
             except FileNotFoundError:
+                pass
+
+    def _clean_dead_candidates(self) -> None:
+        """Remove complete candidates whose recorded owner is demonstrably dead."""
+        pattern = f".{self.path.name}.candidate-*"
+        for candidate in self.path.parent.glob(pattern):
+            try:
+                record = json.loads(candidate.read_text(encoding="utf-8"))
+            except (FileNotFoundError, OSError, UnicodeDecodeError, json.JSONDecodeError):
+                continue
+            pid = record.get("pid") if isinstance(record, dict) else None
+            created_at = record.get("createdAt") if isinstance(record, dict) else None
+            token = record.get("token") if isinstance(record, dict) else None
+            if (
+                not isinstance(pid, int)
+                or isinstance(pid, bool)
+                or pid <= 0
+                or not isinstance(created_at, (int, float))
+                or isinstance(created_at, bool)
+                or not isinstance(token, str)
+                or not token
+                or self._process_alive(pid)
+            ):
+                continue
+            try:
+                candidate.unlink()
+            except (FileNotFoundError, OSError):
                 pass
 
     @staticmethod
@@ -127,6 +172,7 @@ class FileLock:
 
     def __enter__(self) -> FileLock:
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._clean_dead_candidates()
         deadline = time.monotonic() + self.timeout
         while True:
             if self._publish_lock():

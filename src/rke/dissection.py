@@ -23,6 +23,7 @@ MANIFEST_NAMES = {
 ENTRYPOINT_NAMES = {
     "main.py",
     "app.py",
+    "api.py",
     "server.py",
     "__main__.py",
     "main.ts",

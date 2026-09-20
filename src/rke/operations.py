@@ -6,11 +6,17 @@ import json
 from pathlib import Path
 from typing import Any, Callable, Iterator
 
-from .documentation import apply_documentation, assess_documentation, explain_change
+from .documentation import (
+    apply_documentation,
+    assess_documentation,
+    assess_documentation_bootstrap,
+    explain_change,
+)
 from .continuity import inspect_handoff, write_handoff
 from .coordination import plan_coordination, validate_coordination
 from .dissection import assess_dissection
 from .host_integration import host_recipe, install_host
+from .io import LockAtomicPublishUnsupported
 from .knowledge import build_indexes, inspect_bundle, register_knowledge
 from .manifest import DEFAULT_MANIFEST_PATH
 from .publication import scan_publication
@@ -418,6 +424,17 @@ def documentation_assess(root: Path, arguments: dict[str, Any]) -> tuple[dict[st
         root,
         base=string(arguments, "base"),
         manifest=string(arguments, "manifest", default=DEFAULT_MANIFEST),
+    )
+
+
+def documentation_bootstrap(root: Path, arguments: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    return (
+        assess_documentation_bootstrap(
+            root,
+            bundle=string(arguments, "bundle", default="docs/knowledge"),
+            manifest=string(arguments, "manifest", default=DEFAULT_MANIFEST),
+        ),
+        0,
     )
 
 
@@ -884,6 +901,15 @@ OPERATIONS = (
         knowledge_register,
     ),
     Operation(
+        "repo_documentation_bootstrap",
+        "Assess documentation foundation",
+        "Discover the minimum evidence-backed documentation foundation without authoring prose.",
+        object_schema({"bundle": STRING, "manifest": STRING}),
+        True,
+        True,
+        documentation_bootstrap,
+    ),
+    Operation(
         "repo_documentation_assess",
         "Assess documentation impact",
         "Classify a material Git delta as no-op, update, or decision-required.",
@@ -1039,6 +1065,8 @@ def invoke_operation(
         payload, exit_code = operation.handler(root, raw_arguments)
     except OperationError:
         raise
+    except LockAtomicPublishUnsupported as exc:
+        raise OperationError(str(exc), code=exc.code) from exc
     except Exception as exc:
         if isinstance(exc, (ValueError, json.JSONDecodeError)):
             raise OperationError(str(exc), code="invalid_operation_data") from exc

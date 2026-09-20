@@ -2,10 +2,10 @@
 type: Architecture Concept
 title: RKE architecture
 description: Defines the independently installed Repository Knowledge Engineering runtime, its shared CLI and MCP operation layer, repository boundaries, and relationship with EWF and OKF Tasks.
-timestamp: 2026-09-19T16:04:38+01:00
+timestamp: 2026-09-20T12:07:43+01:00
 authority: canonical
 verification: verified-working
-verified_at: 2026-09-19T16:04:38+01:00
+reviewed_at: 2026-09-20T12:09:29+01:00
 verified_against:
   - src/rke/operations.py
   - src/rke/cli.py
@@ -52,9 +52,22 @@ Yes: the CLI and MCP expose the same complete public operation registry, argumen
 
 Durable workflow state and knowledge manifests use repository-local locks, revision checks and atomic replacement. Each lock owner writes and synchronises a complete PID, creation-time and token record under a unique candidate name, then atomically publishes that record as the lock path; another process can therefore never observe a live creator's pre-metadata lock. A valid live owner is never evicted by age, a demonstrably dead owner is reclaimed immediately, and a malformed legacy or externally damaged record is reclaimed only after a short grace window. Token matching prevents an old holder from removing a replacement lock. Documentation application holds the manifest lock through verification and rollback so a failed transaction cannot erase a waiting manifest writer. Handoffs use collision-resistant identities and directory locking. Disposable retrieval and structure indexes use atomic last-writer-wins replacement and can always be rebuilt.
 
+Atomic lock publication requires hard-link support from the repository filesystem. RKE never falls back to a weaker locking algorithm: an unsupported filesystem returns `lock_atomic_publish_unsupported` with remediation guidance. A hard process death may leave a complete candidate file, so later acquisition removes only candidates whose valid recorded owner is demonstrably dead; live and malformed candidates are retained because deleting them could weaken mutual exclusion.
+
 The EWF skill is co-versioned in `skills/engineering-workflow`. Its operating contracts live only under the skill's `references/` directory: shared contracts are flat, phase-specific guidance is under `journeys/`, and opt-in capability guidance is under `extensions/`. The repository's `docs/knowledge/` directory is reserved for canonical RKE project knowledge and must not mirror those skill instructions.
 
 The Polaralias skills repository carries a synchronized catalogue mirror for agent discovery. A mirror may not contain a divergent runtime copy.
+
+The intended RKE 1.x stability surface and pre-1.0 qualification are consolidated in [`docs/compatibility.md`](../compatibility.md).
+At 1.0, that contract stabilises CLI operation names and principal arguments, MCP tool names and schemas, structured result semantics, exit-code meanings, the `.rke/repo-context.json` migration boundary, repository directory ownership, deprecation timing, and RKE-to-EWF compatibility expectations. `.engineering-workflow/state.json` remains an implementation detail.
+
+## Documentation bootstrap
+
+`rke documentation bootstrap` is the read-only deterministic entry point for “document this repository.” It classifies a repository as `no-rke`, `partial-rke`, or `mature-rke`; inventories existing canonical knowledge and instructions; identifies foundation gaps; and returns preserve, review, recommendation, evidence, and reader-query sets. It never authors prose or automatically supersedes existing documentation.
+
+The model or EWF journey traces real runtime evidence, writes only the necessary human-readable content, then uses knowledge registration, documentation apply, and context verification. A mature repository may correctly return `no-op`; bootstrap does not create a fixed set of files on every run.
+
+The frontmatter `reviewed_at` records the human content-review point. The verification receipt and current source hashes in `.rke/repo-context.json` are the authoritative machine freshness record.
 
 ## Repository selection
 

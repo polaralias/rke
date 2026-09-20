@@ -325,6 +325,14 @@ def build_parser() -> argparse.ArgumentParser:
     documentation_subparsers = documentation_parser.add_subparsers(
         dest="documentation_command", required=True
     )
+    documentation_bootstrap_parser = documentation_subparsers.add_parser(
+        "bootstrap", help="Assess the repository's documentation foundation without writing it."
+    )
+    documentation_bootstrap_parser.add_argument("--root", type=Path, default=Path.cwd())
+    documentation_bootstrap_parser.add_argument("--bundle", default="docs/knowledge")
+    documentation_bootstrap_parser.add_argument(
+        "--manifest", default=".rke/repo-context.json"
+    )
     documentation_assess_parser = documentation_subparsers.add_parser(
         "assess", help="Classify documentation impact from a Git base."
     )
@@ -595,6 +603,12 @@ def main() -> int:
                     "sources": args.source,
                     "manifest": args.manifest,
                 },
+            )
+        elif args.command == "documentation" and args.documentation_command == "bootstrap":
+            payload, exit_code = invoke_operation(
+                root,
+                "repo_documentation_bootstrap",
+                {"bundle": args.bundle, "manifest": args.manifest},
             )
         elif args.command == "documentation" and args.documentation_command == "assess":
             payload, exit_code = invoke_operation(

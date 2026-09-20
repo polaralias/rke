@@ -7,9 +7,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .dissection import assess_dissection
 from .io import FileLock, atomic_write_bytes, atomic_write_json, sibling_lock
-from .knowledge import build_indexes, inspect_bundle
-from .manifest import DEFAULT_MANIFEST_PATH, load_knowledge_manifest
+from .knowledge import build_indexes, inspect_bundle, parse_frontmatter
+from .manifest import DEFAULT_MANIFEST_PATH, LEGACY_MANIFEST_PATH, load_knowledge_manifest
+from .paths import repository_relative_path
 from .repo_context import (
     check_context,
     find_context,
@@ -39,6 +41,179 @@ def utc_now() -> str:
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     atomic_write_json(path, payload)
+
+
+def _read_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+
+def assess_documentation_bootstrap(
+    root: Path,
+    *,
+    bundle: str = "docs/knowledge",
+    manifest: str = DEFAULT_MANIFEST_PATH,
+) -> dict[str, Any]:
+    """Assess the minimum documentation foundation without mutating the repository."""
+    root = root.resolve()
+    inventory = assess_dissection(root)["codebaseMap"]
+    bundle_path, bundle_relative = repository_relative_path(
+        root, bundle, escape_code="knowledge_bundle_escape"
+    )
+    documentation = list(inventory["documentation"])
+    canonical: list[str] = []
+    generated_indexes: list[str] = []
+    concept_text: dict[str, str] = {}
+    if bundle_path.is_dir():
+        for path in sorted(bundle_path.rglob("*.md")):
+            relative = path.relative_to(root).as_posix()
+            content = _read_text(path)
+            if path.name.casefold() == "index.md" and any(
+                marker in content for marker in GENERATED_INDEX_MARKERS
+            ):
+                generated_indexes.append(relative)
+                continue
+            try:
+                metadata, body = parse_frontmatter(path)
+            except (OSError, UnicodeDecodeError, ValueError):
+                continue
+            if isinstance(metadata.get("type"), str):
+                canonical.append(relative)
+                concept_text[relative] = " ".join(
+                    str(value)
+                    for value in (
+                        metadata.get("type", ""),
+                        metadata.get("title", ""),
+                        metadata.get("description", ""),
+                        body,
+                    )
+                ).casefold()
+
+    manifest_target, manifest_relative, manifest_payload = load_knowledge_manifest(root, manifest)
+    legacy_target = root / LEGACY_MANIFEST_PATH
+    using_legacy_manifest = (
+        manifest == DEFAULT_MANIFEST_PATH
+        and not manifest_target.is_file()
+        and legacy_target.is_file()
+    )
+    manifest_exists = manifest_target.is_file() or using_legacy_manifest
+    actual_manifest = LEGACY_MANIFEST_PATH if using_legacy_manifest else manifest_relative
+    entries = manifest_payload["knowledge"]
+    bound = {entry["path"] for entry in entries}
+    verified = {
+        entry["path"] for entry in entries if isinstance(entry.get("verified"), dict)
+    }
+    readme_path = root / "README.md"
+    readme = "README.md" if readme_path.is_file() else None
+    readme_text = _read_text(readme_path)
+    readme_words = readme_text.split()
+    workflow_state = root / ".engineering-workflow" / "state.json"
+    decisions = [
+        path
+        for path in documentation
+        if any(part.casefold() in {"adr", "adrs", "decision", "decisions"} for part in Path(path).parts)
+    ]
+    review = [
+        path
+        for path in documentation
+        if path not in canonical
+        and any(
+            marker in path.casefold()
+            for marker in ("old", "legacy", "deprecated", "archive")
+        )
+    ]
+    all_concepts = "\n".join(concept_text.values())
+    has_system = "system overview" in all_concepts
+    has_architecture = "architecture concept" in all_concepts
+    has_runtime = "runtime" in all_concepts or "entrypoint" in all_concepts
+    operating_terms = (" install", " run", " test", " usage", " operate", " command")
+    has_operating = len(readme_words) >= 40 and any(term in f" {readme_text.casefold()}" for term in operating_terms)
+
+    gaps: list[str] = []
+    if readme is None:
+        gaps.append("no-repository-readme")
+    elif len(readme_words) < 40:
+        gaps.append("readme-too-thin")
+    if not canonical:
+        gaps.append("no-canonical-knowledge")
+    if not has_system:
+        gaps.append("no-system-overview")
+    if not has_architecture:
+        gaps.append("no-architecture-concept")
+    if inventory["entrypointCandidates"] and not has_runtime:
+        gaps.append("no-runtime-entrypoint-documentation")
+    if not has_operating:
+        gaps.append("no-operating-guide")
+    if canonical and not bound.issuperset(canonical):
+        gaps.append("no-source-bindings")
+    if bound and verified != bound:
+        gaps.append("unverified-canonical-knowledge")
+    if canonical and not generated_indexes:
+        gaps.append("no-generated-knowledge-index")
+
+    any_rke_state = manifest_exists or bool(canonical) or workflow_state.is_file()
+    if not any_rke_state:
+        starting_state = "no-rke"
+        outcome = "foundation-required"
+    elif gaps:
+        starting_state = "partial-rke"
+        outcome = "targeted-repair"
+    else:
+        starting_state = "mature-rke"
+        outcome = "no-op"
+
+    recommended: list[str] = []
+    if readme is None or "readme-too-thin" in gaps:
+        recommended.append("README.md")
+    if not has_system or not has_architecture:
+        recommended.append(f"{bundle_relative.rstrip('/')}/system-overview.md")
+    if inventory["entrypointCandidates"] and not has_runtime:
+        recommended.append(f"{bundle_relative.rstrip('/')}/runtime.md")
+    if not has_operating:
+        recommended.append(f"{bundle_relative.rstrip('/')}/operating-guide.md")
+
+    preserve = sorted(set(([readme] if readme else []) + canonical))
+    reader_queries = [
+        "What is this system and how is it structured?",
+        "Where does the runtime start and how does a request flow?",
+        "How do I install, run, test, and operate this repository?",
+    ]
+    return {
+        "result": "documentation-bootstrap-assessed",
+        "schemaVersion": 1,
+        "startingState": starting_state,
+        "outcome": outcome,
+        "claimBoundary": "assessment-only; the model authors prose from verified repository evidence",
+        "existing": {
+            "readme": readme,
+            "canonicalKnowledge": canonical,
+            "instructions": inventory["instructions"],
+            "decisions": sorted(decisions),
+            "generatedIndexes": generated_indexes,
+            "manifest": actual_manifest if manifest_exists else None,
+            "workflowState": ".engineering-workflow/state.json" if workflow_state.is_file() else None,
+            "runtimeEntrypointCandidates": inventory["entrypointCandidates"],
+        },
+        "gaps": gaps,
+        "recommendedFoundation": recommended,
+        "preserve": preserve,
+        "review": sorted(review),
+        "supersede": [],
+        "evidenceRequired": [
+            "trace-and-exercise-the-real-runtime-path",
+            "compare-declared-documentation-with-implementation-and-tests",
+            "bind-each-canonical-concept-to-explicit-source-patterns",
+            "verify-reader-queries-and-freshness-after-authoring",
+        ],
+        "readerQueries": reader_queries,
+        "nextOperations": [
+            "repo_knowledge_register",
+            "repo_documentation_apply",
+            "repo_context_verify",
+        ],
+    }
 
 
 def git_output(root: Path, arguments: list[str]) -> str:

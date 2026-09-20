@@ -57,6 +57,7 @@ rke activate --phase deliver --task-mode none --root C:\repos\service
 rke context find "where are credentials hydrated" --root C:\repos\service
 rke structure trace hydrateCredentials --direction both --root C:\repos\service
 rke dissection assess --root C:\repos\service
+rke documentation bootstrap --root C:\repos\service
 rke handoff write --topic credential-runtime --summary "Provider path is mapped." --next-action "Run the integration test." --root C:\repos\service
 rke handoff write --visibility shared --topic credential-runtime --summary "Provider path is mapped." --next-action "Run the integration test." --root C:\repos\service
 rke coordination validate --manifest local-docs/worktrees.json --root C:\repos\service
@@ -114,3 +115,5 @@ The formerly separate repository-dissection, design/decomposition, session-align
 - `scripts/` — compatibility wrappers for the original source layout; installed consumers should use the console commands.
 
 The copy of `engineering-workflow` in the Polaralias skills catalogue is a synchronized distribution mirror. Runtime implementation does not live in the skills repository.
+
+The planned 1.x public-interface, repository-format, directory-ownership, deprecation, and runtime-to-skill promises are consolidated in [docs/compatibility.md](docs/compatibility.md).
