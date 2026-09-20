@@ -54,7 +54,7 @@ class DurableIoTests(unittest.TestCase):
                 record = json.loads(path.read_text(encoding="utf-8"))
                 self.assertEqual(record["pid"], os.getpid())
 
-    def test_lock_reclaims_an_expired_live_owner(self) -> None:
+    def test_old_live_owner_is_never_reclaimed_by_age(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "resource.lock"
             path.write_text(
@@ -63,9 +63,31 @@ class DurableIoTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            with FileLock(path, timeout=0.1, stale_after=1):
+            with self.assertRaisesRegex(ConcurrentWriteError, "Timed out"):
+                with FileLock(path, timeout=0.03, malformed_grace=0):
+                    pass
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["token"], "expired")
+
+    def test_malformed_lock_is_reclaimed_after_a_short_grace(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "resource.lock"
+            path.write_text("{", encoding="utf-8")
+            old = time.time() - 10
+            os.utime(path, (old, old))
+
+            with FileLock(path, timeout=0.1, malformed_grace=0.01):
                 record = json.loads(path.read_text(encoding="utf-8"))
-                self.assertNotEqual(record["token"], "expired")
+                self.assertEqual(record["pid"], os.getpid())
+
+    def test_fresh_malformed_lock_is_not_reclaimed_during_its_grace(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "resource.lock"
+            path.write_text("", encoding="utf-8")
+
+            with self.assertRaisesRegex(ConcurrentWriteError, "Timed out"):
+                with FileLock(path, timeout=0.03, malformed_grace=60):
+                    pass
+            self.assertTrue(path.exists())
 
     def test_fresh_live_lock_is_not_reclaimed(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -77,7 +99,7 @@ class DurableIoTests(unittest.TestCase):
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(ConcurrentWriteError, "Timed out"):
-                with FileLock(path, timeout=0.03, stale_after=60):
+                with FileLock(path, timeout=0.03, malformed_grace=0):
                     pass
             self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["token"], "active")
 

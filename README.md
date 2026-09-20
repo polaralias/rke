@@ -83,7 +83,7 @@ The gate lives at `.githooks/pre-push`; installation configures `core.hooksPath=
 
 ## Retrieval and structural scope
 
-Repository retrieval uses BM25F and Git-backed content identity. Clean tracked files reuse Git object identity, while dirty, staged, untracked and uncertain files are content-hashed. Known credential locations are omitted, secret-like values are redacted, and the response reports those boundaries without returning the values.
+Repository retrieval uses BM25F and Git-backed content identity. Clean tracked files reuse Git object identity only after a batched, filter-aware content check; dirty, staged, untracked, uncertain and mismatched files are content-hashed by the indexer. Non-Git fallback traversal prunes dependency, vendor, archive and cache directories before descent. Known credential locations are omitted, secret-like values are redacted, and the response reports those boundaries without returning the values.
 
 Structural operations detect package and source scopes automatically, cache graph shards and widen only when the first likely scope is insufficient. Use repeatable `--scope <relative-path>` options to override selection or combine scopes. Whole-repository analysis fuses bounded shards instead of rejecting a repository at an arbitrary file count. Tree-sitter is preferred; unavailable or inconclusive parsing returns a bounded agent-review packet with explicit confidence and uncertainty.
 
@@ -91,7 +91,9 @@ Structural operations detect package and source scopes automatically, cache grap
 
 `rke-eval` loads its packaged corpus without a repository-relative data dependency. It invokes a configured model and consumes model usage, so deterministic tests remain the default inner loop.
 
-`rke.__version__` is the only version source. Release Drafter prepares one serialized draft from that version. A matching `vX.Y.Z` tag runs the complete tests, separately clean-installs wheel and sdist, attests both artifacts, and submits them to PyPI through trusted publishing when the repository `pypi` environment is configured. Only a successful PyPI job promotes or creates the single public GitHub release. Published tags are immutable.
+Run `python scripts/benchmark_freshness.py` to measure cold indexing, warm retrieval and one changed file across 1k, 10k and 50k tracked-file fixtures. Override the matrix with `--sizes`; the full default benchmark is intentionally kept out of routine CI.
+
+`rke.__version__` is the only version source. Release Drafter prepares one serialized draft from that version. A matching `vX.Y.Z` tag runs the complete tests, separately clean-installs wheel and sdist, attests both artifacts, and submits them to PyPI through trusted publishing when the repository `pypi` environment is configured. Only a successful PyPI job promotes or creates the single public GitHub release, and that job receives explicit `GH_REPO` identity rather than depending on a checkout. Published tags are immutable.
 
 ## Preserved workflows
 

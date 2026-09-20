@@ -4,7 +4,7 @@ import ast
 import unittest
 from pathlib import Path
 
-from rke import cli, engineering, freshness, index, manifest, repo_context, retrieval
+from rke import cli, dissection, engineering, filesystem, freshness, index, manifest, repo_context, retrieval
 
 
 PACKAGE = Path(__file__).resolve().parents[1] / "src" / "rke"
@@ -27,6 +27,8 @@ class ModuleBoundaryTests(unittest.TestCase):
         self.assertIs(repo_context.load_knowledge_manifest, manifest.load_knowledge_manifest)
         self.assertIs(repo_context.write_knowledge_manifest, manifest.write_knowledge_manifest)
         self.assertIs(repo_context.eligible_files, freshness.eligible_files)
+        self.assertIs(freshness.pruned_repository_files, filesystem.pruned_repository_files)
+        self.assertIs(dissection.pruned_repository_files, filesystem.pruned_repository_files)
         self.assertIs(
             repo_context.clean_git_blob_identities,
             freshness.clean_git_blob_identities,

@@ -30,6 +30,7 @@ def test_release_draft_has_one_serialized_main_branch_trigger() -> None:
 
 def test_tag_release_validates_and_publishes_the_built_artifacts() -> None:
     workflow = read_workflow("publish-release.yml")
+    publish_github = workflow.split("publish-github:", 1)[1]
     assert '"v*.*.*"' in workflow
     assert "scripts/validate_release.py --tag" in workflow
     assert "scripts/smoke_distribution.py dist/*.whl" in workflow
@@ -39,4 +40,5 @@ def test_tag_release_validates_and_publishes_the_built_artifacts() -> None:
     assert 'gh release view "$tag"' in workflow
     assert 'gh release edit "$tag" --draft=false' in workflow
     assert "needs: publish-pypi" in workflow
+    assert "GH_REPO: ${{ github.repository }}" in publish_github
     assert workflow.index("publish-pypi:") < workflow.index("publish-github:")

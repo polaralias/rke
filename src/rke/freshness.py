@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import hashlib
+import stat
 import subprocess
 from pathlib import Path
 
+from .filesystem import has_excluded_directory, pruned_repository_files
 from .security import is_sensitive_path
 
 
@@ -35,19 +37,12 @@ def git_visible_files(root: Path) -> list[Path] | None:
 
 
 def eligible_files(root: Path) -> tuple[list[Path], list[str], list[str]]:
-    excluded_parts = {
-        ".git",
-        ".engineering-workflow",
-        "__pycache__",
-        "archive",
-        "node_modules",
-    }
     candidates = git_visible_files(root)
+    inaccessible: list[str] = []
     if candidates is None:
-        candidates = list(root.rglob("*"))
+        candidates, inaccessible = pruned_repository_files(root)
     resolved_root = root.resolve()
     eligible: list[Path] = []
-    inaccessible: list[str] = []
     sensitive: list[str] = []
     for path in candidates:
         try:
@@ -55,12 +50,19 @@ def eligible_files(root: Path) -> tuple[list[Path], list[str], list[str]]:
             if is_sensitive_path(relative):
                 sensitive.append(relative.as_posix())
                 continue
-            if (
-                path.is_file()
-                and not excluded_parts.intersection(relative.parts)
-                and path.resolve().is_relative_to(resolved_root)
-                and path.stat().st_size <= 1_000_000
-            ):
+            if has_excluded_directory(relative):
+                continue
+            metadata = path.lstat()
+            if stat.S_ISLNK(metadata.st_mode):
+                resolved = path.resolve(strict=True)
+                if not resolved.is_relative_to(resolved_root) or not resolved.is_file():
+                    continue
+                size = resolved.stat().st_size
+            elif stat.S_ISREG(metadata.st_mode):
+                size = metadata.st_size
+            else:
+                continue
+            if size <= 1_000_000:
                 eligible.append(path)
         except (OSError, RuntimeError, ValueError):
             try:
@@ -133,8 +135,10 @@ def clean_git_blob_identities(
         and (eligible_paths is None or path in eligible_paths)
         and "\n" not in path
         and "\r" not in path
-        and (root / path).is_file()
-        and not (root / path).is_symlink()
+        and (
+            eligible_paths is not None
+            or ((root / path).is_file() and not (root / path).is_symlink())
+        )
     }
     if not candidates:
         return {}

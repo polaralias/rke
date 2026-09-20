@@ -21,11 +21,11 @@ class FileLock:
         path: Path,
         *,
         timeout: float = 10.0,
-        stale_after: float = 3600.0,
+        malformed_grace: float = 1.0,
     ) -> None:
         self.path = path
         self.timeout = timeout
-        self.stale_after = stale_after
+        self.malformed_grace = malformed_grace
         self._descriptor: int | None = None
         self._token: str | None = None
 
@@ -67,19 +67,21 @@ class FileLock:
             except FileNotFoundError:
                 return True
             record = None
-        created_at = record.get("createdAt") if isinstance(record, dict) else None
         pid = record.get("pid") if isinstance(record, dict) else None
-        age = time.time() - (
-            float(created_at)
-            if isinstance(created_at, (int, float)) and not isinstance(created_at, bool)
-            else observed.st_mtime
+        created_at = record.get("createdAt") if isinstance(record, dict) else None
+        token = record.get("token") if isinstance(record, dict) else None
+        owner_pid = pid if isinstance(pid, int) and not isinstance(pid, bool) and pid > 0 else None
+        valid_owner = (
+            owner_pid is not None
+            and isinstance(created_at, (int, float))
+            and not isinstance(created_at, bool)
+            and isinstance(token, str)
+            and bool(token)
         )
-        owner_dead = (
-            isinstance(pid, int)
-            and not isinstance(pid, bool)
-            and not self._process_alive(pid)
-        )
-        if not owner_dead and age < self.stale_after:
+        if valid_owner:
+            if owner_pid is not None and self._process_alive(owner_pid):
+                return False
+        elif time.time() - observed.st_mtime < self.malformed_grace:
             return False
         try:
             current = self.path.stat()

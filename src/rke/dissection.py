@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import subprocess
-import os
 from pathlib import Path
 from typing import Any
 
+from .filesystem import has_excluded_directory, pruned_repository_files
 from .security import is_sensitive_path
 
 
@@ -70,22 +70,11 @@ def _eligible_files(root: Path) -> list[Path]:
             if value
         ]
     else:
-        candidates = []
-        excluded = {
-            ".git",
-            ".engineering-workflow",
-            ".rke-cache",
-            "node_modules",
-            "vendor",
-            "__pycache__",
-        }
-        for current, directories, filenames in os.walk(root):
-            directories[:] = [name for name in directories if name not in excluded]
-            base = Path(current)
-            candidates.extend((base / name).relative_to(root) for name in filenames)
+        walked, _ = pruned_repository_files(root)
+        candidates = [path.relative_to(root) for path in walked]
     for relative in candidates:
         path = root / relative
-        if {".git", ".engineering-workflow", ".rke-cache", "node_modules", "vendor"}.intersection(relative.parts):
+        if has_excluded_directory(relative):
             continue
         if is_sensitive_path(relative):
             continue

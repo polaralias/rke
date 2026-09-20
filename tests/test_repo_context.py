@@ -135,12 +135,12 @@ class RepoContextCliTests(unittest.TestCase):
                 "# Architecture\n\nRepository knowledge is retrieved here.\n",
                 encoding="utf-8",
             )
-            original_is_file = Path.is_file
+            original_lstat = Path.lstat
 
-            def guarded_is_file(path: Path) -> bool:
+            def guarded_lstat(path: Path):
                 if path == unreadable:
                     raise PermissionError("simulated inaccessible reparse point")
-                return original_is_file(path)
+                return original_lstat(path)
 
             with (
                 patch.object(
@@ -148,7 +148,7 @@ class RepoContextCliTests(unittest.TestCase):
                     "git_visible_files",
                     return_value=[readable, unreadable],
                 ),
-                patch.object(Path, "is_file", guarded_is_file),
+                patch.object(Path, "lstat", guarded_lstat),
             ):
                 payload = repo_context.find_context(root, "repository knowledge")
 
