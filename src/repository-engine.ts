@@ -158,11 +158,11 @@ export class RepositoryEngine {
     const started=performance.now();
     if(this.refreshInFlight)return this.refreshInFlight;
     if(!forceVerification&&this.lastFresh&&await this.hotStateMatches())return{...this.lastFresh,hashedFiles:0,changed:0,rowsChanged:0,parsed:0,reused:this.lastFresh.checked,reusedFiles:this.lastFresh.checked,failed:0,omittedSensitive:0,elapsedMs:Math.round((performance.now()-started)*100)/100};
-    if(!this.refreshInFlight)this.refreshInFlight=this.refresh().finally(()=>{this.refreshInFlight=undefined;});
+    if(!this.refreshInFlight)this.refreshInFlight=this.refresh(forceVerification).finally(()=>{this.refreshInFlight=undefined;});
     return this.refreshInFlight;
   }
 
-  private async refresh(): Promise<FreshnessResult> {
+  private async refresh(verifyContent=false): Promise<FreshnessResult> {
     const started = performance.now();
     this.refreshCount++;
     const discovery=await this.discover(),candidates=discovery.candidates;
@@ -172,7 +172,7 @@ export class RepositoryEngine {
     let changed = 0, hashedFiles = 0, parsed = 0, reused = 0, failed = 0, omittedSensitive = 0;
     for (const candidate of candidates) {
       const previous = existing.get(candidate.path);
-      if(discovery.gitBacked&&candidate.gitOid&&!discovery.dirty.has(candidate.path)&&previous?.extractor_version===EXTRACTOR_VERSION&&previous.git_oid===candidate.gitOid){seen.add(candidate.path);reused++;continue;}
+      if(!verifyContent&&discovery.gitBacked&&candidate.gitOid&&!discovery.dirty.has(candidate.path)&&previous?.extractor_version===EXTRACTOR_VERSION&&previous.git_oid===candidate.gitOid){seen.add(candidate.path);reused++;continue;}
       const absolute = repositoryPath(this.root, candidate.path);
       let details;
       try { details = await stat(absolute); } catch { continue; }

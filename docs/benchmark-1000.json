@@ -12,7 +12,7 @@
     "reusedFiles": 0,
     "failed": 0,
     "omittedSensitive": 0,
-    "elapsedMs": 3472.31
+    "elapsedMs": 3570.28
   },
   "hot": {
     "checked": 1000,
@@ -25,11 +25,11 @@
     "reusedFiles": 1000,
     "failed": 0,
     "omittedSensitive": 0,
-    "elapsedMs": 339.57
+    "elapsedMs": 318.46
   },
   "verifiedWarm": {
     "checked": 1000,
-    "hashedFiles": 0,
+    "hashedFiles": 1000,
     "changed": 0,
     "rowsChanged": 0,
     "removed": 0,
@@ -38,7 +38,7 @@
     "reusedFiles": 1000,
     "failed": 0,
     "omittedSensitive": 0,
-    "elapsedMs": 463.56
+    "elapsedMs": 2175.53
   },
   "changed": {
     "checked": 1000,
@@ -51,21 +51,21 @@
     "reusedFiles": 999,
     "failed": 0,
     "omittedSensitive": 0,
-    "elapsedMs": 462.01
+    "elapsedMs": 387.67
   },
   "resources": {
-    "peakRss": 515575808,
-    "finalRss": 69623808,
-    "maxRss": 505576,
+    "peakRss": 514256896,
+    "finalRss": 71344128,
+    "maxRss": 502204,
     "databaseBytes": 1093632,
     "gitProcessCount": 58,
     "refreshCount": 3,
     "parserChildProcessCount": 0,
     "repeatedQueryRss": {
-      "first": 73240576,
-      "last": 70860800,
-      "minimum": 70135808,
-      "maximum": 73887744,
+      "first": 77725696,
+      "last": 72454144,
+      "minimum": 72040448,
+      "maximum": 77914112,
       "strictlyMonotonic": false
     }
   }

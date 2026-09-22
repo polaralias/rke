@@ -162,12 +162,13 @@ Tracked `.rke/repo-context.json` bindings remain canonical repository data. SQLi
 
 ### Freshness contract
 
-The rewrite preserves RKE's current correctness guarantee that modification time and size alone are not proof of unchanged content.
+The rewrite uses a fast retrieval check and a deterministic full content check. Windows CI proved that Git can miss a same-size edit whose timestamps are deliberately restored, so the fast check does not claim to prove byte-for-byte freshness in that case.
 
 - Git supplies the visible file set and clean/staged/dirty classification where available.
-- Clean tracked candidates may use batched Git object/content verification.
+- Fast retrieval may reuse clean tracked candidates through batched Git object identity after a status/HEAD check.
+- `context check` reads and hashes every eligible file, including clean tracked candidates.
 - Dirty, staged, untracked, uncertain, or non-Git files are content-hashed.
-- Metadata may avoid unnecessary work only when it does not weaken the public freshness guarantee.
+- Search may be stale under deliberately restored file metadata until `context check` performs full verification; this limitation is explicit in the public contract.
 - An unchanged request performs no parsing and no search-index reconstruction.
 - Freshness, parsing, storage update, and querying remain separate operations even when one public command composes them.
 
@@ -413,10 +414,10 @@ The former uncommitted edits to `pyproject.toml`, `src/rke/freshness_benchmark.p
 
 - The npm runtime exposes 41 operations through one TypeScript registry shared by CLI and MCP.
 - The deterministic suite contains 37 passing tests, including executable success and malformed-input failure evidence for every public operation, exact CLI/MCP registry parity, malformed workflow state, concurrent state mutation, bounded repository-scale command output, SQLite migration/corruption recovery/concurrent readers, single-refresh impact composition, coalesced concurrent freshness, stable dirty-worktree reuse and second-edit detection, repository escape, secret eviction, legacy receipt migration, Gitleaks-safe source identities, evaluator corpus discovery, and clean transport behaviour.
-- SQLite schema version 4 stores Git object identity alongside files, symbols, imports, edges, chunks, and FTS5 fields; each hot Git query compares status and HEAD plus content hashes for dirty paths, explicit full Git verification checks tracked identities, batched Git classification avoids per-file warm stats, and content hashing remains mandatory for dirty, staged, untracked, uncertain and non-Git files.
+- SQLite schema version 4 stores Git object identity alongside files, symbols, imports, edges, chunks, and FTS5 fields. Hot Git queries compare status and HEAD plus content hashes for dirty paths. `context check` hashes all eligible content, including clean tracked files, because CI proved Git status can miss a same-size edit with restored timestamps on Windows. This bounds the fast path honestly: search can be stale under deliberately restored metadata until a full check. The acceptance change is supported by that cross-platform failure and keeps a deterministic full-verification route rather than claiming Git metadata proves content identity.
 - Release validation loads all 24 claimed Tree-sitter grammar fixtures in-process and validates FTS5, version identity, bins, and the frozen operation inventory.
 - Checked-in retrieval and structure corpora pass at 5/5 queries and 14/14 structural cases respectively.
-- Mixed-language resource evidence is stored in `benchmark-1000.json` and `benchmark-10000.json` in this directory. Both final-code runs performed exactly three refreshes across cold, explicit verified-warm, changed-file, and 50 repeated-query phases; the one-file edit produced one hash and one parse, and parser child-process count was zero. At 10,000 files, cold parsing took 31.2 seconds, the authoritative hot Git check took 1.40 seconds on this Windows host, peak RSS was 532.8 MB, and repeated-query RSS was non-monotonic within 0.2 MB. The checked-in `benchmark-50000.json` is a prior implementation measurement and must be replaced by the in-progress final-code run before release.
+- Mixed-language resource evidence is stored in `benchmark-1000.json` and `benchmark-10000.json` in this directory. Both final-code runs performed exactly three refreshes across cold, explicit full verification, changed-file, and 50 repeated-query phases; the one-file edit produced one hash and one parse, and parser child-process count was zero. At 10,000 files, cold parsing took 31.3 seconds, the hot Git check took 2.14 seconds, full content verification hashed all 10,000 files without parsing and took 21.9 seconds, and peak RSS was 536.7 MB on this Windows host. The checked-in `benchmark-50000.json` is a prior implementation measurement and must be replaced by a final-code run before release.
 - The earlier Python benchmark could not supply meaningful pre-WP3 ceilings because it indexed tiny non-code `.txt` files and did not measure memory. The immutable v0.10.0 reports therefore record the first valid mixed-language baseline rather than inventing retrospective clean-main limits.
 - The canonical EWF 4.6.0 package contains immediate-falsifier reset, protected acceptance, compact convergence continuity, and positive/nearby-negative prompts; its catalogue mirror is digest-identical apart from declared provenance metadata.
 - The packaged `rke-eval` executable loads eight canonical agent-behaviour cases from the npm artefact, including decisive-falsifier and incidental-failure convergence cases, and grades workflow phase and gates as well as activation order, authority boundaries, authored evidence, reader retrieval, and knowledge freshness without making model evaluation part of the deterministic inner loop.
