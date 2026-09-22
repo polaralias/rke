@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { existsSync, watch, type FSWatcher } from "node:fs";
+import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir, rename, stat } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 
@@ -31,10 +31,7 @@ export interface FreshnessResult {
 }
 
 export class RepositoryEngine {
-  private dirty=true;
-  private watcher:FSWatcher|undefined;
-  private lastFresh:FreshnessResult|undefined;
-  private constructor(public readonly root: string, private readonly db: DatabaseSync, private readonly parser: SourceParser) {try{this.watcher=watch(root,{recursive:true},(_event,filename)=>{const path=String(filename??"").replaceAll("\\","/");if(!isExcludedPath(path)&&!path.startsWith(".engineering-workflow/"))this.dirty=true;});this.watcher.unref();}catch{this.watcher=undefined;}}
+  private constructor(public readonly root: string, private readonly db: DatabaseSync, private readonly parser: SourceParser) {}
 
   static async open(root: string): Promise<RepositoryEngine> {
     const normalized = resolve(root);
@@ -53,7 +50,7 @@ export class RepositoryEngine {
     }
   }
 
-  close(): void { this.watcher?.close();this.parser.close();this.db.close(); }
+  close(): void { this.parser.close();this.db.close(); }
 
   private migrate(): void {
     this.db.exec("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
@@ -105,7 +102,6 @@ export class RepositoryEngine {
 
   async ensureFresh(): Promise<FreshnessResult> {
     const started = performance.now();
-    if(this.watcher&&!this.dirty&&this.lastFresh)return{...this.lastFresh,hashedFiles:0,changed:0,rowsChanged:0,removed:0,parsed:0,reused:this.lastFresh.checked,reusedFiles:this.lastFresh.checked,failed:0,elapsedMs:Math.round((performance.now()-started)*100)/100};
     const candidates = await this.discover();
     const existingRows = this.db.prepare("SELECT id,path,size,mtime_ms,ctime_ms,content_hash,extractor_version FROM files").all() as FileRow[];
     const existing = new Map(existingRows.map((row) => [row.path, row]));
@@ -141,7 +137,7 @@ export class RepositoryEngine {
       try { removeFts.run(row.id); remove.run(row.id); this.db.exec("COMMIT"); removed++; } catch (error) { this.db.exec("ROLLBACK"); throw error; }
     }
     this.db.prepare("INSERT OR REPLACE INTO meta(key,value) VALUES('last_refresh',?)").run(new Date().toISOString());
-    const result={ checked: candidates.length, hashedFiles, changed, rowsChanged:changed+removed, removed, parsed, reused, reusedFiles:reused, failed, omittedSensitive, elapsedMs: Math.round((performance.now() - started) * 100) / 100 };this.dirty=false;this.lastFresh=result;return result;
+    return { checked: candidates.length, hashedFiles, changed, rowsChanged:changed+removed, removed, parsed, reused, reusedFiles:reused, failed, omittedSensitive, elapsedMs: Math.round((performance.now() - started) * 100) / 100 };
   }
 
   private replaceFile(fingerprint: FileFingerprint, parsed: ParsedFile): void {

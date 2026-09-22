@@ -23,8 +23,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-22T07:04:23.379Z",
-        "evidence": "RKE 0.10.0 TypeScript rewrite implementation, full validation, exact tarball smoke tests, benchmarks, and compatibility tests.",
+        "verifiedAt": "2026-09-22T07:14:21.174Z",
+        "evidence": "RKE 0.10.0 qualification plus macOS CI evidence that freshness now uses deterministic metadata scans instead of watcher timing.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -252,7 +252,7 @@
           },
           {
             "path": "src/repository-engine.ts",
-            "sha256": "d6fb401c8cd5c90c1771c276ac103563a28060ce04b3a3d6a5876c32c001b2a5"
+            "sha256": "af8051b1523656391c50a6376415698d3cd46603efc57d6278e382967f8088ac"
           },
           {
             "path": "src/security.ts",
@@ -450,5 +450,5 @@
       }
     }
   ],
-  "revision": 28
+  "revision": 29
 }
