@@ -12,7 +12,7 @@
     "reusedFiles": 0,
     "failed": 0,
     "omittedSensitive": 0,
-    "elapsedMs": 3996.22
+    "elapsedMs": 3472.31
   },
   "hot": {
     "checked": 1000,
@@ -25,7 +25,7 @@
     "reusedFiles": 1000,
     "failed": 0,
     "omittedSensitive": 0,
-    "elapsedMs": 15.37
+    "elapsedMs": 339.57
   },
   "verifiedWarm": {
     "checked": 1000,
@@ -38,7 +38,7 @@
     "reusedFiles": 1000,
     "failed": 0,
     "omittedSensitive": 0,
-    "elapsedMs": 161.8
+    "elapsedMs": 463.56
   },
   "changed": {
     "checked": 1000,
@@ -51,20 +51,21 @@
     "reusedFiles": 999,
     "failed": 0,
     "omittedSensitive": 0,
-    "elapsedMs": 195.83
+    "elapsedMs": 462.01
   },
   "resources": {
-    "peakRss": 510631936,
-    "finalRss": 70856704,
-    "maxRss": 499824,
+    "peakRss": 515575808,
+    "finalRss": 69623808,
+    "maxRss": 505576,
     "databaseBytes": 1093632,
-    "gitProcessCount": 8,
+    "gitProcessCount": 58,
+    "refreshCount": 3,
     "parserChildProcessCount": 0,
     "repeatedQueryRss": {
-      "first": 71450624,
-      "last": 72007680,
-      "minimum": 71450624,
-      "maximum": 72007680,
+      "first": 73240576,
+      "last": 70860800,
+      "minimum": 70135808,
+      "maximum": 73887744,
       "strictlyMonotonic": false
     }
   }

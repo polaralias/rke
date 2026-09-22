@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { existsSync, watch, type FSWatcher } from "node:fs";
+import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir, rename, stat } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 
@@ -12,8 +12,6 @@ import type { ParsedFile } from "./types.js";
 const MAX_FILE_BYTES = 1_048_576;
 const CACHE_PATH = ".engineering-workflow/cache/rke.sqlite";
 const SCHEMA_VERSION = "4";
-const HOT_VERIFICATION_MS = 5_000;
-const WATCH_BARRIER_MS = 10;
 
 interface FileFingerprint { path: string; size: number; mtimeMs: number; ctimeMs:number; hash?: string; gitOid?:string }
 interface FileRow extends Record<string, unknown> { id: number; path: string; size: number; mtime_ms: number; ctime_ms:number; content_hash: string; git_oid:string|null; extractor_version: string }
@@ -35,12 +33,11 @@ export interface FreshnessResult {
 export class RepositoryEngine {
   private refreshInFlight:Promise<FreshnessResult>|undefined;
   private gitProcessCount=0;
-  private watcher:FSWatcher|undefined;
-  private dirty=true;
-  private changeGeneration=0;
-  private lastVerifiedAt=0;
+  private refreshCount=0;
+  private lastGitHead:string|undefined;
+  private lastDirtyIdentities=new Map<string,string>();
   private lastFresh:FreshnessResult|undefined;
-  private constructor(public readonly root: string, private readonly db: DatabaseSync, private readonly parser: SourceParser) {try{this.watcher=watch(root,{recursive:true},(_event,filename)=>{if(!filename)return;const path=String(filename).replaceAll("\\","/");if(path!==".engineering-workflow"&&!path.startsWith(".engineering-workflow/")&&!isExcludedPath(path)){this.changeGeneration++;this.dirty=true;}});this.watcher.unref();}catch{this.watcher=undefined;}}
+  private constructor(public readonly root: string, private readonly db: DatabaseSync, private readonly parser: SourceParser) {}
 
   static async open(root: string): Promise<RepositoryEngine> {
     const normalized = resolve(root);
@@ -59,7 +56,7 @@ export class RepositoryEngine {
     }
   }
 
-  close(): void { this.watcher?.close();this.parser.close();this.db.close(); }
+  close(): void { this.parser.close();this.db.close(); }
 
   private migrate(): void {
     this.db.exec("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
@@ -102,43 +99,72 @@ export class RepositoryEngine {
 
   private runGit(...args:string[]):ReturnType<typeof git>{this.gitProcessCount++;return git(this.root,...args);}
 
-  private async discover(): Promise<{candidates:FileFingerprint[];dirty:Set<string>;gitBacked:boolean}> {
+  private gitStatus():{head:string|undefined;dirty:Set<string>;untracked:Set<string>}|undefined{
+    const status=this.runGit("status","--porcelain=v2","-z","--untracked-files=all","--branch","--",".",":(exclude).engineering-workflow/**");
+    if(status.code!==0)return undefined;
+    const dirty=new Set<string>(),untracked=new Set<string>(),entries=status.stdout.split("\0").filter(Boolean);
+    const head=entries.find(entry=>entry.startsWith("# branch.oid "))?.slice("# branch.oid ".length);
+    for(let index=0;index<entries.length;index++){
+      const entry=entries[index]!;let path:string|undefined;
+      if(entry.startsWith("? ")){path=entry.slice(2);untracked.add(path.replaceAll("\\","/"));}
+      else if(entry.startsWith("1 "))path=/^1 (?:\S+ ){7}([\s\S]+)$/.exec(entry)?.[1];
+      else if(entry.startsWith("2 ")){path=/^2 (?:\S+ ){8}([\s\S]+)$/.exec(entry)?.[1];const oldPath=entries[++index];if(oldPath)dirty.add(oldPath.replaceAll("\\","/"));}
+      else if(entry.startsWith("u "))path=/^u (?:\S+ ){9}([\s\S]+)$/.exec(entry)?.[1];
+      if(path)dirty.add(path.replaceAll("\\","/"));
+    }
+    return{head,dirty,untracked};
+  }
+
+  private async dirtyIdentities(paths:Set<string>):Promise<Map<string,string>>{
+    const identities=new Map<string,string>();
+    for(const path of paths){
+      if(isExcludedPath(path)||path===CACHE_PATH||!this.parser.supports(path))continue;
+      const absolute=repositoryPath(this.root,path);
+      let details;
+      try{details=await stat(absolute);}catch{identities.set(path,"missing");continue;}
+      if(!details.isFile()){identities.set(path,"not-file");continue;}
+      if(details.size>MAX_FILE_BYTES){identities.set(path,`oversize:${details.size}`);continue;}
+      try{identities.set(path,sha256(await readFile(absolute)));}catch{identities.set(path,"missing");}
+    }
+    return identities;
+  }
+
+  private async hotStateMatches():Promise<boolean>{
+    const status=this.gitStatus();
+    if(!status||status.head!==this.lastGitHead)return false;
+    const identities=await this.dirtyIdentities(status.dirty);
+    if(identities.size!==this.lastDirtyIdentities.size)return false;
+    for(const [path,identity] of identities)if(this.lastDirtyIdentities.get(path)!==identity)return false;
+    return true;
+  }
+
+  private async discover(): Promise<{candidates:FileFingerprint[];dirty:Set<string>;gitBacked:boolean;head:string|undefined}> {
     const staged=this.runGit("ls-files","-s","-z","--cached");
     if(staged.code===0){
       const tracked=new Map<string,string>();
       for(const entry of staged.stdout.split("\0").filter(Boolean)){const match=/^\d+ ([0-9a-f]+) 0\t([\s\S]+)$/.exec(entry);if(match)tracked.set(match[2]!.replaceAll("\\","/"),match[1]!);}
-      const status=this.runGit("status","--porcelain=v2","-z","--untracked-files=all");
-      if(status.code!==0)throw new Error(status.stderr.trim()||"Unable to classify repository freshness");
-      const dirty=new Set<string>(),untracked=new Set<string>(),entries=status.stdout.split("\0").filter(Boolean);
-      for(let index=0;index<entries.length;index++){
-        const entry=entries[index]!;let path:string|undefined;
-        if(entry.startsWith("? ")){path=entry.slice(2);untracked.add(path.replaceAll("\\","/"));}
-        else if(entry.startsWith("1 "))path=/^1 (?:\S+ ){7}([\s\S]+)$/.exec(entry)?.[1];
-        else if(entry.startsWith("2 ")){path=/^2 (?:\S+ ){8}([\s\S]+)$/.exec(entry)?.[1];index++;}
-        else if(entry.startsWith("u "))path=/^u (?:\S+ ){9}([\s\S]+)$/.exec(entry)?.[1];
-        if(path)dirty.add(path.replaceAll("\\","/"));
-      }
+      const status=this.gitStatus();
+      if(!status)throw new Error("Unable to classify repository freshness");
+      const{dirty,untracked,head}=status;
       const candidates=[...[...tracked].map(([path,gitOid])=>({path,size:0,mtimeMs:0,ctimeMs:0,gitOid})),...[...untracked].map(path=>({path,size:0,mtimeMs:0,ctimeMs:0}))];
-      return{candidates:candidates.filter(({path})=>!isExcludedPath(path)&&path!==CACHE_PATH&&this.parser.supports(path)),dirty,gitBacked:true};
+      return{candidates:candidates.filter(({path})=>!isExcludedPath(path)&&path!==CACHE_PATH&&this.parser.supports(path)),dirty,gitBacked:true,head};
     }
     const paths:string[]=[];const visit=async(directory:string):Promise<void>=>{for(const entry of await readdir(directory,{withFileTypes:true})){const absolute=join(directory,entry.name);const relative=absolute.slice(this.root.length+1).replaceAll("\\","/");if(isExcludedPath(relative))continue;if(entry.isDirectory())await visit(absolute);else if(entry.isFile())paths.push(relative);}};await visit(this.root);
     const candidates=paths.map(path=>({path,size:0,mtimeMs:0,ctimeMs:0})).filter(({path})=>path!==CACHE_PATH&&this.parser.supports(path));
-    return{candidates,dirty:new Set(candidates.map(({path})=>path)),gitBacked:false};
+    return{candidates,dirty:new Set(candidates.map(({path})=>path)),gitBacked:false,head:undefined};
   }
 
   async ensureFresh(forceVerification=false): Promise<FreshnessResult> {
     const started=performance.now();
-    if(!forceVerification&&this.watcher&&this.lastFresh&&!this.dirty&&Date.now()-this.lastVerifiedAt<HOT_VERIFICATION_MS){
-      await new Promise(resolve=>setTimeout(resolve,WATCH_BARRIER_MS));
-      if(!this.dirty)return{...this.lastFresh,hashedFiles:0,changed:0,rowsChanged:0,parsed:0,reused:this.lastFresh.checked,reusedFiles:this.lastFresh.checked,failed:0,omittedSensitive:0,elapsedMs:Math.round((performance.now()-started)*100)/100};
-    }
+    if(this.refreshInFlight)return this.refreshInFlight;
+    if(!forceVerification&&this.lastFresh&&await this.hotStateMatches())return{...this.lastFresh,hashedFiles:0,changed:0,rowsChanged:0,parsed:0,reused:this.lastFresh.checked,reusedFiles:this.lastFresh.checked,failed:0,omittedSensitive:0,elapsedMs:Math.round((performance.now()-started)*100)/100};
     if(!this.refreshInFlight)this.refreshInFlight=this.refresh().finally(()=>{this.refreshInFlight=undefined;});
     return this.refreshInFlight;
   }
 
   private async refresh(): Promise<FreshnessResult> {
     const started = performance.now();
-    const startingGeneration=this.changeGeneration;
+    this.refreshCount++;
     const discovery=await this.discover(),candidates=discovery.candidates;
     const existingRows = this.db.prepare("SELECT id,path,size,mtime_ms,ctime_ms,content_hash,git_oid,extractor_version FROM files").all() as FileRow[];
     const existing = new Map(existingRows.map((row) => [row.path, row]));
@@ -175,7 +201,7 @@ export class RepositoryEngine {
     }
     this.db.prepare("INSERT OR REPLACE INTO meta(key,value) VALUES('last_refresh',?)").run(new Date().toISOString());
     const result={checked:candidates.length,hashedFiles,changed,rowsChanged:changed+removed,removed,parsed,reused,reusedFiles:reused,failed,omittedSensitive,elapsedMs:Math.round((performance.now()-started)*100)/100};
-    this.lastFresh=result;this.lastVerifiedAt=Date.now();this.dirty=this.changeGeneration!==startingGeneration;return result;
+    this.lastFresh=result;this.lastGitHead=discovery.head;this.lastDirtyIdentities=discovery.gitBacked?await this.dirtyIdentities(discovery.dirty):new Map();return result;
   }
 
   private replaceFile(fingerprint: FileFingerprint, parsed: ParsedFile): void {
@@ -284,5 +310,5 @@ export class RepositoryEngine {
   }
 
   async fileIdentities(paths?:readonly string[]):Promise<Record<string,unknown>>{await this.ensureFresh();const selected=paths?.map(safeRelative)??[];const rows=selected.length?this.db.prepare(`SELECT path,size,mtime_ms AS mtimeMs,content_hash AS contentHash,language,status FROM files WHERE path IN (${selected.map(()=>"?").join(",")}) ORDER BY path`).all(...selected):this.db.prepare("SELECT path,size,mtime_ms AS mtimeMs,content_hash AS contentHash,language,status FROM files ORDER BY path").all();return{repository:this.root,files:rows};}
-  processMetrics():{gitProcessCount:number;parserChildProcessCount:number}{return{gitProcessCount:this.gitProcessCount,parserChildProcessCount:0};}
+  processMetrics():{gitProcessCount:number;refreshCount:number;parserChildProcessCount:number}{return{gitProcessCount:this.gitProcessCount,refreshCount:this.refreshCount,parserChildProcessCount:0};}
 }
