@@ -23,8 +23,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-22T13:56:57.417Z",
-        "evidence": "Reviewed the Git-backed freshness implementation, measured benchmark artefacts, EWF convergence contract, and validation results together.",
+        "verifiedAt": "2026-09-22T19:57:07.604Z",
+        "evidence": "Reviewed the TypeScript runtime, source identity and full verification semantics, final 1k/10k/50k benchmark artifacts, EWF convergence contract, and green six-platform CI matrix.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -48,15 +48,15 @@
           },
           {
             "path": "docs/benchmark-1000.json",
-            "sha256": "244565211ab52450ebc0545f9c359f00e6f2caf4bd8329f248c9dcb6a4050d40"
+            "sha256": "acf42909fec698f232c8cb070428e35026261a4428e60b77c16427c53fdfd000"
           },
           {
             "path": "docs/benchmark-10000.json",
-            "sha256": "4cf89523385424af3ee88e7ec36b162f2e25b5b3ba92f571595d522752e4819a"
+            "sha256": "79f894fdb48132e103b21bd3ea4ead7d5365a309f6250aaf0cf4e7851cc27401"
           },
           {
             "path": "docs/benchmark-50000.json",
-            "sha256": "b2d3af57fabcc1fed47c47aaccf9402d69dde52059384b5e779a1e7ada7b0a24"
+            "sha256": "21ccea7acf662c31f87174205ebff724bd55c841a459bddf07ccffeec9961a59"
           },
           {
             "path": "docs/compatibility.md",
@@ -64,11 +64,11 @@
           },
           {
             "path": "docs/knowledge/rke-architecture.md",
-            "sha256": "77a73c06b6d5ab41049e7869b50a9e19f8d93b31e4cc850e6c927cce991e295b"
+            "sha256": "5be423e0cc8c62a5821caaf425c9e776ff1b781fa17fe9533cdce96540b82bc1"
           },
           {
             "path": "docs/typescript-rewrite-plan.md",
-            "sha256": "cbf16494b1259195bbb3ac375652227831569fce9e0c054840bb9bd7e7c13fb1"
+            "sha256": "6b601771298780a4cb67d6c15292e275850a0312161f26eaca3ca9c9546a97a8"
           },
           {
             "path": "eslint.config.js",
@@ -84,7 +84,7 @@
           },
           {
             "path": "README.md",
-            "sha256": "dd261be9d24ce44893dab13d64250559749f04ae3e954d5cab527bff659c604f"
+            "sha256": "c7b0c24e569fad6d5554340904f5a1ff8f71f401bab0948cf1fc2720c4982468"
           },
           {
             "path": "scripts/benchmark-freshness.ts",
@@ -176,7 +176,7 @@
           },
           {
             "path": "skills/engineering-workflow/references/repo-context-contract.md",
-            "sha256": "31505817413137522dfc07adf0cf05ccbdfcb08d8bad4ed448ba6ca3b05670b4"
+            "sha256": "8c7b9fc6b81f427150dd079789d12861ad8077187b0f7494904e538085b4d80d"
           },
           {
             "path": "skills/engineering-workflow/references/repo-context-manifest.schema.json",
@@ -240,7 +240,7 @@
           },
           {
             "path": "src/operations.ts",
-            "sha256": "5f0861944cfe30c3580a69733ad91a792b7c137afa2219a774ad93c6057980bf"
+            "sha256": "3c899d27b8d147364b406c23c50c3dfa30cd72aca7e077a2acb78ab8e25de17c"
           },
           {
             "path": "src/parser.ts",
@@ -252,7 +252,7 @@
           },
           {
             "path": "src/repository-engine.ts",
-            "sha256": "991a68ddb47e6521314e644f3bd18b2e3573cefcd62bb8193b23bf08483695df"
+            "sha256": "888b5d99a4c6a919cc798190dd10de85f2229a4f2c33c330cb504fcb6fb4fa0f"
           },
           {
             "path": "src/security.ts",
@@ -276,7 +276,7 @@
           },
           {
             "path": "tests/engine.test.ts",
-            "sha256": "318d1e9bc832ad63b25bac8b04b391d58137463e9248702ddc9670105ecd97ef"
+            "sha256": "4b998f5c23162e064624be94ef706c827dec8ffb986b1a788bd5af8428887741"
           },
           {
             "path": "tests/fixtures/documentation-bootstrap/partial-state/.rke/repo-context.json",
@@ -424,7 +424,7 @@
           },
           {
             "path": "tests/operations.test.ts",
-            "sha256": "6480ffc7dda98f1601bd1b1480ccabe05d63c951890a9b1a191607138c39055e"
+            "sha256": "a67595200c91233a95a8441fa5da5d1db055bc8aede827054e2dda8641bbce9c"
           },
           {
             "path": "tests/parser.test.ts",
@@ -436,7 +436,7 @@
           },
           {
             "path": "tests/security.test.ts",
-            "sha256": "630369fe297b70084b30dbc76d32c385e4460c03d52de41d7bd7e4219c755b0d"
+            "sha256": "9ecb67113d0176ffce60d8730aa58975adf98626e2a54e0a83a53ca1dbd5bd60"
           },
           {
             "path": "tests/transport.test.ts",
@@ -450,5 +450,5 @@
       }
     }
   ],
-  "revision": 30
+  "revision": 31
 }
