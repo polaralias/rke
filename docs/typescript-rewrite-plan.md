@@ -275,13 +275,14 @@ Canonical changes:
    - the corrective-attempt limit;
    - the reset or kill condition.
 2. Update `skills/engineering-workflow/SKILL.md` with the workflow-level convergence rule:
-   - after two assumption-relevant corrective failures against the same acceptance condition, stop delivery;
+   - when the predefined falsifier occurs, stop delivery immediately; otherwise stop after two individually inconclusive assumption-relevant corrective failures against the same acceptance condition;
    - capture what the attempt taught;
    - run `rke journey enter design`, which reopens `acceptance-defined`;
    - explicitly reaffirm, simplify, replace, or abandon the design before more delivery;
    - do not count incidental build, fixture, or typographical failures as design failures.
+   - do not weaken acceptance to fit the implementation; change it only when new authoritative evidence changes required behaviour, and record why.
 3. Make simplify/delete an explicit valid design-reset outcome.
-4. Keep the learning in the owning task, handoff, checkpoint, or canonical knowledge surface as appropriate; do not overload the Git-delta-bound change-explanation receipt.
+4. Keep the learning in the owning task, handoff, checkpoint, or canonical knowledge surface as appropriate; continuity carries the minimum active hypothesis, assumption, acceptance, falsifier, relevant-failure count, and latest learning; do not overload the Git-delta-bound change-explanation receipt.
 5. Do not add `rke experiment` commands or a new runtime subsystem in this version.
 
 Machine-testable coverage:
@@ -368,7 +369,7 @@ Acceptance:
 | Structural quality | Checked-in recall, precision, trace, impact, map, and output-size floors |
 | Incrementality | Instrumented zero-parse warm query and exactly-one-parse changed-file cases |
 | Memory | Mixed 1k/10k/50k corpus with parent peak RSS and final RSS; 50 repeated MCP requests |
-| Process behaviour | Zero Python processes and zero parser child processes |
+| Process behaviour | Measured Git subprocess count, zero Python processes and zero parser child processes |
 | Storage | Transactional one-file update, migration, corruption recovery, concurrent readers |
 | Security | Path escape, symlink/reparse point, secret omission/redaction, malformed input, size limits |
 | Cross-platform | Windows, Linux, and macOS package installation and path semantics |
@@ -388,7 +389,7 @@ The rewrite specifically closes the observed resource failure mode. The release 
 - one changed file performs one parse and one bounded transaction;
 - a 50,000-file mixed-language fixture completes without multi-gigabyte transient allocation;
 - after warm-up, 50 identical MCP retrieval calls do not show monotonic retained-memory growth and finish within the agreed bounded variance from the warmed baseline;
-- all benchmark reports include wall time, parent peak RSS, final RSS, database size, files hashed, files parsed, rows changed, and child-process counts.
+- all benchmark reports include wall time, parent peak RSS, final RSS, database size, files hashed, files parsed, rows changed, measured Git process count, and parser child-process count.
 
 Exact numeric latency and RSS ceilings must be recorded in the benchmark corpus before WP3 implementation begins, using clean-main evidence and the available machine profile. Changing those ceilings later requires an explicit design decision, not an undocumented test relaxation.
 
@@ -400,7 +401,7 @@ This rewrite is exploratory in parser packaging, SQLite integration, and retriev
 - Supporting evidence: the current failure analysis, existing typed structural model, Node Tree-sitter ecosystem, SQLite query model, and comparable in-process tooling.
 - Expected observation: parity fixtures pass while warm retrieval performs zero parses/rebuilds and repeated MCP memory stabilizes.
 - Falsifiers: required language coverage cannot be packaged reliably; SQLite/FTS cannot preserve acceptable retrieval; or resource measurements remain proportional to the whole repository in memory.
-- Corrective limit: two assumption-relevant failed attempts for the same parser, storage, ranking, or distribution design.
+- Corrective limit: a predefined falsifier causes immediate reset; otherwise two individually inconclusive assumption-relevant failed attempts for the same parser, storage, ranking, or distribution design.
 - Reset action: return to design and choose a simpler TypeScript architecture or different TypeScript-compatible dependency.
 - Kill condition: only a proven platform requirement with no viable TypeScript solution may justify a narrowly scoped exception, and that exception requires its own ADR and removal plan.
 
@@ -411,14 +412,15 @@ The former uncommitted edits to `pyproject.toml`, `src/rke/freshness_benchmark.p
 ## v0.10.0 implementation evidence
 
 - The npm runtime exposes 41 operations through one TypeScript registry shared by CLI and MCP.
-- The deterministic suite contains 33 passing tests, including executable success and malformed-input failure evidence for every public operation, exact CLI/MCP registry parity, malformed workflow state, concurrent state mutation, SQLite migration/corruption recovery/concurrent readers, repository escape, secret eviction, legacy receipt migration, Gitleaks-safe source identities, evaluator corpus discovery, and clean transport behaviour.
-- SQLite schema version 3 stores files, symbols, imports, edges, chunks, and FTS5 fields; a persistent watched engine avoids warm reconstruction.
+- The deterministic suite contains 36 passing tests, including executable success and malformed-input failure evidence for every public operation, exact CLI/MCP registry parity, malformed workflow state, concurrent state mutation, bounded repository-scale command output, SQLite migration/corruption recovery/concurrent readers, single-refresh impact composition, coalesced concurrent freshness, repository escape, secret eviction, legacy receipt migration, Gitleaks-safe source identities, evaluator corpus discovery, and clean transport behaviour.
+- SQLite schema version 4 stores Git object identity alongside files, symbols, imports, edges, chunks, and FTS5 fields; watcher-invalidated hot state is bounded by an event-delivery barrier and periodic Git verification, batched Git classification avoids per-file warm stats, and content hashing remains mandatory for dirty, staged, untracked, uncertain and non-Git files.
 - Release validation loads all 24 claimed Tree-sitter grammar fixtures in-process and validates FTS5, version identity, bins, and the frozen operation inventory.
 - Checked-in retrieval and structure corpora pass at 5/5 queries and 14/14 structural cases respectively.
-- Mixed-language resource evidence is stored in `benchmark-1000.json`, `benchmark-10000.json`, and `benchmark-50000.json` in this directory. At 50,000 files, cold parsing completed in 199.9 seconds, peak RSS was 609.7 MB, final RSS was 262.0 MB, warm refresh took 0.02 ms with zero hashes and parses, one changed file produced one hash and one parse, child-process count was zero, and 50 repeated queries were non-monotonic within a 12 KB RSS range.
+- Mixed-language resource evidence is stored in `benchmark-1000.json`, `benchmark-10000.json`, and `benchmark-50000.json` in this directory. At 50,000 files, cold parsing completed in 192.2 seconds, peak RSS was 546.7 MB, final RSS was 373.4 MB, hot-cache refresh took 19.97 ms, forced Git-verified warm refresh took 770.99 ms with zero hashes and parses, and one changed file produced one hash and one parse in 852.72 ms. The run measured 10 Git subprocesses and zero parser child processes; 50 repeated queries were non-monotonic within a 3.0 MB RSS range.
 - The earlier Python benchmark could not supply meaningful pre-WP3 ceilings because it indexed tiny non-code `.txt` files and did not measure memory. The immutable v0.10.0 reports therefore record the first valid mixed-language baseline rather than inventing retrospective clean-main limits.
-- The canonical EWF 4.5.0 package contains the convergence contract and positive/nearby-negative prompts; its catalogue mirror is digest-identical apart from declared provenance metadata.
-- The packaged `rke-eval` executable loads six canonical agent-behaviour cases from the npm artefact, runs selected cases in isolated repositories with a bounded timeout, and grades activation order, authority boundaries, authored evidence, reader retrieval, and knowledge freshness without making model evaluation part of the deterministic inner loop.
+- The canonical EWF 4.6.0 package contains immediate-falsifier reset, protected acceptance, compact convergence continuity, and positive/nearby-negative prompts; its catalogue mirror is digest-identical apart from declared provenance metadata.
+- The packaged `rke-eval` executable loads eight canonical agent-behaviour cases from the npm artefact, including decisive-falsifier and incidental-failure convergence cases, and grades workflow phase and gates as well as activation order, authority boundaries, authored evidence, reader retrieval, and knowledge freshness without making model evaluation part of the deterministic inner loop.
+- A focused 2026-09-22 Codex host evaluation passed both convergence cases: the first observed falsifier persisted design re-entry with `acceptance-defined` reopened, while two incidental failures remained in delivery with acceptance unchanged and the gate closed.
 
 ## Completion definition
 

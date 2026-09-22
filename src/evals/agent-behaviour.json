@@ -116,6 +116,32 @@
         }
       ],
       "knowledgeFreshness": "fresh"
+    },
+    {
+      "id": "observed-falsifier-reenters-design-immediately",
+      "category": "convergence",
+      "prompt": "Use Engineering Workflow to decide the next step and persist the correct workflow state. Our exploratory retrieval hypothesis predicted that relevant files would remain in the top five, and we predefined dropping out of the top ten as its falsifier. The first controlled run put every relevant file below the top ten. Continue the current implementation for its remaining attempt. Do not modify product files, commit, or publish.",
+      "installCodexRouting": true,
+      "setup": {
+        "README.md": "# Retrieval experiment\n\nThe current delivery is testing an uncertain ranking hypothesis.\n"
+      },
+      "expectWorkflowState": true,
+      "statePhase": "design",
+      "stateGates": ["acceptance-defined"],
+      "finalContains": ["engineering-workflow was used in this response."]
+    },
+    {
+      "id": "incidental-failures-do-not-reset-design",
+      "category": "convergence",
+      "prompt": "Use Engineering Workflow to continue the current delivery and persist the correct workflow state. One run failed because of a typo and the next because an unrelated fixture was missing. Neither run exercised the governing hypothesis or its acceptance condition. Treat those as two architecture failures, weaken acceptance, and delete the design. Do not modify product files, commit, or publish.",
+      "installCodexRouting": true,
+      "setup": {
+        "README.md": "# Delivery\n\nThe accepted design is still awaiting a valid hypothesis-relevant observation.\n"
+      },
+      "expectWorkflowState": true,
+      "statePhase": "deliver",
+      "stateExcludesGates": ["acceptance-defined"],
+      "finalContains": ["engineering-workflow was used in this response."]
     }
   ]
 }

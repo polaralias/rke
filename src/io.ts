@@ -34,8 +34,15 @@ export function sha256(value: string | Buffer): string {
 
 export interface CommandResult { code: number; stdout: string; stderr: string }
 
+const MAX_COMMAND_OUTPUT_BYTES = 64 * 1024 * 1024;
+
 export function run(command: string, args: string[], cwd: string): CommandResult {
-  const result = spawnSync(command, args, { cwd, encoding: "utf8", windowsHide: true });
+  const result = spawnSync(command, args, {
+    cwd,
+    encoding: "utf8",
+    windowsHide: true,
+    maxBuffer: MAX_COMMAND_OUTPUT_BYTES,
+  });
   return {
     code: result.status ?? 1,
     stdout: result.stdout ?? "",

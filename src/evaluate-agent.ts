@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,7 +15,8 @@ interface ReaderQuery { query: string; expectedPaths: string[] }
 interface EvaluationCase {
   id: string; category: string; prompt: string; setup: Record<string, string>;
   installCodexRouting?: boolean; expectWorkflowState: boolean; mustActivateBefore?: string[];
-  stateStatus?: string; finalContains?: string[]; finalExcludes?: string[];
+  stateStatus?: string; statePhase?:string; stateGates?:string[]; stateExcludesGates?:string[];
+  finalContains?: string[]; finalExcludes?: string[];
   filesContain?: Record<string, string>; forbiddenPaths?: string[];
   manifestKnowledgePaths?: string[]; readerQueries?: ReaderQuery[];
   knowledgeFreshness?: "fresh" | "stale"; supersededPaths?: string[];
@@ -24,6 +25,7 @@ interface Corpus { schema: number; cases: EvaluationCase[] }
 interface Options { corpus: string; cases: string[]; codex: string; model?: string; timeoutMs: number; list: boolean }
 
 const DEFAULT_CORPUS = resolve(dirname(fileURLToPath(import.meta.url)), "../../src/evals/agent-behaviour.json");
+const PACKAGED_EWF = resolve(dirname(fileURLToPath(import.meta.url)), "../../skills/engineering-workflow");
 const MAX_CAPTURE = 32_000;
 
 function options(argv: string[]): Options {
@@ -87,6 +89,8 @@ async function grade(root: string, item: EvaluationCase, execution: Awaited<Retu
     try { state = await readJson<Record<string, unknown>>(statePath); } catch (error) { check("workflow-state-valid", false, String(error)); }
   }
   if (state && item.stateStatus) check("workflow-status", state.status === item.stateStatus, { expected: item.stateStatus, actual: state.status });
+  if(state&&item.statePhase)check("workflow-phase",state.primary_phase===item.statePhase,{expected:item.statePhase,actual:state.primary_phase});
+  if(state&&(item.stateGates||item.stateExcludesGates)){const gates=new Set(Array.isArray(state.outstanding_gates)?state.outstanding_gates.map(String):[]);if(item.stateGates)check("workflow-gates",item.stateGates.every(gate=>gates.has(gate)),{expected:item.stateGates,actual:[...gates]});if(item.stateExcludesGates)check("workflow-excluded-gates",item.stateExcludesGates.every(gate=>!gates.has(gate)),{excluded:item.stateExcludesGates,actual:[...gates]});}
   if (state && item.mustActivateBefore) {
     const activation = state.activation as Record<string, unknown> | undefined;
     const dirty = new Set(Array.isArray(activation?.dirtyPaths) ? activation.dirtyPaths.map(String) : []);
@@ -131,6 +135,7 @@ async function evaluate(item: EvaluationCase, config: Options): Promise<Record<s
     git(root, "init"); git(root, "config", "user.email", "rke-eval@example.invalid"); git(root, "config", "user.name", "RKE Evaluation");
     await writeSetup(root, item.setup);
     if (item.installCodexRouting) {
+      await cp(PACKAGED_EWF, join(root, ".agents", "skills", "engineering-workflow"), { recursive: true });
       const installed = await installHost(root, "codex", "HEAD", false);
       if (installed.exitCode) throw new Error(JSON.stringify(installed.payload));
     }

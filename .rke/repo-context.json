@@ -23,8 +23,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-22T07:14:21.174Z",
-        "evidence": "RKE 0.10.0 qualification plus macOS CI evidence that freshness now uses deterministic metadata scans instead of watcher timing.",
+        "verifiedAt": "2026-09-22T13:56:57.417Z",
+        "evidence": "Reviewed the Git-backed freshness implementation, measured benchmark artefacts, EWF convergence contract, and validation results together.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -48,15 +48,15 @@
           },
           {
             "path": "docs/benchmark-1000.json",
-            "sha256": "a9727fa795eac5e4cb1c072c9ac909e38b5f45592cfe666364f276dfb73acb3c"
+            "sha256": "244565211ab52450ebc0545f9c359f00e6f2caf4bd8329f248c9dcb6a4050d40"
           },
           {
             "path": "docs/benchmark-10000.json",
-            "sha256": "bd270f5cca70e76ac633dcfc77f4950f292bdcb5affc639d07e1f6bc977f761c"
+            "sha256": "4cf89523385424af3ee88e7ec36b162f2e25b5b3ba92f571595d522752e4819a"
           },
           {
             "path": "docs/benchmark-50000.json",
-            "sha256": "2b7ba009f9cc3656295ae0cf6f149b0c0b7b15b9a4d1457cdd68d2840ca5e353"
+            "sha256": "b2d3af57fabcc1fed47c47aaccf9402d69dde52059384b5e779a1e7ada7b0a24"
           },
           {
             "path": "docs/compatibility.md",
@@ -64,11 +64,11 @@
           },
           {
             "path": "docs/knowledge/rke-architecture.md",
-            "sha256": "810406c2c0f2b7f143119b5430eef04bc53b90cd72ce11bff94e09f162fa2b6b"
+            "sha256": "77a73c06b6d5ab41049e7869b50a9e19f8d93b31e4cc850e6c927cce991e295b"
           },
           {
             "path": "docs/typescript-rewrite-plan.md",
-            "sha256": "249cd3d6036929d99923f709b59566b61bd7cfb597c34cf9be7c536e753b449b"
+            "sha256": "cbf16494b1259195bbb3ac375652227831569fce9e0c054840bb9bd7e7c13fb1"
           },
           {
             "path": "eslint.config.js",
@@ -84,11 +84,11 @@
           },
           {
             "path": "README.md",
-            "sha256": "d4cfb0e90b719b4530a479adcea1cc5c76b173eca81b9ee14df48e2eddbaccbe"
+            "sha256": "dd261be9d24ce44893dab13d64250559749f04ae3e954d5cab527bff659c604f"
           },
           {
             "path": "scripts/benchmark-freshness.ts",
-            "sha256": "e2b075d748462b47f885f04b5da5f0e7d220040be4f323f80c5d2adb280f302a"
+            "sha256": "8f5e451b1e7476efcf108f26edf3bc37481183e1e1d731d4a3d760e73df7c50d"
           },
           {
             "path": "scripts/no-python.ts",
@@ -96,7 +96,7 @@
           },
           {
             "path": "scripts/smoke-distribution.ts",
-            "sha256": "13adc5c2d7f7317a766ef0ddad1c3e35f9e1fadfd1c0bbf135ddcd1caf2ae3bb"
+            "sha256": "a13805f158ff764c7834f0a58ba6c8304fc65ec8b2ecfb201e4ca195c058d978"
           },
           {
             "path": "scripts/smoke-packed.ts",
@@ -124,7 +124,7 @@
           },
           {
             "path": "skills/engineering-workflow/references/continuity.md",
-            "sha256": "435df6866d90cc0245549be3de186f28a8c779066a8619fb00ec90dee814a106"
+            "sha256": "3eaa73932df2dfce758256042641639a9f5b78e3c65c4c52020087d7b55cd053"
           },
           {
             "path": "skills/engineering-workflow/references/documentation-lifecycle.md",
@@ -152,7 +152,7 @@
           },
           {
             "path": "skills/engineering-workflow/references/journeys/design.md",
-            "sha256": "72d677a5abaf9a1b85cd5d919a48b18d9bf098deebd614930cf23982ad7a543d"
+            "sha256": "9264cb90a9a559a50349d10065f5ff08a5d4508d3d662ae48074df0e0531c0e1"
           },
           {
             "path": "skills/engineering-workflow/references/journeys/understand.md",
@@ -172,11 +172,11 @@
           },
           {
             "path": "skills/engineering-workflow/references/quality-coverage.md",
-            "sha256": "e42ddf91b841f1062c478b60cf19e4edbbd23db1beccfac3e8705fb896169fe0"
+            "sha256": "acf9392431e3896f2cf6895fbc6cd8626db58beb85203c84550ee0eb9d866ace"
           },
           {
             "path": "skills/engineering-workflow/references/repo-context-contract.md",
-            "sha256": "de1a8aac1d9e2cdbc9824dc24531c2b78bc69f34a18ceb9551a3e9f6d4db5eea"
+            "sha256": "31505817413137522dfc07adf0cf05ccbdfcb08d8bad4ed448ba6ca3b05670b4"
           },
           {
             "path": "skills/engineering-workflow/references/repo-context-manifest.schema.json",
@@ -192,11 +192,11 @@
           },
           {
             "path": "skills/engineering-workflow/SKILL.md",
-            "sha256": "07157535003f53dc451d8130060b07547674b0773f777cd97c591b1af28ad6f6"
+            "sha256": "6574cc87157a5d034797226c50f0cad90b516a92c7bb218a2c1155d57c9930ad"
           },
           {
             "path": "skills/engineering-workflow/tests/prompts.md",
-            "sha256": "30542ec64aba585b91cbad7135eb4c2cef6fa3db1804a23db3773a6b981b4855"
+            "sha256": "7d0bd4ae3a8a00dcb3532f31085861a6419bf1b8bc7c43e0e1df83c34a3f925d"
           },
           {
             "path": "src/cli-routes.ts",
@@ -212,11 +212,11 @@
           },
           {
             "path": "src/evals/agent-behaviour.json",
-            "sha256": "ddcd1a533390e42c1269c6ece189297c0f683581d33fef51922e7826b6788f15"
+            "sha256": "d431f3aaf958bb9ae7f94811356ce9304a2999c2d3a55ea09eaaff601b973a5b"
           },
           {
             "path": "src/evaluate-agent.ts",
-            "sha256": "74dc6c293d9ed322756ef30401873a82c0575c3042fd6490345bc0c01557a684"
+            "sha256": "2bb8139acfaac758bb1cd0665d3e0064ec0c4159c1b19a698afb618acb98a135"
           },
           {
             "path": "src/hooks/pre-compaction.ts",
@@ -232,7 +232,7 @@
           },
           {
             "path": "src/io.ts",
-            "sha256": "199d4d934c15a1812f893cde370a0c248d2d214bda52cc5ec0464484be91f180"
+            "sha256": "0ec257cbe7ea58c2196331d97ef5423e388d0bf19b1cc02fc33150a0eac08324"
           },
           {
             "path": "src/mcp.ts",
@@ -252,7 +252,7 @@
           },
           {
             "path": "src/repository-engine.ts",
-            "sha256": "af8051b1523656391c50a6376415698d3cd46603efc57d6278e382967f8088ac"
+            "sha256": "991a68ddb47e6521314e644f3bd18b2e3573cefcd62bb8193b23bf08483695df"
           },
           {
             "path": "src/security.ts",
@@ -276,7 +276,7 @@
           },
           {
             "path": "tests/engine.test.ts",
-            "sha256": "9c51bbcc2de08181b642c64e61647cdd4574008397202ba45a76b228741694e6"
+            "sha256": "318d1e9bc832ad63b25bac8b04b391d58137463e9248702ddc9670105ecd97ef"
           },
           {
             "path": "tests/fixtures/documentation-bootstrap/partial-state/.rke/repo-context.json",
@@ -436,11 +436,11 @@
           },
           {
             "path": "tests/security.test.ts",
-            "sha256": "66e756b750b6b799301475ce5c1c337e1c1efa0d7b81b557589848e0524407f7"
+            "sha256": "630369fe297b70084b30dbc76d32c385e4460c03d52de41d7bd7e4219c755b0d"
           },
           {
             "path": "tests/transport.test.ts",
-            "sha256": "af2148a0b6117b59090b3d5891d6c46cf00d9569ed427884a3d66f29321ddb00"
+            "sha256": "ceb662c33c5a34ec2929cbfa69ff48c410a01e6b64fcb7293e2d08ae2b2a6fd5"
           },
           {
             "path": "tsconfig.json",
@@ -450,5 +450,5 @@
       }
     }
   ],
-  "revision": 29
+  "revision": 30
 }

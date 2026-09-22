@@ -23,5 +23,5 @@ const request=JSON.stringify({jsonrpc:"2.0",id:1,method:"initialize",params:{pro
 const transport=spawnSync(process.execPath,[mcp,"--root",root],{cwd:root,input:request,encoding:"utf8",windowsHide:true});
 assert.equal(transport.status,0,transport.stderr);assert.match(transport.stdout,/repo_find_context/);
 const evaluation=spawnSync(process.execPath,[evaluator,"--list"],{cwd:root,encoding:"utf8",windowsHide:true});
-assert.equal(evaluation.status,0,evaluation.stderr);assert.equal((JSON.parse(evaluation.stdout) as {caseCount:number}).caseCount,6);
+assert.equal(evaluation.status,0,evaluation.stderr);assert.equal((JSON.parse(evaluation.stdout) as {caseCount:number}).caseCount,8);
 console.log(`Clean npm artefact smoke passed at ${root}: version, parser retrieval, MCP tool discovery, and evaluator corpus.`);

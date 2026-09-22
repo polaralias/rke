@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { existsSync } from "node:fs";
+import { existsSync, watch, type FSWatcher } from "node:fs";
 import { mkdir, readFile, readdir, rename, stat } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 
@@ -11,10 +11,12 @@ import type { ParsedFile } from "./types.js";
 
 const MAX_FILE_BYTES = 1_048_576;
 const CACHE_PATH = ".engineering-workflow/cache/rke.sqlite";
-const SCHEMA_VERSION = "3";
+const SCHEMA_VERSION = "4";
+const HOT_VERIFICATION_MS = 5_000;
+const WATCH_BARRIER_MS = 10;
 
-interface FileFingerprint { path: string; size: number; mtimeMs: number; ctimeMs:number; hash?: string }
-interface FileRow extends Record<string, unknown> { id: number; path: string; size: number; mtime_ms: number; ctime_ms:number; content_hash: string; extractor_version: string }
+interface FileFingerprint { path: string; size: number; mtimeMs: number; ctimeMs:number; hash?: string; gitOid?:string }
+interface FileRow extends Record<string, unknown> { id: number; path: string; size: number; mtime_ms: number; ctime_ms:number; content_hash: string; git_oid:string|null; extractor_version: string }
 
 function queryTerms(value: string): string[] {
   return [...new Set(value.toLowerCase().match(/[\p{L}\p{N}_$-]{2,}/gu) ?? [])].slice(0, 20);
@@ -31,7 +33,14 @@ export interface FreshnessResult {
 }
 
 export class RepositoryEngine {
-  private constructor(public readonly root: string, private readonly db: DatabaseSync, private readonly parser: SourceParser) {}
+  private refreshInFlight:Promise<FreshnessResult>|undefined;
+  private gitProcessCount=0;
+  private watcher:FSWatcher|undefined;
+  private dirty=true;
+  private changeGeneration=0;
+  private lastVerifiedAt=0;
+  private lastFresh:FreshnessResult|undefined;
+  private constructor(public readonly root: string, private readonly db: DatabaseSync, private readonly parser: SourceParser) {try{this.watcher=watch(root,{recursive:true},(_event,filename)=>{if(!filename)return;const path=String(filename).replaceAll("\\","/");if(path!==".engineering-workflow"&&!path.startsWith(".engineering-workflow/")&&!isExcludedPath(path)){this.changeGeneration++;this.dirty=true;}});this.watcher.unref();}catch{this.watcher=undefined;}}
 
   static async open(root: string): Promise<RepositoryEngine> {
     const normalized = resolve(root);
@@ -50,7 +59,7 @@ export class RepositoryEngine {
     }
   }
 
-  close(): void { this.parser.close();this.db.close(); }
+  close(): void { this.watcher?.close();this.parser.close();this.db.close(); }
 
   private migrate(): void {
     this.db.exec("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
@@ -59,7 +68,7 @@ export class RepositoryEngine {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS files (
         id INTEGER PRIMARY KEY, path TEXT NOT NULL UNIQUE, size INTEGER NOT NULL, mtime_ms REAL NOT NULL, ctime_ms REAL NOT NULL,
-        content_hash TEXT NOT NULL, language TEXT NOT NULL, parser_id TEXT NOT NULL, grammar_version TEXT NOT NULL,
+        content_hash TEXT NOT NULL, git_oid TEXT, language TEXT NOT NULL, parser_id TEXT NOT NULL, grammar_version TEXT NOT NULL,
         extractor_version TEXT NOT NULL, status TEXT NOT NULL, diagnostics_json TEXT NOT NULL, indexed_at TEXT NOT NULL
       );
       CREATE TABLE IF NOT EXISTS symbols (
@@ -91,30 +100,58 @@ export class RepositoryEngine {
     this.db.prepare("INSERT OR REPLACE INTO meta(key,value) VALUES('repository_identity',?)").run(sha256(this.root));
   }
 
-  private async discover(): Promise<FileFingerprint[]> {
-    const listed = git(this.root, "ls-files", "-z", "--cached", "--others", "--exclude-standard");
-    let paths:string[];
-    if(listed.code===0)paths=listed.stdout.split("\0").filter(Boolean).map(path=>path.replaceAll("\\","/"));
-    else { paths=[]; const visit=async(directory:string):Promise<void>=>{for(const entry of await readdir(directory,{withFileTypes:true})){const absolute=join(directory,entry.name);const relative=absolute.slice(this.root.length+1).replaceAll("\\","/");if(isExcludedPath(relative))continue;if(entry.isDirectory())await visit(absolute);else if(entry.isFile())paths.push(relative);}};await visit(this.root); }
-    return paths.map((path) => ({ path, size: 0, mtimeMs: 0,ctimeMs:0 }))
-      .filter(({ path }) => !isExcludedPath(path) && path !== CACHE_PATH && this.parser.supports(path));
+  private runGit(...args:string[]):ReturnType<typeof git>{this.gitProcessCount++;return git(this.root,...args);}
+
+  private async discover(): Promise<{candidates:FileFingerprint[];dirty:Set<string>;gitBacked:boolean}> {
+    const staged=this.runGit("ls-files","-s","-z","--cached");
+    if(staged.code===0){
+      const tracked=new Map<string,string>();
+      for(const entry of staged.stdout.split("\0").filter(Boolean)){const match=/^\d+ ([0-9a-f]+) 0\t([\s\S]+)$/.exec(entry);if(match)tracked.set(match[2]!.replaceAll("\\","/"),match[1]!);}
+      const status=this.runGit("status","--porcelain=v2","-z","--untracked-files=all");
+      if(status.code!==0)throw new Error(status.stderr.trim()||"Unable to classify repository freshness");
+      const dirty=new Set<string>(),untracked=new Set<string>(),entries=status.stdout.split("\0").filter(Boolean);
+      for(let index=0;index<entries.length;index++){
+        const entry=entries[index]!;let path:string|undefined;
+        if(entry.startsWith("? ")){path=entry.slice(2);untracked.add(path.replaceAll("\\","/"));}
+        else if(entry.startsWith("1 "))path=/^1 (?:\S+ ){7}([\s\S]+)$/.exec(entry)?.[1];
+        else if(entry.startsWith("2 ")){path=/^2 (?:\S+ ){8}([\s\S]+)$/.exec(entry)?.[1];index++;}
+        else if(entry.startsWith("u "))path=/^u (?:\S+ ){9}([\s\S]+)$/.exec(entry)?.[1];
+        if(path)dirty.add(path.replaceAll("\\","/"));
+      }
+      const candidates=[...[...tracked].map(([path,gitOid])=>({path,size:0,mtimeMs:0,ctimeMs:0,gitOid})),...[...untracked].map(path=>({path,size:0,mtimeMs:0,ctimeMs:0}))];
+      return{candidates:candidates.filter(({path})=>!isExcludedPath(path)&&path!==CACHE_PATH&&this.parser.supports(path)),dirty,gitBacked:true};
+    }
+    const paths:string[]=[];const visit=async(directory:string):Promise<void>=>{for(const entry of await readdir(directory,{withFileTypes:true})){const absolute=join(directory,entry.name);const relative=absolute.slice(this.root.length+1).replaceAll("\\","/");if(isExcludedPath(relative))continue;if(entry.isDirectory())await visit(absolute);else if(entry.isFile())paths.push(relative);}};await visit(this.root);
+    const candidates=paths.map(path=>({path,size:0,mtimeMs:0,ctimeMs:0})).filter(({path})=>path!==CACHE_PATH&&this.parser.supports(path));
+    return{candidates,dirty:new Set(candidates.map(({path})=>path)),gitBacked:false};
   }
 
-  async ensureFresh(): Promise<FreshnessResult> {
+  async ensureFresh(forceVerification=false): Promise<FreshnessResult> {
+    const started=performance.now();
+    if(!forceVerification&&this.watcher&&this.lastFresh&&!this.dirty&&Date.now()-this.lastVerifiedAt<HOT_VERIFICATION_MS){
+      await new Promise(resolve=>setTimeout(resolve,WATCH_BARRIER_MS));
+      if(!this.dirty)return{...this.lastFresh,hashedFiles:0,changed:0,rowsChanged:0,parsed:0,reused:this.lastFresh.checked,reusedFiles:this.lastFresh.checked,failed:0,omittedSensitive:0,elapsedMs:Math.round((performance.now()-started)*100)/100};
+    }
+    if(!this.refreshInFlight)this.refreshInFlight=this.refresh().finally(()=>{this.refreshInFlight=undefined;});
+    return this.refreshInFlight;
+  }
+
+  private async refresh(): Promise<FreshnessResult> {
     const started = performance.now();
-    const candidates = await this.discover();
-    const existingRows = this.db.prepare("SELECT id,path,size,mtime_ms,ctime_ms,content_hash,extractor_version FROM files").all() as FileRow[];
+    const startingGeneration=this.changeGeneration;
+    const discovery=await this.discover(),candidates=discovery.candidates;
+    const existingRows = this.db.prepare("SELECT id,path,size,mtime_ms,ctime_ms,content_hash,git_oid,extractor_version FROM files").all() as FileRow[];
     const existing = new Map(existingRows.map((row) => [row.path, row]));
     const seen = new Set<string>();
     let changed = 0, hashedFiles = 0, parsed = 0, reused = 0, failed = 0, omittedSensitive = 0;
     for (const candidate of candidates) {
+      const previous = existing.get(candidate.path);
+      if(discovery.gitBacked&&candidate.gitOid&&!discovery.dirty.has(candidate.path)&&previous?.extractor_version===EXTRACTOR_VERSION&&previous.git_oid===candidate.gitOid){seen.add(candidate.path);reused++;continue;}
       const absolute = repositoryPath(this.root, candidate.path);
       let details;
       try { details = await stat(absolute); } catch { continue; }
       if (!details.isFile() || details.size > MAX_FILE_BYTES) continue;
       candidate.size = details.size; candidate.mtimeMs = details.mtimeMs;candidate.ctimeMs=details.ctimeMs;
-      const previous = existing.get(candidate.path);
-      if(previous&&previous.extractor_version===EXTRACTOR_VERSION&&previous.size===candidate.size&&previous.mtime_ms===candidate.mtimeMs&&previous.ctime_ms===candidate.ctimeMs){seen.add(candidate.path);reused++;continue;}
       const bytes = await readFile(absolute);
       if (bytes.includes(0)) continue;
       const text=bytes.toString("utf8");
@@ -122,7 +159,7 @@ export class RepositoryEngine {
       seen.add(candidate.path);
       const hash = sha256(bytes); candidate.hash = hash; hashedFiles++;
       if (previous && previous.extractor_version === EXTRACTOR_VERSION && previous.content_hash === hash) {
-        this.db.prepare("UPDATE files SET size=?,mtime_ms=?,ctime_ms=? WHERE id=?").run(candidate.size, candidate.mtimeMs,candidate.ctimeMs, previous.id);
+        this.db.prepare("UPDATE files SET size=?,mtime_ms=?,ctime_ms=?,git_oid=? WHERE id=?").run(candidate.size,candidate.mtimeMs,candidate.ctimeMs,candidate.gitOid??null,previous.id);
         reused++; continue;
       }
       const result = await this.parser.parse(candidate.path, text);
@@ -137,7 +174,8 @@ export class RepositoryEngine {
       try { removeFts.run(row.id); remove.run(row.id); this.db.exec("COMMIT"); removed++; } catch (error) { this.db.exec("ROLLBACK"); throw error; }
     }
     this.db.prepare("INSERT OR REPLACE INTO meta(key,value) VALUES('last_refresh',?)").run(new Date().toISOString());
-    return { checked: candidates.length, hashedFiles, changed, rowsChanged:changed+removed, removed, parsed, reused, reusedFiles:reused, failed, omittedSensitive, elapsedMs: Math.round((performance.now() - started) * 100) / 100 };
+    const result={checked:candidates.length,hashedFiles,changed,rowsChanged:changed+removed,removed,parsed,reused,reusedFiles:reused,failed,omittedSensitive,elapsedMs:Math.round((performance.now()-started)*100)/100};
+    this.lastFresh=result;this.lastVerifiedAt=Date.now();this.dirty=this.changeGeneration!==startingGeneration;return result;
   }
 
   private replaceFile(fingerprint: FileFingerprint, parsed: ParsedFile): void {
@@ -148,8 +186,8 @@ export class RepositoryEngine {
         this.db.prepare("DELETE FROM chunks_fts WHERE rowid IN (SELECT id FROM chunks WHERE file_id=?)").run(old.id);
         this.db.prepare("DELETE FROM files WHERE id=?").run(old.id);
       }
-      const file = this.db.prepare(`INSERT INTO files(path,size,mtime_ms,ctime_ms,content_hash,language,parser_id,grammar_version,extractor_version,status,diagnostics_json,indexed_at)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).run(fingerprint.path, fingerprint.size, fingerprint.mtimeMs,fingerprint.ctimeMs, fingerprint.hash??parsed.contentHash, parsed.language,
+      const file = this.db.prepare(`INSERT INTO files(path,size,mtime_ms,ctime_ms,content_hash,git_oid,language,parser_id,grammar_version,extractor_version,status,diagnostics_json,indexed_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(fingerprint.path,fingerprint.size,fingerprint.mtimeMs,fingerprint.ctimeMs,fingerprint.hash??parsed.contentHash,fingerprint.gitOid??null,parsed.language,
           parsed.parserId, parsed.grammarVersion, parsed.extractorVersion, parsed.status, JSON.stringify(parsed.diagnostics), new Date().toISOString());
       const fileId = Number(file.lastInsertRowid);
       const symbolStatement = this.db.prepare(`INSERT INTO symbols(file_id,name,qualname,kind,signature,start_line,end_line,start_column,end_column,origin,confidence)
@@ -197,6 +235,10 @@ export class RepositoryEngine {
 
   async trace(symbol: string, direction: "callers" | "callees" | "both" = "both", depth = 2): Promise<Record<string, unknown>> {
     await this.ensureFresh();
+    return this.traceCurrentIndex(symbol,direction,depth);
+  }
+
+  private traceCurrentIndex(symbol:string,direction:"callers"|"callees"|"both",depth:number):Record<string,unknown>{
     const seed=symbol.split("::").at(-1)??symbol;
     const nodes = new Set([seed]); const edges: Record<string, unknown>[] = []; let frontier = new Set([seed]);
     for (let level = 0; level < Math.max(1, depth); level++) {
@@ -222,14 +264,14 @@ export class RepositoryEngine {
     await this.ensureFresh();
     const changed = paths.map(safeRelative);
     const symbols = this.db.prepare(`SELECT s.qualname FROM symbols s JOIN files f ON f.id=s.file_id WHERE f.path IN (${changed.map(() => "?").join(",")})`).all(...changed) as {qualname:string}[];
-    const traces = await Promise.all(symbols.slice(0, 100).map(({ qualname }) => this.trace(qualname, "callers", depth)));
+    const traces = symbols.slice(0,100).map(({qualname})=>this.traceCurrentIndex(qualname,"callers",depth));
     return { changedPaths: changed, symbols: symbols.map((row) => row.qualname), traces };
   }
 
   async findAll(pattern: string, limit = 100, scopes: string[] = []): Promise<Record<string, unknown>[]> {
     await this.ensureFresh();
     const matcher = new RegExp(pattern, "i");
-    const files = (await this.discover()).filter(({ path }) => !scopes.length || scopes.some((scope) => path.startsWith(safeRelative(scope))));
+    const files = (await this.discover()).candidates.filter(({ path }) => !scopes.length || scopes.some((scope) => path.startsWith(safeRelative(scope))));
     const results: Record<string, unknown>[] = [];
     for (const file of files) {
       const content = await readFile(join(this.root, file.path), "utf8");
@@ -242,4 +284,5 @@ export class RepositoryEngine {
   }
 
   async fileIdentities(paths?:readonly string[]):Promise<Record<string,unknown>>{await this.ensureFresh();const selected=paths?.map(safeRelative)??[];const rows=selected.length?this.db.prepare(`SELECT path,size,mtime_ms AS mtimeMs,content_hash AS contentHash,language,status FROM files WHERE path IN (${selected.map(()=>"?").join(",")}) ORDER BY path`).all(...selected):this.db.prepare("SELECT path,size,mtime_ms AS mtimeMs,content_hash AS contentHash,language,status FROM files ORDER BY path").all();return{repository:this.root,files:rows};}
+  processMetrics():{gitProcessCount:number;parserChildProcessCount:number}{return{gitProcessCount:this.gitProcessCount,parserChildProcessCount:0};}
 }
