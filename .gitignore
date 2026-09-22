@@ -7,4 +7,5 @@ __pycache__/
 build/
 dist/
 local-docs/
-
+node_modules/
+*.tgz

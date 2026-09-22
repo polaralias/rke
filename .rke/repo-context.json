@@ -7,137 +7,448 @@
         ".github/workflows/*.yml",
         "AGENTS.md",
         "README.md",
-        "VERSION",
+        "package.json",
+        "package-lock.json",
+        "tsconfig.json",
+        "eslint.config.js",
         "docs/compatibility.md",
-        "pyproject.toml",
-        "scripts/benchmark_freshness.py",
-        "scripts/smoke_distribution.py",
-        "scripts/validate_release.py",
-        "src/rke/**/*.py",
-        "src/rke/evals/*.json",
-        "skills/engineering-workflow/SKILL.md",
-        "skills/engineering-workflow/agents/**/*.yaml",
-        "skills/engineering-workflow/references/**/*",
-        "skills/engineering-workflow/tests/prompts.md",
-        "tests/**/*.py",
-        "tests/fixtures/documentation-bootstrap/**/*",
-        "tests/evals/agent-behaviour.json",
-        "tests/prompts.md"
+        "docs/typescript-rewrite-plan.md",
+        "docs/benchmark-*.json",
+        "docs/adr/*.md",
+        "scripts/**/*.ts",
+        "src/**/*.ts",
+        "src/evals/*.json",
+        "tests/**/*.ts",
+        "tests/fixtures/**/*",
+        "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-20T14:39:41.919582Z",
-        "evidence": "RKE reports version 0.9.0 consistently through package, installed metadata, MCP identity, and tag validation; 171 tests passed and both distributions passed clean-install smoke tests.",
-        "sourceHashes": {
-          ".github/workflows/ci.yml": "d645d99256cbab4ca8027140a4b490049a2e63a8e242596ef2087ea7ba902132",
-          ".github/workflows/publish-release.yml": "4e105cb3941cf7c6ed01fc57006e0561f500a06d18583baaa8d77805fc8737bf",
-          ".github/workflows/release-drafter.yml": "e52919f1cd346a7db1899734d885deefc8e436d90ce85d82bfd621c1856793a9",
-          "AGENTS.md": "24b649fdce6a1886d952ccbb70c3bf3ad5d2bcadafc7ae132ceddddd11e0620e",
-          "docs/compatibility.md": "414da96062c104537263f76526d63e99227fb62161ba7c2e6622e15173f58928",
-          "docs/knowledge/rke-architecture.md": "3634a96d1c2fe0090ad63535fce6b6eb89feb6afc619ab4d4170ade0115bb0bc",
-          "pyproject.toml": "faa8e946d4a57cc74f5ca780a5d86791adf609c667ab46480db52ee04268ec9e",
-          "README.md": "c003c1fcc3e01162e76e405fe6c9ed9d4bca769fb92e92988b2b017d9c01b981",
-          "scripts/benchmark_freshness.py": "acd1e423a4d26a197b82df40c6287149aeba5a731804b359eebca1b09e187802",
-          "scripts/smoke_distribution.py": "f021ac3cb66a902a2dbbb052302cc86b1b14265e60c54776fe7ed0544f9fa16b",
-          "scripts/validate_release.py": "e8cb5bbd72a20068668fb11fc52c2617646a5f0a9fd47d51fd935e091f177943",
-          "skills/engineering-workflow/agents/openai.yaml": "9912dab388a69d45dfc05edbac8a4f92d30af644dce4842fc398f2ebf94b1a8d",
-          "skills/engineering-workflow/references/continuity.md": "435df6866d90cc0245549be3de186f28a8c779066a8619fb00ec90dee814a106",
-          "skills/engineering-workflow/references/documentation-lifecycle.md": "70da2ce025516c914188240aae5c2ba42d48efca67072f80167bc407919a1f48",
-          "skills/engineering-workflow/references/extensions/parallel-delivery.md": "48bf89938e2146a44c2e1861707ff1ef7b378b685a0b2e77a3025987e4f2986e",
-          "skills/engineering-workflow/references/extensions/publication.md": "d305b667e804c9ebeaa872d65a6dfc749ba28d449139e720fca547651a263467",
-          "skills/engineering-workflow/references/extensions/query-to-knowledge.md": "2f3aa42d18a2f76889c2e17886ab38110cce46f173dbc477cd6429fb3b22d36e",
-          "skills/engineering-workflow/references/host-integration.md": "1fb470c15d5af3ef122f139c4833672e9a9717ce6cd1392bc93779a29fa7d9da",
-          "skills/engineering-workflow/references/journeys/close.md": "6feff693c35c98379b58945f727ad4e060e22441cc30e4b2d5d15c23d367b720",
-          "skills/engineering-workflow/references/journeys/design.md": "4577f4e8ee8312376cb5dd69e269e45bbec3e1edc448bbe45596e8e83ab67ec9",
-          "skills/engineering-workflow/references/journeys/understand.md": "a06d3061bdbf66323da3b020eaeecb75fe93147f05129287961991aa89239461",
-          "skills/engineering-workflow/references/knowledge-contract.md": "73def0bd6b0701c6a9b6416a2ff61f91f70efef83b3507ab5b9daf8183978c01",
-          "skills/engineering-workflow/references/migration.md": "7f17a01c67d573e1ac12feb960b27c1a2ee3d6a31354a3a95968cddc8419ce11",
-          "skills/engineering-workflow/references/okf-tasks-adapter.md": "0f115a36a4bf1582079f29883f1b476c69a38700e71e3c030f2dd9f6f8d269fe",
-          "skills/engineering-workflow/references/quality-coverage.md": "53ee57ba83a4a0268c8dd151bc57063783fa32c9ee21466bf77436d33b235fa4",
-          "skills/engineering-workflow/references/repo-context-contract.md": "10b9a8fc8da087f3cae6f0addcbf9a8f13b8110882e9c0766774f4fbf53b3d9b",
-          "skills/engineering-workflow/references/repo-context-manifest.schema.json": "a3acc092d3918fcc5035f882e1a9a8d2db1417dac91242ccefdc91e58b2ac9ba",
-          "skills/engineering-workflow/references/structural-context.md": "d35323af4d7a4618e5c766b6de5f089e03bb1e1ed777fc42244a3219a9c84b6b",
-          "skills/engineering-workflow/references/workflow-contract.md": "9438c840a3f20014221340bd1700e3931da727d9fc2f7f2b235d0113e571733f",
-          "skills/engineering-workflow/SKILL.md": "7d959f2ed48811e4529181dff2619a530920fed9d9a08cf35e37802a316fd670",
-          "skills/engineering-workflow/tests/prompts.md": "ad22261ee2af701d05eabfb5272a4e197352164295119a78d24cdfd6c945352e",
-          "src/rke/__init__.py": "742356693a38ce607a36ec2a860cc64010b688a56c7687b17c4bfc1140f7ebbd",
-          "src/rke/__main__.py": "e51811e27d3e03674d37a0d029698f5f7f7648ab2736af38d599cf50645a6ef8",
-          "src/rke/chunking.py": "c14034fda67dfaaa5b11e36052433a278a6b520f42e929f68f4693bfe924987f",
-          "src/rke/cli.py": "cd710567ec457197b9371decdfd09101ba35f4446cb0a60c7c559704edbc2061",
-          "src/rke/continuity.py": "64bf59e984f75658168d4cd84b41306db496281531f3dcfeb155dab8a6a6103e",
-          "src/rke/coordination.py": "e8dce0c1daa150bd7405918d58d8cd917cbae9ab261421ac48e0e1dbb6146011",
-          "src/rke/dissection.py": "d6512bf8089f52e84437c28b1951eafd0ec26345d4040a20d9232d88700e2a6c",
-          "src/rke/documentation.py": "42cdf19da39f1ff0408d314d1012beb2c657c4d63dd2e844ea876b7a72b475a2",
-          "src/rke/engineering.py": "d81370adc7dae4f59ac1c20d6463826965d037410ad5b95b5d6272fb06216b73",
-          "src/rke/errors.py": "bb0bfa012b217239446cbba6cfc9abc62b4092d0125f27e0ee763182b44aca2b",
-          "src/rke/evals/__init__.py": "7b504b68acad6b033876d36bd5d11e319a1fa4224dec46496eb0059cb9308337",
-          "src/rke/evals/agent-behaviour.json": "ddcd1a533390e42c1269c6ece189297c0f683581d33fef51922e7826b6788f15",
-          "src/rke/evaluate_agent.py": "546d55e3bf26217499df140e4933e48fa2ede76bb2d24598042e98b9e7741e66",
-          "src/rke/filesystem.py": "5af15c93f368ad77e6fda952f3d8e852c00cc1b06dcc9448735963c97e129c6d",
-          "src/rke/freshness.py": "aa63eb2b542cb648d1224d880c1e1e7b42f0f93dc4b2062f41e0ecaa39f1f61e",
-          "src/rke/freshness_benchmark.py": "8da7c5cac470c492b98b52b90829f2623839d9a56ce7aafe0d7678f85cd58ab3",
-          "src/rke/hooks/__init__.py": "85b69618ff6c738fa9e5489dbdde2cd8500650a1f038edcea5ae7929f28ae62d",
-          "src/rke/hooks/_invoke.py": "3937c6c69b22545d6bffc2e0e676ff5141208e444f53bb52ec1e1b11c3313495",
-          "src/rke/hooks/pre_compaction.py": "3700eda49f9a60a1b746e419621ffa762ab23da683e18c4c5e36437c19d4cbc6",
-          "src/rke/hooks/pre_merge.py": "fda08ba90c7fd2b9ee2363db2329694a683266cbae39bad84eab49888247b6e1",
-          "src/rke/hooks/session_start.py": "002f5d71dd5f77a1f4bd04f27fc1eadb2a2aff6c1db70bdb5de1ba61576a9727",
-          "src/rke/host_integration.py": "cd3766d0ad09949a45c7d7fc3ce6185aaff89802ea7b1ff32329b2d61df55f96",
-          "src/rke/index.py": "df44eec17cf2695b63e639f5d81e894cff2d3e88ea95d8704071a890cc2cd3d6",
-          "src/rke/io.py": "a2e7f88ba04c66afd4bd235084db03a80627aabcd3ee34caced991ae2c866d06",
-          "src/rke/knowledge.py": "357adf79509d9b2063d311d10afd7058d9778bf172977115cccb0274b301b31c",
-          "src/rke/lifecycle.py": "d8c0a56860ba43838e3204e747e9e35fdce0f310b60e7c8ec705abc8ce50f3ee",
-          "src/rke/manifest.py": "b04fbc53f756953f404490a9800d0bbc42d2aca27383b910c86143ebfdcc1796",
-          "src/rke/okf_adapter.py": "fa925c6f23120de7d69beeeed2106b12e18627aa8a2caa557c3f5bbe5b8c70ee",
-          "src/rke/operations.py": "ccffa047f0895df0e4f888e8bf0f5af244132fe1c2a1174c410dd537eb09778f",
-          "src/rke/paths.py": "c37475ce0b8e958fdb5f7bfb8af11349a3bea15cd8356f0460c2284fdf2be3ea",
-          "src/rke/publication.py": "bd3fa66b91d1ecb692a47646543aa872c7fe62c5ede1021845310049bbce465a",
-          "src/rke/regex_worker.py": "389f0f7fbfadc8d01faff0adb0122d8bdf5da001c4dbabf354ef0b935928a1ff",
-          "src/rke/repo_context.py": "32929871d72cd04e37e7536254089e2e7df436c1eeaccf91e704930b7618a2c8",
-          "src/rke/repo_context_mcp.py": "f42c8b8e5f0cae76038208d86db53a9776b385176bbda9c122dc2bd4c4528e4c",
-          "src/rke/retrieval.py": "befbb3a7207e499ea4448d5a5e60480f30b0ea715b560415cc504940e5cf62c1",
-          "src/rke/security.py": "b1c5ed43749d393c0426e1ad0290365b40624d84e15ebf1a14c8cdc3fceee7bf",
-          "src/rke/structural_scopes.py": "9e0f9d999d189d42c78b0e3183ef6ff45b0d5530aa1dc901fb117431af5645f6",
-          "src/rke/structural_search.py": "9cdf8e3a70720c5ad62587f13b8e5cbaa6be6d35a1a8949f545bda4534e73d9d",
-          "src/rke/structure.py": "019ecaebd5cecd51851f30bf3aad3fe52820388496f2937a71c4ebc55b69b990",
-          "src/rke/structure_worker.py": "afe18046a5afca54db4fcc614a0648ed1e46f6a48d6743e9c836d71667fcdbe4",
-          "src/rke/workflow_state.py": "20932b64ef79e89d36ba98dea3cf9aae2b66a862e5283a5a92f4586967606899",
-          "tests/fixtures/documentation-bootstrap/partial-state/.rke/repo-context.json": "aa4e6949fc28c32e5c6cd83ecda65d4469d8189f79e4f20b871fd3e3ed1949de",
-          "tests/fixtures/documentation-bootstrap/partial-state/docs/knowledge/system-overview.md": "562a1dcac7a1cc8dd148f4a0423fe15d8bd02e83de52d0e9ebe942a116a017c2",
-          "tests/fixtures/documentation-bootstrap/partial-state/README.md": "174045e764de3dfd81f83d419b5c0056b911a6a8d5e07dcf721e31dc7d00b8b5",
-          "tests/fixtures/documentation-bootstrap/partial-state/src/auth.py": "e2f3de79e60ea9f5367b91fa8158cea232244d174d6d3b70797bf6053cac2cf2",
-          "tests/fixtures/documentation-bootstrap/partial-state/src/main.py": "3cbe99a74dfcfca9602afc531d5fa37d9e7c74c605aba20e8c630e5a78866e9a",
-          "tests/fixtures/documentation-bootstrap/zero-state/config/service.toml": "82f4aca8134a08f5f1984fc1415a99d2136c7c125e6939685604b73f04587407",
-          "tests/fixtures/documentation-bootstrap/zero-state/old-docs/architecture-old.md": "afb354faf8b071f18854fe5b9244483da7e7e7a6df37a37d08c978b4ff1646fd",
-          "tests/fixtures/documentation-bootstrap/zero-state/README.md": "b3e10ae7aeb6e7f8a202c89190890ab250af7c90384f28993daec30fd91c2b73",
-          "tests/fixtures/documentation-bootstrap/zero-state/src/api.py": "33b893868e8f062d538cef09e1c1cfebc23f5997a16cc7a925a3cfd9d9cf5954",
-          "tests/fixtures/documentation-bootstrap/zero-state/src/auth.py": "e2f3de79e60ea9f5367b91fa8158cea232244d174d6d3b70797bf6053cac2cf2",
-          "tests/fixtures/documentation-bootstrap/zero-state/tests/api_check.py": "e9a57bdcf2950e500ab1698ef508592ee8ffccf80f4c14715d9d2ca0325c958e",
-          "tests/fixtures/retrieval-benchmark/repository/src/billing/invoice.py": "926a6887429da3ef9c2496526014f54cd623abf8c7914f7a23d87ec5228067aa",
-          "tests/fixtures/retrieval-benchmark/repository/src/github/credential_gateway.py": "7b89f172b77e56bdf9c637775b441b62c8211d7e653711afb3d95527c801b235",
-          "tests/fixtures/retrieval-benchmark/repository/src/tasks/ledger.py": "211c784de5018bc8b46f22bc9f37e8a2001f486072ad25629eb8f07dd0552ce3",
-          "tests/fixtures/structural-benchmark/repository/core.py": "49651956276e1df8b4d6bbe1f3533a6ab8dc6ab21637b8ef16921e9c1b907599",
-          "tests/fixtures/structural-benchmark/repository/service.py": "0edb95ce3b1fd80bb10b7b769ea64f07338bc9648e4bf077daa54b04d627b422",
-          "tests/test_absorbed_workflows.py": "617af287e6b81c8bd0c8ea9f9b1639edfc6ee06ffbaa5495a79b3f30aefe250e",
-          "tests/test_contract_docs.py": "185e750cc5791f47a07584f0b98b7ac97eae8b60ebca7c6d73fa8eafdc58f51a",
-          "tests/test_documentation.py": "4aa9410f1078fd0284d2b1d8d6364bff35644b26bfd53ce3f5d3e0a6bfd30e74",
-          "tests/test_engineering_workflow.py": "36ed567d1955612c8f7477cf8baad4ee3e9ef651cc823c56798a505cb9a31c89",
-          "tests/test_evaluate_agent.py": "1303ff639042464b9ddea2747c730fca4ba6bc166228ad40335833b1da275556",
-          "tests/test_filesystem.py": "dd2c1175488d1b0b436908276c4113fa18d31aa33b38aa0c02fa73a05d998115",
-          "tests/test_freshness_benchmark.py": "708e9bc5869a61a09c8ed0d883b0628141f48b9af7ec2a20229e5a4409f7480d",
-          "tests/test_hooks.py": "1942aa32af00dc9a25bcdcf7006acc9f87e9fc1dd193c9ef06a08b94989f5cdd",
-          "tests/test_host_integration.py": "648897bf4dd3fce4f4c0da17a1646f4801c0e4ecee6238039c8372778b64aa93",
-          "tests/test_io.py": "d792c5926ccddd4e0cd79c5b6dd941486b07b2ed4a772a56bdf6cc7ed3c6ab5e",
-          "tests/test_knowledge.py": "11a37f81a9987e02d5c9cab4c224a86fda6d22a326aad1851562e7a8bb120b68",
-          "tests/test_legacy_routes.py": "abd40d6c0e719d10156e105accc6f954236fbfead04a35f46017a65f1a348678",
-          "tests/test_module_boundaries.py": "34f5a9c99fba83dd1d9bc1e89463a7c533ea7533dd8dd7c7800138ce7f007c85",
-          "tests/test_okf_adapter.py": "76d747d308054a7fc4277e7b15085cfb438374e60cef52cc0b9fe7471049b42e",
-          "tests/test_release_contract.py": "c58e30172e9ec5112d747eaf719b5c5dff9a88f9b96f3328c194cee8e8ddf47b",
-          "tests/test_repo_context.py": "3700d72f2e0f415102e03356493b949bf0468206c39d2eebd88addf91664c745",
-          "tests/test_repo_context_mcp.py": "cdda332e83f646d11949eaf205e535e68b0f05572dd0458e00fa981d9bc76bc0",
-          "tests/test_structure.py": "432e73ceaad260916f5c1e2314ebe90c62c592ffdd6ba9ce555f20daf01f81f5",
-          "tests/test_versioning.py": "9e637bcc7e2b3226d6733ccfd31d7ccfa8c1a6779985d82eeb6b385d7dcf050b"
-        }
+        "verifiedAt": "2026-09-22T07:04:23.379Z",
+        "evidence": "RKE 0.10.0 TypeScript rewrite implementation, full validation, exact tarball smoke tests, benchmarks, and compatibility tests.",
+        "sourceIdentities": [
+          {
+            "path": ".github/workflows/ci.yml",
+            "sha256": "032f6bbd228c02561f0ce43f4b95ded4e5c06744064d4786d46b7ac659d49117"
+          },
+          {
+            "path": ".github/workflows/publish-release.yml",
+            "sha256": "46c788ab21cc4838a519919fc0062f3a7a9792c3c414916f93f1dabb35a36841"
+          },
+          {
+            "path": ".github/workflows/release-drafter.yml",
+            "sha256": "22d01c6022e35155f39d603d19e015a734e5e0e80f4dfe22ae6b183406bb8529"
+          },
+          {
+            "path": "AGENTS.md",
+            "sha256": "8c02e605972086528ef063d03907ee9af0d030d1062229f0fd4c61fbb4072a34"
+          },
+          {
+            "path": "docs/adr/0001-python-fixtures-only.md",
+            "sha256": "3041f80097533081ab059f3d9510a6d25a60b3428beaa3b95b131770897c6cd8"
+          },
+          {
+            "path": "docs/benchmark-1000.json",
+            "sha256": "a9727fa795eac5e4cb1c072c9ac909e38b5f45592cfe666364f276dfb73acb3c"
+          },
+          {
+            "path": "docs/benchmark-10000.json",
+            "sha256": "bd270f5cca70e76ac633dcfc77f4950f292bdcb5affc639d07e1f6bc977f761c"
+          },
+          {
+            "path": "docs/benchmark-50000.json",
+            "sha256": "2b7ba009f9cc3656295ae0cf6f149b0c0b7b15b9a4d1457cdd68d2840ca5e353"
+          },
+          {
+            "path": "docs/compatibility.md",
+            "sha256": "9791a8ea99ad322500043bfeb416dbbe46ac015165a6604c53187f303884f0a0"
+          },
+          {
+            "path": "docs/knowledge/rke-architecture.md",
+            "sha256": "810406c2c0f2b7f143119b5430eef04bc53b90cd72ce11bff94e09f162fa2b6b"
+          },
+          {
+            "path": "docs/typescript-rewrite-plan.md",
+            "sha256": "249cd3d6036929d99923f709b59566b61bd7cfb597c34cf9be7c536e753b449b"
+          },
+          {
+            "path": "eslint.config.js",
+            "sha256": "d25949bc5b329ce2e30f00eaaaf01dea279412b7c04617a5c26acfa57c008a9a"
+          },
+          {
+            "path": "package-lock.json",
+            "sha256": "89a5f29bec3e09f3710bd60206a861cb9f788285baaf13b4d63052eb783c95f9"
+          },
+          {
+            "path": "package.json",
+            "sha256": "835a76246509dbe4c117b64a42c0f60632fa4cb25b35a33d865f1b217d4f0dc2"
+          },
+          {
+            "path": "README.md",
+            "sha256": "d4cfb0e90b719b4530a479adcea1cc5c76b173eca81b9ee14df48e2eddbaccbe"
+          },
+          {
+            "path": "scripts/benchmark-freshness.ts",
+            "sha256": "e2b075d748462b47f885f04b5da5f0e7d220040be4f323f80c5d2adb280f302a"
+          },
+          {
+            "path": "scripts/no-python.ts",
+            "sha256": "4c66b1c2f834f5d995e708e82256562658470c96337b68dc89565809acabbc5b"
+          },
+          {
+            "path": "scripts/smoke-distribution.ts",
+            "sha256": "13adc5c2d7f7317a766ef0ddad1c3e35f9e1fadfd1c0bbf135ddcd1caf2ae3bb"
+          },
+          {
+            "path": "scripts/smoke-packed.ts",
+            "sha256": "90e480bc3abbabd066fcc54f4bac432dbafc9d46e76fea0b1269f3de47848d4b"
+          },
+          {
+            "path": "scripts/sync-skill.ts",
+            "sha256": "0a97b293771da057b7bdf9ae2de4b343a7d70cb2fe05c4a0610adf4d6376c201"
+          },
+          {
+            "path": "scripts/validate-release.ts",
+            "sha256": "74688ca2cbe5ef696fb7357f619624e325a7df398714a1a9344af9e8de66652e"
+          },
+          {
+            "path": "skills/engineering-workflow/agents/openai.yaml",
+            "sha256": "9912dab388a69d45dfc05edbac8a4f92d30af644dce4842fc398f2ebf94b1a8d"
+          },
+          {
+            "path": "skills/engineering-workflow/assets/icon.svg",
+            "sha256": "de3410cf5b622449198fe019ef9f8ed7ad232e1ef171c7023bfb25029db40b0f"
+          },
+          {
+            "path": "skills/engineering-workflow/license.txt",
+            "sha256": "6f8cfa1e19fdae05451b237bd4be972816c3b2a7103d791554f8b8928af6e539"
+          },
+          {
+            "path": "skills/engineering-workflow/references/continuity.md",
+            "sha256": "435df6866d90cc0245549be3de186f28a8c779066a8619fb00ec90dee814a106"
+          },
+          {
+            "path": "skills/engineering-workflow/references/documentation-lifecycle.md",
+            "sha256": "70da2ce025516c914188240aae5c2ba42d48efca67072f80167bc407919a1f48"
+          },
+          {
+            "path": "skills/engineering-workflow/references/extensions/parallel-delivery.md",
+            "sha256": "48bf89938e2146a44c2e1861707ff1ef7b378b685a0b2e77a3025987e4f2986e"
+          },
+          {
+            "path": "skills/engineering-workflow/references/extensions/publication.md",
+            "sha256": "d305b667e804c9ebeaa872d65a6dfc749ba28d449139e720fca547651a263467"
+          },
+          {
+            "path": "skills/engineering-workflow/references/extensions/query-to-knowledge.md",
+            "sha256": "2f3aa42d18a2f76889c2e17886ab38110cce46f173dbc477cd6429fb3b22d36e"
+          },
+          {
+            "path": "skills/engineering-workflow/references/host-integration.md",
+            "sha256": "858fbe4cc72b22c5517d916857eae96205f5ca348eb0f1a74210df905e8973b1"
+          },
+          {
+            "path": "skills/engineering-workflow/references/journeys/close.md",
+            "sha256": "6feff693c35c98379b58945f727ad4e060e22441cc30e4b2d5d15c23d367b720"
+          },
+          {
+            "path": "skills/engineering-workflow/references/journeys/design.md",
+            "sha256": "72d677a5abaf9a1b85cd5d919a48b18d9bf098deebd614930cf23982ad7a543d"
+          },
+          {
+            "path": "skills/engineering-workflow/references/journeys/understand.md",
+            "sha256": "a06d3061bdbf66323da3b020eaeecb75fe93147f05129287961991aa89239461"
+          },
+          {
+            "path": "skills/engineering-workflow/references/knowledge-contract.md",
+            "sha256": "73def0bd6b0701c6a9b6416a2ff61f91f70efef83b3507ab5b9daf8183978c01"
+          },
+          {
+            "path": "skills/engineering-workflow/references/migration.md",
+            "sha256": "7f17a01c67d573e1ac12feb960b27c1a2ee3d6a31354a3a95968cddc8419ce11"
+          },
+          {
+            "path": "skills/engineering-workflow/references/okf-tasks-adapter.md",
+            "sha256": "0f115a36a4bf1582079f29883f1b476c69a38700e71e3c030f2dd9f6f8d269fe"
+          },
+          {
+            "path": "skills/engineering-workflow/references/quality-coverage.md",
+            "sha256": "e42ddf91b841f1062c478b60cf19e4edbbd23db1beccfac3e8705fb896169fe0"
+          },
+          {
+            "path": "skills/engineering-workflow/references/repo-context-contract.md",
+            "sha256": "de1a8aac1d9e2cdbc9824dc24531c2b78bc69f34a18ceb9551a3e9f6d4db5eea"
+          },
+          {
+            "path": "skills/engineering-workflow/references/repo-context-manifest.schema.json",
+            "sha256": "7a575f29a0a67a921426db86a716aed9b2da894acab810c374721cff10fb43a1"
+          },
+          {
+            "path": "skills/engineering-workflow/references/structural-context.md",
+            "sha256": "468b9013e36bfd21db9eddc55b39771da842a11883042e56cd77b9834210b96b"
+          },
+          {
+            "path": "skills/engineering-workflow/references/workflow-contract.md",
+            "sha256": "280f9a6384af8abfc5c6d56712b3790f988bdf2823920e401b57d1f1837d1d8d"
+          },
+          {
+            "path": "skills/engineering-workflow/SKILL.md",
+            "sha256": "07157535003f53dc451d8130060b07547674b0773f777cd97c591b1af28ad6f6"
+          },
+          {
+            "path": "skills/engineering-workflow/tests/prompts.md",
+            "sha256": "30542ec64aba585b91cbad7135eb4c2cef6fa3db1804a23db3773a6b981b4855"
+          },
+          {
+            "path": "src/cli-routes.ts",
+            "sha256": "db702353978258e0dfc78f6ea6065ea975f10a6fd9d81109ffd44e9b8534cbb4"
+          },
+          {
+            "path": "src/cli.ts",
+            "sha256": "ba128c86fdca55c02c0fdbe5b2c1e49332771fead9ecc4d8931cea003defec0e"
+          },
+          {
+            "path": "src/errors.ts",
+            "sha256": "030d5c673c797971115abe3206bcd41e4b3598439b9f62f3d4366f50d4d415d6"
+          },
+          {
+            "path": "src/evals/agent-behaviour.json",
+            "sha256": "ddcd1a533390e42c1269c6ece189297c0f683581d33fef51922e7826b6788f15"
+          },
+          {
+            "path": "src/evaluate-agent.ts",
+            "sha256": "74dc6c293d9ed322756ef30401873a82c0575c3042fd6490345bc0c01557a684"
+          },
+          {
+            "path": "src/hooks/pre-compaction.ts",
+            "sha256": "1d94e58c1d58eb23646dd784295da1c39c53cc43f2d671a67960fdfcd7def22a"
+          },
+          {
+            "path": "src/hooks/pre-push.ts",
+            "sha256": "892a52a540ee7ae6e21cccc622268f9888267e054a898135f6f971b476f94521"
+          },
+          {
+            "path": "src/hooks/session-start.ts",
+            "sha256": "48e35af192d182adc049f071ce30dbc41f95dbc0aa34b7cc2d9de569f9f07035"
+          },
+          {
+            "path": "src/io.ts",
+            "sha256": "199d4d934c15a1812f893cde370a0c248d2d214bda52cc5ec0464484be91f180"
+          },
+          {
+            "path": "src/mcp.ts",
+            "sha256": "86c3fa089be4eadf542b87efcee6ec6b31b688c49be97bd430edefd495a38635"
+          },
+          {
+            "path": "src/operations.ts",
+            "sha256": "5f0861944cfe30c3580a69733ad91a792b7c137afa2219a774ad93c6057980bf"
+          },
+          {
+            "path": "src/parser.ts",
+            "sha256": "fe53b0cd194ab6b473b21fd80a20d1070c40396ddcf757a1b3680186844e077f"
+          },
+          {
+            "path": "src/paths.ts",
+            "sha256": "dd5f8c713dc730ec3a07753c7fc82f042c035364eb2c781ed5bfd9e8bf278b5a"
+          },
+          {
+            "path": "src/repository-engine.ts",
+            "sha256": "d6fb401c8cd5c90c1771c276ac103563a28060ce04b3a3d6a5876c32c001b2a5"
+          },
+          {
+            "path": "src/security.ts",
+            "sha256": "e1460f79b9be7c7a71c22a72c465b491c2510a103be1327abb84204143fb8adb"
+          },
+          {
+            "path": "src/surfaces.ts",
+            "sha256": "fc649a4edc8adb008a64fa88eaddba06d53b5598327ef0d8207bb3f776d9e052"
+          },
+          {
+            "path": "src/types.ts",
+            "sha256": "fa92531bd90e4c1fff580bec773896b8deaf9f595c5a00f70b119810f65edcdb"
+          },
+          {
+            "path": "src/version.ts",
+            "sha256": "29bf6fb4fb32082555e530deff4b249b0c3b2c3e9102d93cc63f38dd048cdf68"
+          },
+          {
+            "path": "src/workflow.ts",
+            "sha256": "8a3b91f2314f71a31a6f7c8494adec09008d765cab31882beac049a21f6c08f2"
+          },
+          {
+            "path": "tests/engine.test.ts",
+            "sha256": "9c51bbcc2de08181b642c64e61647cdd4574008397202ba45a76b228741694e6"
+          },
+          {
+            "path": "tests/fixtures/documentation-bootstrap/partial-state/.rke/repo-context.json",
+            "sha256": "aa4e6949fc28c32e5c6cd83ecda65d4469d8189f79e4f20b871fd3e3ed1949de"
+          },
+          {
+            "path": "tests/fixtures/documentation-bootstrap/partial-state/docs/knowledge/system-overview.md",
+            "sha256": "562a1dcac7a1cc8dd148f4a0423fe15d8bd02e83de52d0e9ebe942a116a017c2"
+          },
+          {
+            "path": "tests/fixtures/documentation-bootstrap/partial-state/README.md",
+            "sha256": "174045e764de3dfd81f83d419b5c0056b911a6a8d5e07dcf721e31dc7d00b8b5"
+          },
+          {
+            "path": "tests/fixtures/documentation-bootstrap/partial-state/src/auth.py",
+            "sha256": "e2f3de79e60ea9f5367b91fa8158cea232244d174d6d3b70797bf6053cac2cf2"
+          },
+          {
+            "path": "tests/fixtures/documentation-bootstrap/partial-state/src/main.py",
+            "sha256": "3cbe99a74dfcfca9602afc531d5fa37d9e7c74c605aba20e8c630e5a78866e9a"
+          },
+          {
+            "path": "tests/fixtures/documentation-bootstrap/zero-state/config/service.toml",
+            "sha256": "82f4aca8134a08f5f1984fc1415a99d2136c7c125e6939685604b73f04587407"
+          },
+          {
+            "path": "tests/fixtures/documentation-bootstrap/zero-state/old-docs/architecture-old.md",
+            "sha256": "afb354faf8b071f18854fe5b9244483da7e7e7a6df37a37d08c978b4ff1646fd"
+          },
+          {
+            "path": "tests/fixtures/documentation-bootstrap/zero-state/README.md",
+            "sha256": "b3e10ae7aeb6e7f8a202c89190890ab250af7c90384f28993daec30fd91c2b73"
+          },
+          {
+            "path": "tests/fixtures/documentation-bootstrap/zero-state/src/api.py",
+            "sha256": "33b893868e8f062d538cef09e1c1cfebc23f5997a16cc7a925a3cfd9d9cf5954"
+          },
+          {
+            "path": "tests/fixtures/documentation-bootstrap/zero-state/src/auth.py",
+            "sha256": "e2f3de79e60ea9f5367b91fa8158cea232244d174d6d3b70797bf6053cac2cf2"
+          },
+          {
+            "path": "tests/fixtures/documentation-bootstrap/zero-state/tests/api_check.py",
+            "sha256": "e9a57bdcf2950e500ab1698ef508592ee8ffccf80f4c14715d9d2ca0325c958e"
+          },
+          {
+            "path": "tests/fixtures/public-operations.json",
+            "sha256": "d662d2b8ac71f695218753279faeab4bb73ec8b452eb931a219dfebf51213195"
+          },
+          {
+            "path": "tests/fixtures/retrieval-benchmark/repository/config/providers.toml",
+            "sha256": "577fd0721417df865d05108d83a831ec9286eaf6917445ee5fec2ebe7340839a"
+          },
+          {
+            "path": "tests/fixtures/retrieval-benchmark/repository/corpus.json",
+            "sha256": "14c620c7004e38bc3da9247a44f3665210993a76fed67f19ab3f3bb6ec5368aa"
+          },
+          {
+            "path": "tests/fixtures/retrieval-benchmark/repository/docs/architecture.md",
+            "sha256": "5bf081e09dfa69189b98650779bdd671aacfd398448d540de50e26b4fdb43b0d"
+          },
+          {
+            "path": "tests/fixtures/retrieval-benchmark/repository/docs/glossary.md",
+            "sha256": "198b9940aae049440c3a9661d937dacfc6a409efb813af2abfe84c5447c0f89e"
+          },
+          {
+            "path": "tests/fixtures/retrieval-benchmark/repository/docs/releases.md",
+            "sha256": "eed9b9de67e0b6c71b55c0fdec020ebcb175a92340fc62811b0146bf9c913049"
+          },
+          {
+            "path": "tests/fixtures/retrieval-benchmark/repository/src/billing/invoice.py",
+            "sha256": "926a6887429da3ef9c2496526014f54cd623abf8c7914f7a23d87ec5228067aa"
+          },
+          {
+            "path": "tests/fixtures/retrieval-benchmark/repository/src/github/credential_gateway.py",
+            "sha256": "7b89f172b77e56bdf9c637775b441b62c8211d7e653711afb3d95527c801b235"
+          },
+          {
+            "path": "tests/fixtures/retrieval-benchmark/repository/src/tasks/ledger.py",
+            "sha256": "211c784de5018bc8b46f22bc9f37e8a2001f486072ad25629eb8f07dd0552ce3"
+          },
+          {
+            "path": "tests/fixtures/structural-benchmark/repository/apple/Worker.swift",
+            "sha256": "a4740893b63d98c4ba04f239d3faf0a86a839e9c3486599db52652f01ae112b0"
+          },
+          {
+            "path": "tests/fixtures/structural-benchmark/repository/core.py",
+            "sha256": "49651956276e1df8b4d6bbe1f3533a6ab8dc6ab21637b8ef16921e9c1b907599"
+          },
+          {
+            "path": "tests/fixtures/structural-benchmark/repository/corpus.json",
+            "sha256": "fad12c74f3a51c4d7189555b8089b2be6658101e3a311b94d9d2e5c9c7955a73"
+          },
+          {
+            "path": "tests/fixtures/structural-benchmark/repository/dotnet/Program.cs",
+            "sha256": "a984a78cf96ba809aff5fe8dcc0e2ddf25089656028d749877cded4c6dba0af4"
+          },
+          {
+            "path": "tests/fixtures/structural-benchmark/repository/dotnet/Service.cs",
+            "sha256": "1aa7da976a03dc978244b81a4d8b27bbbf86c375d4f8f71924409d8a3f08a458"
+          },
+          {
+            "path": "tests/fixtures/structural-benchmark/repository/go/main.go",
+            "sha256": "4c045299bc8615acdc40415792ec2a6bc0bee486ff5d87198c263f835079a97a"
+          },
+          {
+            "path": "tests/fixtures/structural-benchmark/repository/go/service.go",
+            "sha256": "4e6d83d063bb96e00fb918bf657418781130425a6b1e59390cca8da97c1f55e1"
+          },
+          {
+            "path": "tests/fixtures/structural-benchmark/repository/jvm/Main.java",
+            "sha256": "f1e9a7c25916ec173861d9e8ad79b3f77e3661282d72d550a970ffaa25a56d13"
+          },
+          {
+            "path": "tests/fixtures/structural-benchmark/repository/jvm/Service.java",
+            "sha256": "4238d87b93ba9cea739289d73325b1472d16f090628043e45fc9083c38ae483c"
+          },
+          {
+            "path": "tests/fixtures/structural-benchmark/repository/mobile/Worker.kt",
+            "sha256": "ba9a74741eb33a1bfed7e1b36ff8f941bb2312436487e1a4af85e272479c36e3"
+          },
+          {
+            "path": "tests/fixtures/structural-benchmark/repository/native/math.cpp",
+            "sha256": "e3d63a82889a93e25432f5c1d6b851f66186353adb4a374c5b45a59c73d86743"
+          },
+          {
+            "path": "tests/fixtures/structural-benchmark/repository/scripts/worker.rb",
+            "sha256": "2e5ab801c8b74ea102926dbd44b119a96190aacc5c98d2858f8dae7d721899d8"
+          },
+          {
+            "path": "tests/fixtures/structural-benchmark/repository/service.py",
+            "sha256": "0edb95ce3b1fd80bb10b7b769ea64f07338bc9648e4bf077daa54b04d627b422"
+          },
+          {
+            "path": "tests/fixtures/structural-benchmark/repository/src/main.rs",
+            "sha256": "028124eb5bce3248fe728bd3ac67fc28946f81afe8dd01d70acc9b251bb6584a"
+          },
+          {
+            "path": "tests/fixtures/structural-benchmark/repository/src/math.rs",
+            "sha256": "bd8e2f32cd16c9a44823706b587c14481d2dcfab86e93581dab58e67b2710b21"
+          },
+          {
+            "path": "tests/fixtures/structural-benchmark/repository/web/worker.php",
+            "sha256": "6e1bbfc393d7390b9019316b1639b919e01931e702c373619cb70eac0fd69ed3"
+          },
+          {
+            "path": "tests/operations.test.ts",
+            "sha256": "6480ffc7dda98f1601bd1b1480ccabe05d63c951890a9b1a191607138c39055e"
+          },
+          {
+            "path": "tests/parser.test.ts",
+            "sha256": "da0cd2ad39e81ed2c05952fd85bd54c51a8e414d005c749de8b73b0d80d78187"
+          },
+          {
+            "path": "tests/public-behavior.test.ts",
+            "sha256": "af9301f3bee72e82d4b6ee8e2dd40c28d0cd27360674f7220cfac5a41f964c26"
+          },
+          {
+            "path": "tests/security.test.ts",
+            "sha256": "66e756b750b6b799301475ce5c1c337e1c1efa0d7b81b557589848e0524407f7"
+          },
+          {
+            "path": "tests/transport.test.ts",
+            "sha256": "af2148a0b6117b59090b3d5891d6c46cf00d9569ed427884a3d66f29321ddb00"
+          },
+          {
+            "path": "tsconfig.json",
+            "sha256": "1b326f421df5ce5ecc9784fa7ba06b6d3589911f1e6eabd218fbb01bc62228da"
+          }
+        ]
       }
     }
   ],
-  "revision": 21
+  "revision": 28
 }

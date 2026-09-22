@@ -26,3 +26,7 @@ A public 1.x interface is deprecated for at least one minor release before remov
 Every RKE release publishes its canonical EWF skill from the same source repository. The skill metadata states its version, and the synchronized catalogue mirror records the exact RKE source commit. Patch versions within a documented compatible minor line may be mixed; otherwise install the EWF skill shipped from the same RKE release. The runtime must return an explicit compatibility failure when it can prove that a requested skill contract requires an unavailable operation.
 
 OKF Tasks remains an independent primitive with its own compatibility contract. RKE integrations call its supported interface rather than making its internal state part of this contract.
+
+## 0.10.0 runtime migration
+
+RKE 0.10.0 replaces the pre-release PyPI distribution with the sole supported npm runtime. Remove the old Python-installed `rke` and `rke-mcp` commands before installing `@polaralias/rke` globally; otherwise shell path order can select the obsolete executable. Repository manifests and workflow state remain readable through their documented schema contracts, while generated JSON retrieval caches are discarded and rebuilt into local SQLite storage.

@@ -1,0 +1,57 @@
+{
+  "result": "freshness-benchmark",
+  "files": 1000,
+  "cold": {
+    "checked": 1000,
+    "hashedFiles": 1000,
+    "changed": 1000,
+    "rowsChanged": 1000,
+    "removed": 0,
+    "parsed": 1000,
+    "reused": 0,
+    "reusedFiles": 0,
+    "failed": 0,
+    "omittedSensitive": 0,
+    "elapsedMs": 6209.53
+  },
+  "warm": {
+    "checked": 1000,
+    "hashedFiles": 0,
+    "changed": 0,
+    "rowsChanged": 0,
+    "removed": 0,
+    "parsed": 0,
+    "reused": 1000,
+    "reusedFiles": 1000,
+    "failed": 0,
+    "omittedSensitive": 0,
+    "elapsedMs": 0.01
+  },
+  "changed": {
+    "checked": 1000,
+    "hashedFiles": 1,
+    "changed": 1,
+    "rowsChanged": 1,
+    "removed": 0,
+    "parsed": 1,
+    "reused": 999,
+    "reusedFiles": 999,
+    "failed": 0,
+    "omittedSensitive": 0,
+    "elapsedMs": 1339.41
+  },
+  "resources": {
+    "peakRss": 508436480,
+    "finalRss": 75182080,
+    "maxRss": 501164,
+    "databaseBytes": 1044480,
+    "childProcessCount": 0,
+    "repeatedQueryRss": {
+      "first": 75821056,
+      "last": 76201984,
+      "minimum": 75821056,
+      "maximum": 76201984,
+      "strictlyMonotonic": false
+    }
+  }
+}
