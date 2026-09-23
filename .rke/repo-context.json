@@ -23,8 +23,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-23T12:03:37.549Z",
-        "evidence": "Reviewed updated v0.10 TypeScript contracts, Node-native evaluator fixtures, and current skill mirror.",
+        "verifiedAt": "2026-09-23T13:11:23.399Z",
+        "evidence": "Reviewed architecture parity wording against the 16-case priority matrix, contract scorecard, and current test outcomes.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -64,7 +64,7 @@
           },
           {
             "path": "docs/knowledge/rke-architecture.md",
-            "sha256": "67d4e141bd3f341ba2cadb6d457b3223343c9bd48bcb5e66b240fcd96c539670"
+            "sha256": "59b0f88f56116008a675d6b983242d2b701a6263a068701f1120a97af0813c4e"
           },
           {
             "path": "docs/typescript-rewrite-plan.md",
@@ -452,7 +452,7 @@
           },
           {
             "path": "tests/legacy-parity.test.ts",
-            "sha256": "a483a40da0534f6c5567be3fc3808724fd27b05493965696ccef48d62951c574"
+            "sha256": "a7f30d800b85c5e36cfebc3c365d8ac9a83f1fea8e45aca69bbc373fe6036bdd"
           },
           {
             "path": "tests/operations.test.ts",
@@ -464,7 +464,7 @@
           },
           {
             "path": "tests/public-behavior.test.ts",
-            "sha256": "d35bf82b68cad4967686542ab7856b0162bbdffd4e2f501451cb6bf963d6e5e2"
+            "sha256": "88bb6b3efc8eefe6fba636b98357143df055bc2e0e7adb049822389e0e419877"
           },
           {
             "path": "tests/security.test.ts",
@@ -482,5 +482,5 @@
       }
     }
   ],
-  "revision": 37
+  "revision": 38
 }

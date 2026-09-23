@@ -41,3 +41,20 @@ test("legacy parity scenarios cover every retained outcome and the two explicit 
   assert.equal(routeLegacy("TPW").exitCode, 2);
   assert.ok(fixture.cases.filter(item => item.category.includes("injection") || item.category.includes("authority") || item.category.includes("safety")).length >= 3);
 });
+
+test("priority matrix orders every contract once and retains an explicit exit test", async () => {
+  const fixture = JSON.parse(await readFile(join(process.cwd(), "tests/fixtures/legacy-parity-scenarios.json"), "utf8")) as {cases: Scenario[]};
+  const priority = await readFile(join(process.cwd(), "docs/legacy-skill-priority-matrix.md"), "utf8");
+  const rows = priority.split("\n").filter(line => /^\| \d+ \| [A-Z]+-\d{2} \| P[0-2] \|/.test(line));
+  const parsed = rows.map(line => {
+    const cells = line.split("|").slice(1, -1).map(cell => cell.trim());
+    return {order: Number(cells[0]), id: cells[1], priority: cells[2], owner: cells[3], evidence: cells[4], done: cells[5]};
+  });
+  assert.deepEqual(parsed.map(row => row.order), Array.from({length: fixture.cases.length}, (_, index) => index + 1));
+  assert.deepEqual(parsed.map(row => row.id).sort(), fixture.cases.map(item => item.id).sort());
+  assert.ok(parsed.every(row => row.owner?.startsWith("`") && row.evidence?.length && row.done?.length), "every row needs owner, evidence and exit test");
+  assert.ok(parsed.every(row => ["P0", "P1", "P2"].includes(row.priority ?? "")));
+  assert.equal(parsed.find(row => row.id === "TPU-01")?.priority, "P0");
+  assert.equal(parsed.find(row => row.id === "TPW-01")?.priority, "P2");
+  assert.match(priority, /OKF Tasks remains the execution authority and the default durable TPU path/);
+});

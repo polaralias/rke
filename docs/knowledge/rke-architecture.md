@@ -51,7 +51,7 @@ The registry contains every public lifecycle, gate, journey, task, closure, host
 
 Yes: the CLI and MCP expose the same complete public operation registry, argument schemas, handlers and structured outcomes. The CLI adds shell parsing and exit codes; MCP adds tool discovery, repository selection and protocol error mapping. Neither transport owns separate domain behavior.
 
-Transport parity does not establish legacy-skill outcome parity. The [legacy skill parity matrix](../legacy-skill-parity-matrix.md) records the remaining behavioural contracts; the deterministic adversarial probes now pass, while agent and delegated-provider evaluation remains open.
+Transport parity does not establish legacy-skill outcome parity. The [legacy skill parity matrix](../legacy-skill-parity-matrix.md) records the remaining behavioural contracts, and the [priority matrix](../legacy-skill-priority-matrix.md) orders their outstanding proof obligations. The deterministic adversarial probes pass, while agent and delegated-provider evaluation remains open; neither document is a parity sign-off.
 
 Workflow state and authored receipts use atomic replacement. Repository indexing uses SQLite WAL mode, foreign keys and an immediate transaction per changed or deleted file. A failed parse or transaction cannot leave half of a file's symbols, chunks or edges visible. The disposable database can always be rebuilt and is never canonical knowledge.
 
