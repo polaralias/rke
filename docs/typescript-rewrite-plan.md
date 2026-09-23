@@ -1,8 +1,10 @@
 # RKE TypeScript rewrite plan
 
-Status: implemented for v0.10.0; final qualification evidence recorded below
+Status: TypeScript runtime implemented for v0.10.0; legacy-skill outcome parity remains open before merge
 Date: 2026-09-21
 Scope: complete RKE runtime rewrite, Engineering Workflow convergence update, distribution migration, and Python removal
+
+The [legacy skill parity matrix](legacy-skill-parity-matrix.md) is the v0.10 outcome-level acceptance baseline. Its opt-in adversarial contract probes are deliberately failing at this point; green public-operation smoke tests do not supersede those failures. TPU integration ownership is open, while standalone TPW is excluded from EWF by user decision.
 
 ## Decision
 
@@ -413,7 +415,7 @@ The former uncommitted edits to `pyproject.toml`, `src/rke/freshness_benchmark.p
 ## v0.10.0 implementation evidence
 
 - The npm runtime exposes 41 operations through one TypeScript registry shared by CLI and MCP.
-- The deterministic suite contains 45 tests, including executable success and malformed-input failure evidence for every public operation, exact CLI/MCP registry parity, malformed workflow state, concurrent state mutation, bounded repository-scale command output, SQLite migration/corruption recovery/concurrent readers, single-refresh impact composition, strength-aware concurrent verification, stable dirty-worktree reuse and second-edit detection, scoped graph/retrieval results, source-evidence and local-cache exclusion, bounded long-line review packets, regex timeout isolation, digest-bound reviewed-evidence consumption and invalidation, repository escape, secret eviction, legacy receipt migration, Gitleaks-safe source identities, evaluator corpus discovery, and clean transport behaviour.
+- The default deterministic suite contains 46 tests, including executable success and malformed-input failure evidence for every public operation, exact CLI/MCP registry parity, malformed workflow state, concurrent state mutation, bounded repository-scale command output, SQLite migration/corruption recovery/concurrent readers, single-refresh impact composition, strength-aware concurrent verification, stable dirty-worktree reuse and second-edit detection, scoped graph/retrieval results, source-evidence and local-cache exclusion, bounded long-line review packets, regex timeout isolation, digest-bound reviewed-evidence consumption and invalidation, repository escape, secret eviction, legacy receipt migration, Gitleaks-safe source identities, evaluator corpus discovery, clean transport behaviour, and structural validation of the pending legacy-parity scenario corpus.
 - SQLite schema version 4 stores Git object identity alongside files, symbols, imports, edges, chunks, and FTS5 fields. Hot Git queries compare status and HEAD plus content hashes for dirty paths. `context check` hashes all eligible content, including clean tracked files, because CI proved Git status can miss a same-size edit with restored timestamps on Windows. This bounds the fast path honestly: search can be stale under deliberately restored metadata until a full check. The acceptance change is supported by that cross-platform failure and keeps a deterministic full-verification route rather than claiming Git metadata proves content identity.
 - Release validation loads all 24 claimed Tree-sitter grammar fixtures in-process and validates FTS5, version identity, bins, and the frozen operation inventory.
 - Checked-in retrieval and structure corpora pass at 5/5 queries and 14/14 structural cases respectively.

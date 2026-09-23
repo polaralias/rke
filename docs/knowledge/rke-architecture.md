@@ -2,10 +2,10 @@
 type: Architecture Concept
 title: RKE architecture
 description: Defines the independently installed Repository Knowledge Engineering runtime, its shared CLI and MCP operation layer, repository boundaries, and relationship with EWF and OKF Tasks.
-timestamp: 2026-09-21T12:00:00+01:00
+timestamp: 2026-09-23T07:07:00+01:00
 authority: canonical
 verification: verified-working
-reviewed_at: 2026-09-23T12:00:00+01:00
+reviewed_at: 2026-09-23T07:07:00+01:00
 verified_against:
   - src/operations.ts
   - src/cli.ts
@@ -50,6 +50,8 @@ The registry contains every public lifecycle, gate, journey, task, closure, host
 
 Yes: the CLI and MCP expose the same complete public operation registry, argument schemas, handlers and structured outcomes. The CLI adds shell parsing and exit codes; MCP adds tool discovery, repository selection and protocol error mapping. Neither transport owns separate domain behavior.
 
+Transport parity does not establish legacy-skill outcome parity. The [legacy skill parity matrix](../legacy-skill-parity-matrix.md) records the remaining behavioural contracts and deliberately red acceptance probes.
+
 Workflow state and authored receipts use atomic replacement. Repository indexing uses SQLite WAL mode, foreign keys and an immediate transaction per changed or deleted file. A failed parse or transaction cannot leave half of a file's symbols, chunks or edges visible. The disposable database can always be rebuilt and is never canonical knowledge.
 
 The EWF skill is co-versioned in `skills/engineering-workflow`. Its operating contracts live only under the skill's `references/` directory: shared contracts are flat, phase-specific guidance is under `journeys/`, and opt-in capability guidance is under `extensions/`. The repository's `docs/knowledge/` directory is reserved for canonical RKE project knowledge and must not mirror those skill instructions.
@@ -61,9 +63,9 @@ At 1.0, that contract stabilises CLI operation names and principal arguments, MC
 
 ## Documentation bootstrap
 
-`rke documentation bootstrap` is the read-only deterministic entry point for “document this repository.” It classifies a repository as `no-rke`, `partial-rke`, or `mature-rke`; inventories existing canonical knowledge and instructions; identifies foundation gaps; and returns preserve, review, recommendation, evidence, reader-query, and `fresh`/`stale`/`unverified` binding sets. It hashes current eligible files covered by registered bindings and compares them directly with receipt hashes without writing the disposable context index. Receipt presence alone does not establish freshness, and stale or unverified canonical knowledge produces targeted repair rather than a mature no-op. It never authors prose or automatically supersedes existing documentation.
+`rke documentation bootstrap` is the read-only deterministic entry point for “document this repository.” It classifies a repository as `no-rke`, `partial-rke`, or `mature-rke`; inventories existing canonical knowledge and instructions; and reports preserve/review candidates and `fresh`/`stale`/`unverified` binding sets. It compares registered source hashes with receipts without writing the disposable context index. Receipt presence alone does not establish freshness. The current implementation still recommends fixed `system-overview.md` and `runtime.md` filenames, even when a different verified foundation exists; the parity contract marks this as a defect.
 
-The model or EWF journey traces real runtime evidence, writes only the necessary human-readable content, then uses knowledge registration, documentation apply, and context verification. A mature repository may correctly return `no-op`; bootstrap does not create a fixed set of files on every run.
+The model or EWF journey traces real runtime evidence and writes the necessary human-readable content. Knowledge registration, documentation apply, and context verification provide machine receipts, but the current apply handler does not yet perform every bundle and affected-coverage check promised by the skill contract. Until the parity probes pass, review those surfaces independently rather than treating an apply success as complete documentation validation.
 
 The frontmatter `reviewed_at` records the human content-review point. The verification receipt and current source hashes in `.rke/repo-context.json` are the authoritative machine freshness record.
 
@@ -87,7 +89,7 @@ Trace, map, impact and search accept explicit repository-relative scopes; no sco
 
 ## Installation and release
 
-RKE `0.10.x` is the pre-1.0 qualification series and ships only the TypeScript runtime. It represents a feature-complete candidate for the documented 1.x stability surface while preserving the ability to correct compatibility findings before that promise becomes binding. There is no Python runway or selectable dogfood engine; `1.0.0` follows successful release qualification of the stability contract in real repositories.
+RKE `0.10.x` is the pre-1.0 qualification series and ships only the TypeScript runtime. Runtime cutover is implemented, but legacy-skill outcome parity is not yet complete; the open matrix is a merge qualification boundary. There is no Python runway or selectable dogfood engine; `1.0.0` follows successful release qualification of the stability contract in real repositories.
 
 `rke host install` records repository-local integration derived from the installed commands and preserves independently owned configuration unless `--force` is explicit. The packaged `rke-eval` command is part of the same npm distribution.
 

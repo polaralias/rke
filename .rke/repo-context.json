@@ -23,8 +23,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-23T05:41:55.711Z",
-        "evidence": "Reviewed TypeScript engine, source-bound review safeguards, scoped retrieval, EWF convergence guidance, current 1k/10k/50k benchmark artifacts, 45 tests and release/package verification.",
+        "verifiedAt": "2026-09-23T06:09:50.052Z",
+        "evidence": "Reviewed archived legacy contracts against current TypeScript handlers, 46 green default tests, nine intentionally failing opt-in parity probes, release/package checks, and the corrected canonical architecture claims.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -64,11 +64,11 @@
           },
           {
             "path": "docs/knowledge/rke-architecture.md",
-            "sha256": "ca409d220d02edc3ab47dc532c7e8bb3bed547b753e9b47318d09bcc231e4481"
+            "sha256": "81accba7ded338185e304b9618d4dcce1d3c0112897a374942ce758ed0f89976"
           },
           {
             "path": "docs/typescript-rewrite-plan.md",
-            "sha256": "fabb9503358ea3726c09b604b330db41324484d289a160ad677e46ad90ea4851"
+            "sha256": "5dddb39e545f6d395cd3c10870063dc34a54a47d4945e31e618b0c5f584a114f"
           },
           {
             "path": "eslint.config.js",
@@ -80,11 +80,11 @@
           },
           {
             "path": "package.json",
-            "sha256": "835a76246509dbe4c117b64a42c0f60632fa4cb25b35a33d865f1b217d4f0dc2"
+            "sha256": "4c39a322a04aa21bf15bcedb0c80bf000632854a9509eb9a7c1658a726c1f3ab"
           },
           {
             "path": "README.md",
-            "sha256": "6a44eaed1fc117cf649aaf3c52bb4c9ba77b9cf0d6cd38d835504123e4dde829"
+            "sha256": "f6f37a6dbd49318f3446923127035abed54fd9841722a36c776b2343d9474cfd"
           },
           {
             "path": "scripts/benchmark-freshness.ts",
@@ -339,6 +339,10 @@
             "sha256": "e9a57bdcf2950e500ab1698ef508592ee8ffccf80f4c14715d9d2ca0325c958e"
           },
           {
+            "path": "tests/fixtures/legacy-parity-scenarios.json",
+            "sha256": "6a16d9da7a260b422a0bd61d9a610e1bcbd3a75b41cdcd84027cae08ce6ca5c8"
+          },
+          {
             "path": "tests/fixtures/public-operations.json",
             "sha256": "d662d2b8ac71f695218753279faeab4bb73ec8b452eb931a219dfebf51213195"
           },
@@ -439,6 +443,14 @@
             "sha256": "6e1bbfc393d7390b9019316b1639b919e01931e702c373619cb70eac0fd69ed3"
           },
           {
+            "path": "tests/legacy-parity.contract.ts",
+            "sha256": "035f9271748984f2b705bfa4aa4b9d51e5881f0111356a248edba74de657895c"
+          },
+          {
+            "path": "tests/legacy-parity.test.ts",
+            "sha256": "660e0e1a211963bdc3024fe3ecc84a8a070080f0423a083f24a1cb6f28fc0d29"
+          },
+          {
             "path": "tests/operations.test.ts",
             "sha256": "a67595200c91233a95a8441fa5da5d1db055bc8aede827054e2dda8641bbce9c"
           },
@@ -466,5 +478,5 @@
       }
     }
   ],
-  "revision": 32
+  "revision": 34
 }

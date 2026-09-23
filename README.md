@@ -21,7 +21,7 @@ Use one installed runtime and one EWF entry point:
 activate → retrieve/trace → change → documentation assess → explain → apply → close
 ```
 
-The agent chooses the smallest relevant operations for the work. Retrieval and traces guide inspection; they do not replace source verification. Documentation assessment and causal explanation operate on the actual Git delta, and apply validates agent-authored canonical knowledge before close accepts the exact-delta receipts.
+The agent chooses the smallest relevant operations for the work. Retrieval and traces guide inspection; they do not replace source verification. Explanation and documentation receipts are tied to the Git delta, but current `change explain` and `documentation apply` do not yet enforce the full legacy comprehension and knowledge-validation contracts. Review the [open parity matrix](docs/legacy-skill-parity-matrix.md) before relying on those receipts as completion evidence.
 
 ## Install
 
@@ -105,9 +105,9 @@ Run `npm run benchmark` to measure cold indexing, warm retrieval, memory, and to
 Query-to-Knowledge and Repository Change Comprehension remain distinct named concepts:
 
 - **Query-to-Knowledge (QTK)** is a human clarification loop. It groups consequential questions, recommends answers with rationale, and keeps a hard `shared-understanding` gate open until the user and agent agree on an implementation target. It is not ordinary repository orientation.
-- **Repository Change Comprehension (RCC)** reconstructs the causal behaviour of the final Git delta and records a bounded explanation receipt. It is not a changed-file summary.
+- **Repository Change Comprehension (RCC)** is intended to reconstruct the causal behaviour of the final Git delta. The current `change explain` command only records a caller-authored summary and delta fingerprint; full RCC parity remains an open v0.10 qualification item.
 
-The formerly separate repository-dissection, design/decomposition, session-alignment, local handoff/pickup, and worktree-coordination behaviours now live as deep journeys and shared RKE operations behind EWF. Tracker synchronization remains in OKF Tasks. Scenario and test planning are part of design acceptance rather than a second optional QA workflow.
+The formerly separate repository-dissection, design/decomposition, session-alignment, local handoff/pickup, and worktree-coordination behaviours are routed through EWF, but their outcome-level parity is not yet proven. The [legacy skill parity matrix](docs/legacy-skill-parity-matrix.md) records the open contracts and adversarial tests. Tracker integration for non-OKF work packages remains a design decision; standalone QA-plan writing is outside EWF.
 
 ## Source layout
 
