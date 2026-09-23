@@ -7,6 +7,7 @@ export const CLI_ROUTES:Record<string,CliRoute>={
   "closure assess":{operation:"workflow_closure_assess"},"legacy route":{operation:"workflow_legacy_route",positionals:["name"]},
   "host recipe":{operation:"repo_host_recipe"},"host install":{operation:"repo_host_install"},"dissection assess":{operation:"repo_dissection_assess"},
   "handoff write":{operation:"repo_handoff_write"},"handoff inspect":{operation:"repo_handoff_inspect"},"coordination validate":{operation:"repo_coordination_validate"},"coordination plan":{operation:"repo_coordination_plan"},"coordination cleanup-check":{operation:"repo_coordination_cleanup_check"},
+  "tracker preview":{operation:"repo_tracker_preview"},
   "publication scan":{operation:"repo_publication_scan"},"context find":{operation:"repo_find_context",positionals:["query"]},"context check":{operation:"repo_context_check"},
   "context benchmark":{operation:"repo_context_benchmark"},"context impact":{operation:"repo_knowledge_impact"},"context verify":{operation:"repo_knowledge_verify"},
   "knowledge check":{operation:"repo_knowledge_bundle_check"},"knowledge build-indexes":{operation:"repo_knowledge_build_indexes"},"knowledge register":{operation:"repo_knowledge_register"},

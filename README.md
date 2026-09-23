@@ -64,6 +64,7 @@ rke handoff write --topic credential-runtime --summary "Provider path is mapped.
 rke handoff write --visibility shared --topic credential-runtime --summary "Provider path is mapped." --next-action "Run the integration test." --root C:\repos\service
 rke coordination validate --manifest local-docs/worktrees.json --root C:\repos\service
 rke coordination cleanup-check --lane runtime --branch feat/runtime --review-head <reviewed-commit> --remote origin --destination-branch main --root C:\repos\service
+rke tracker preview --packages design/work-packages.yml --tracker github --scope team/service --root C:\repos\service
 rke publication scan --root C:\repos\service
 rke documentation assess --base main --root C:\repos\service
 rke change explain --base main --summary "Moved credential hydration behind the provider boundary." --detail-file .engineering-workflow/change-detail.json --root C:\repos\service

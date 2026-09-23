@@ -21,6 +21,7 @@ test("every public operation has an executable success and malformed-input failu
   await writeFile(join(root,"retrieval-corpus.json"),JSON.stringify({queries:[{id:"invoice",query:"calculate invoice",relevantPaths:["src/service.ts"]}]},null,2));
   await writeFile(join(root,"structure-corpus.json"),JSON.stringify({cases:[{id:"service",kind:"file-api",path:"src/service.ts",expected:["calculateInvoice","helper"]}]},null,2));
   await writeFile(join(root,"coordination.yml"),"base: HEAD\nlanes:\n  - name: runtime\n    paths:\n      - src/service.ts\n");
+  await writeFile(join(root,"packages.yml"),"schemaVersion: 1\nstatus: accepted\npackages:\n  - id: WP-1\n    title: Implement invoice lookup\n    summary: Add bounded invoice lookup.\n    acceptance: [Lookup returns the requested invoice.]\n");
   spawnSync("git",["add","."],{cwd:root});
   const committed=spawnSync("git",["commit","-m","baseline"],{cwd:root,encoding:"utf8"});
   assert.equal(committed.status,0,committed.stderr);
@@ -67,6 +68,7 @@ test("every public operation has an executable success and malformed-input failu
   });
   const reviewHead=spawnSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).stdout.trim();
   await call("repo_coordination_cleanup_check",{lane,branch:"feat/cleanup",reviewHead,remote:"origin",destinationBranch:"main"});
+  await call("repo_tracker_preview",{packages:"packages.yml",tracker:"github",scope:"team/invoices"});
   const publication=await call("repo_publication_scan",{},[0,3]);
   if(publication.exitCode===3){
     assert.equal(publication.payload.safe,false,"a failed scan must never be reported as safe");

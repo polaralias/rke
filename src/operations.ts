@@ -2,6 +2,7 @@
 import { RkeError } from "./errors.js";
 import { readJson } from "./io.js";
 import { assessCoordinationCleanup } from "./coordination-cleanup.js";
+import { trackerPreview } from "./tracker-preview.js";
 import { repositoryPath, safeRelative } from "./paths.js";
 import { RepositoryEngine } from "./repository-engine.js";
 import { readSourceEvidence, reviewPacket } from "./source-evidence.js";
@@ -46,6 +47,7 @@ const definitions:Array<[string,JsonObject,boolean,boolean,Handler]> = [
   ["repo_coordination_validate",schema({manifest:string},["manifest"]),true,true,(r,a)=>surfaces.coordination(r,value(a,"manifest"))],
   ["repo_coordination_plan",schema({manifest:string},["manifest"]),true,true,(r,a)=>surfaces.coordination(r,value(a,"manifest"),true)],
   ["repo_coordination_cleanup_check",schema({lane:string,branch:string,reviewHead:string,remote:string,destinationBranch:string},["lane","branch","reviewHead","remote","destinationBranch"]),true,true,(r,a)=>assessCoordinationCleanup(r,{lane:value(a,"lane"),branch:value(a,"branch"),reviewHead:value(a,"reviewHead"),remote:value(a,"remote"),destinationBranch:value(a,"destinationBranch")})],
+  ["repo_tracker_preview",schema({packages:string,tracker:string,scope:string},["packages","tracker","scope"]),true,true,(r,a)=>trackerPreview(r,value(a,"packages"),value(a,"tracker"),value(a,"scope"))],
   ["repo_publication_scan",schema({}),true,true,(r)=>surfaces.publicationScan(r)],
   ["repo_find_context",schema({query:string,limit:{type:"integer",minimum:1,default:8},scope:string},["query"]),true,true,async(r,a)=>ok({result:"context-found",query:value(a,"query"),matches:await engine(r,e=>e.search(value(a,"query"),value(a,"limit",8),a.scope?[String(a.scope)]:[]))})],
   ["repo_context_check",schema({manifest:string}),true,true,async(r,a)=>{const freshness=await engine(r,e=>e.ensureFresh(true));const knowledge=await surfaces.contextCheck(r,a.manifest);return ok({result:"context-checked",freshness,knowledge:knowledge.payload},knowledge.exitCode);} ],

@@ -62,21 +62,29 @@ export async function inspectHandoff(root:string,args:Record<string,unknown>):Pr
 export async function publicationScan(root:string):Promise<OperationOutcome>{
   const listed=git(root,"ls-files","-z");if(listed.code)return out({result:"publication-scan-incomplete",safe:false,findings:[{kind:"tracked-files-unavailable"}]},3);
   const findings:Record<string,unknown>[]=[],tracked=listed.stdout.split("\0").filter(Boolean);
+  const coverage={trackedFiles:tracked.length,textScanned:0,publicDocsScanned:0,binaryOrUnreadable:0,oversized:0,historyScanner:false};
   for(const path of tracked){
     if(/(^|\/)(\.env|id_rsa|credentials|secret)/i.test(path))findings.push({path,kind:"sensitive-path"});
     if(/(^|\/)(?:node_modules|dist|build|__pycache__|\.pytest_cache|\.venv|\.engineering-workflow\/cache)(\/|$)/i.test(path))findings.push({path,kind:"generated-cache"});
-    const target=repositoryPath(root,safeRelative(path));if(!existsSync(target))continue;
-    const details=await stat(target);if(details.size>1_000_000){findings.push({path,kind:"scan-coverage-gap",reason:"file exceeds text scan limit"});continue;}
-    const text=await readFile(target,"utf8").catch(()=>"");
+    let target:string;try{target=repositoryPath(root,safeRelative(path));}catch{findings.push({path,kind:"scan-coverage-gap",reason:"tracked path is unsafe"});continue;}
+    if(!existsSync(target)){findings.push({path,kind:"scan-coverage-gap",reason:"tracked path is missing"});continue;}
+    const details=await stat(target).catch(()=>undefined);if(!details?.isFile()){findings.push({path,kind:"scan-coverage-gap",reason:"tracked path is not a readable file"});continue;}
+    if(details.size>1_000_000){coverage.oversized++;findings.push({path,kind:"scan-coverage-gap",reason:"file exceeds text scan limit"});continue;}
+    const bytes=await readFile(target).catch(()=>undefined);let text:string;
+    try{if(!bytes||bytes.includes(0))throw new Error("binary or unreadable");text=new TextDecoder("utf-8",{fatal:true}).decode(bytes);}catch{coverage.binaryOrUnreadable++;findings.push({path,kind:"scan-coverage-gap",reason:"binary or unreadable tracked file"});continue;}
+    coverage.textScanned++;if(/(^|\/)README(?:\.[^/]*)?$/i.test(path)||/\.md$/i.test(path))coverage.publicDocsScanned++;
     const lines=text.split(/\r?\n/),secretLine=lines.findIndex(line=>containsSecret(line)),localLine=lines.findIndex(line=>/(?:[A-Z]:\\Users\\[^\\\s]+\\|\/Users\/[^/\s]+\/|\/home\/[^/\s]+\/)/i.test(line));
+    const personalEmail=lines.findIndex(line=>{const matches=[...line.matchAll(/\b[A-Z0-9._%+-]+@([A-Z0-9.-]+\.[A-Z]{2,})\b/gi)];return matches.some(match=>!/^(?:example\.(?:com|org|net|invalid)|test\.(?:com|org|net|invalid))$/i.test(match[1]!));});
     if(secretLine>=0)findings.push({path,kind:"secret-pattern",line:secretLine+1});
     if(localLine>=0)findings.push({path,kind:"local-path",line:localLine+1});
+    if(personalEmail>=0)findings.push({path,kind:"personal-email-candidate",line:personalEmail+1});
   }
   const gitleaks=run("gitleaks",["detect","--no-banner","--no-git","--source",root,"--report-format","json"],root);
   const available=gitleaks.code!==127&&!/not recognized|ENOENT|not found/i.test(gitleaks.stderr);
   const history=available?run("gitleaks",["detect","--no-banner","--source",root,"--report-format","json"],root):null;
-  const safe=!findings.length&&available&&gitleaks.code===0&&history?.code===0;
-  return out({result:"publication-scanned",safe,findings,gitleaks:{available,workingTreeExitCode:gitleaks.code,historyExitCode:history?.code??null}},safe?0:3);
+  coverage.historyScanner=Boolean(available&&history?.code===0);
+  const safe=!findings.length&&available&&gitleaks.code===0&&coverage.historyScanner;
+  return out({result:"publication-scanned",safe,scope:"automated-hygiene-only",publication:"not performed",findings,coverage,gitleaks:{available,workingTreeExitCode:gitleaks.code,historyExitCode:history?.code??null}},safe?0:3);
 }
 
 interface SourceIdentity {path:string;sha256:string}

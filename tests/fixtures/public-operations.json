@@ -6,7 +6,7 @@
     "workflow_gate_add", "workflow_gate_resolve", "workflow_journey_enter", "workflow_task_configure", "workflow_task_check",
     "workflow_capability_enable", "workflow_closure_assess", "workflow_legacy_route", "repo_host_recipe", "repo_host_install",
     "repo_context_benchmark", "repo_dissection_assess", "repo_handoff_write", "repo_handoff_inspect", "repo_coordination_validate",
-    "repo_coordination_plan", "repo_coordination_cleanup_check", "repo_publication_scan", "repo_find_context", "repo_context_check", "repo_knowledge_impact",
+    "repo_coordination_plan", "repo_coordination_cleanup_check", "repo_tracker_preview", "repo_publication_scan", "repo_find_context", "repo_context_check", "repo_knowledge_impact",
     "repo_knowledge_verify", "repo_knowledge_bundle_check", "repo_knowledge_build_indexes", "repo_knowledge_register", "repo_documentation_bootstrap",
     "repo_documentation_assess", "repo_documentation_disposition", "repo_documentation_apply", "repo_change_explain", "repo_file_api", "repo_prepare_code_review",
     "repo_record_code_review", "repo_trace_symbol", "repo_structure_map", "repo_change_impact", "repo_structure_benchmark", "repo_find_all"

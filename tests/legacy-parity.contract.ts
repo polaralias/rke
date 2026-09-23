@@ -183,6 +183,21 @@ test("RPF-01 reports a tracked machine-local path before declaring publish safet
   assert.ok((result.payload.findings as Record<string, unknown>[]).some(item => item.path === "README.md" && item.kind === "local-path"));
 });
 
+test("RPF-01 accounts for PII and unreadable tracked coverage without returning values",async t=>{
+  const root=await fixture(t);
+  await writeFile(join(root,"README.md"),"# Public guide\n\nContact jane.smith@personal.example for support.\n");
+  await writeFile(join(root,"asset.bin"),new Uint8Array([0,1,2,3]));
+  git(root,"add","README.md","asset.bin");
+  const result=await invokeOperation(root,"repo_publication_scan",{});
+  assert.equal(result.exitCode,3);
+  assert.equal(result.payload.safe,false);
+  assert.equal(result.payload.publication,"not performed");
+  assert.ok((result.payload.findings as Record<string,unknown>[]).some(item=>item.kind==="personal-email-candidate"&&item.path==="README.md"));
+  assert.ok((result.payload.findings as Record<string,unknown>[]).some(item=>item.kind==="scan-coverage-gap"&&item.path==="asset.bin"));
+  assert.ok((result.payload.coverage as {binaryOrUnreadable:number}).binaryOrUnreadable>0);
+  assert.ok(!JSON.stringify(result.payload).includes("jane.smith@personal.example"));
+});
+
 test("RCC-01 rejects or enriches a vacuous explanation rather than accepting it as comprehension", async t => {
   const root = await fixture(t);
   await writeFile(join(root, "service.ts"), "export function calculateTotal(value: number) { return value; }\n");
@@ -237,6 +252,29 @@ test("RTL-01 delegates active-effort validation and repair to the real OKF Tasks
   assert.equal(valid.exitCode,0,JSON.stringify(valid.payload));
   assert.equal((await invokeOperation(root,"workflow_gate_resolve",{gate:"task-reconciliation",evidence:"The authoritative OKF CLI closed effort and strict validation passed."})).exitCode,0);
   assert.equal((await invokeOperation(root,"workflow_closure_assess",{base:"HEAD"})).exitCode,3,"the task mutation still needs change and documentation receipts before closure");
+});
+
+test("TPU-01 renders accepted non-OKF packages without task or provider mutation",async t=>{
+  const root=await fixture(t);
+  await writeFile(join(root,"work-packages.yml"),"schemaVersion: 1\nstatus: accepted\npackages:\n  - id: WP-1\n    title: Invoice lookup\n    summary: Add an invoice lookup endpoint.\n    acceptance: [An existing invoice is returned by ID.]\n  - id: WP-2\n    title: Error handling\n    summary: Return a bounded missing-invoice response.\n    parent: WP-1\n    dependsOn: [WP-1]\n    acceptance: [A missing invoice produces a documented 404.]\n    labels: [api]\n");
+  const preview=await invokeOperation(root,"repo_tracker_preview",{packages:"work-packages.yml",tracker:"github",scope:"team/invoices"});
+  assert.equal(preview.exitCode,0,JSON.stringify(preview.payload));
+  assert.equal(preview.payload.publication,"not performed");
+  assert.equal(preview.payload.tasksCreated,false);
+  const rows=preview.payload.rows as Record<string,unknown>[];
+  assert.deepEqual(rows.map(row=>row.sourceId),["WP-1","WP-2"]);
+  assert.equal(rows[1]!.parentSourceId,"WP-1");
+  assert.deepEqual(rows[1]!.dependsOnSourceIds,["WP-1"]);
+  assert.deepEqual(rows[1]!.acceptance,["A missing invoice produces a documented 404."]);
+  assert.equal(await readFile(join(root,"tasks"),"utf8").then(()=>true,()=>false),false);
+  await writeFile(join(root,"work-packages.yml"),"schemaVersion: 1\nstatus: draft\npackages:\n  - id: WP-1\n    title: Unaccepted work\n    summary: Not ready.\n    acceptance: []\n");
+  const refused=await invokeOperation(root,"repo_tracker_preview",{packages:"work-packages.yml",tracker:"github",scope:"team/invoices"});
+  assert.equal(refused.exitCode,3);
+  assert.equal(refused.payload.publication,"not performed");
+  await writeFile(join(root,"work-packages.yml"),"schemaVersion: 1\nstatus: accepted\npackages:\n  - id: WP-1\n    title: First\n    summary: First work.\n    acceptance: [First accepted.]\n    dependsOn: [WP-2]\n  - id: WP-2\n    title: Second\n    summary: Second work.\n    acceptance: [Second accepted.]\n    dependsOn: [WP-1]\n");
+  const cyclic=await invokeOperation(root,"repo_tracker_preview",{packages:"work-packages.yml",tracker:"github",scope:"team/invoices"});
+  assert.equal(cyclic.exitCode,3);
+  assert.match(JSON.stringify(cyclic.payload.errors),/Dependency cycle/);
 });
 
 test("RKE-01 bootstrap does not require fixed filenames in an otherwise verified knowledge foundation", async t => {
