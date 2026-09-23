@@ -23,8 +23,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-23T06:09:50.052Z",
-        "evidence": "Reviewed archived legacy contracts against current TypeScript handlers, 46 green default tests, nine intentionally failing opt-in parity probes, release/package checks, and the corrected canonical architecture claims.",
+        "verifiedAt": "2026-09-23T06:10:35.770Z",
+        "evidence": "Reviewed archived legacy contracts against current TypeScript handlers, 46 green default tests, nine deliberately failing opt-in parity probes, release/package checks, and corrected canonical architecture claims after commit.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -478,5 +478,5 @@
       }
     }
   ],
-  "revision": 34
+  "revision": 35
 }
