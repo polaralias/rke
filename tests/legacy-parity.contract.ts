@@ -29,6 +29,55 @@ async function fixture(t: TestContext): Promise<string> {
   return root;
 }
 
+test("EWO-01 closes a reviewed small change without manufacturing canonical knowledge",async t=>{
+  const root=await fixture(t);
+  await writeFile(join(root,"calculator.mjs"),"export function add(a, b) { return a + b; }\n");
+  git(root,"add",".");git(root,"commit","-m","baseline");
+  await writeFile(join(root,"calculator.mjs"),"export function add(a, b) { return a + b; }\nexport function divide(a, b) { return a / b; }\n");
+  await writeFile(join(root,"test_calculator.mjs"),"import { divide } from './calculator.mjs';\nif (divide(6, 2) !== 3) throw new Error('divide failed');\n");
+  const changed=["calculator.mjs","test_calculator.mjs"];
+  const incomplete=await invokeOperation(root,"repo_documentation_disposition",{base:"HEAD",reviewedPaths:["calculator.mjs"],evidence:"Reviewed the focused operation and test; no durable architecture changed."});
+  assert.equal(incomplete.exitCode,3);
+  const disposition=await invokeOperation(root,"repo_documentation_disposition",{base:"HEAD",reviewedPaths:changed,evidence:"Reviewed the focused operation and test; no durable architecture changed."});
+  assert.equal(disposition.exitCode,0,JSON.stringify(disposition.payload));
+  assert.equal(disposition.payload.result,"documentation-disposition-recorded");
+  assert.equal(await readFile(join(root,"docs","knowledge","architecture.md"),"utf8").then(()=>true,()=>false),false,"no bundle should be manufactured");
+  await mkdir(join(root,".engineering-workflow"),{recursive:true});
+  await writeFile(join(root,".engineering-workflow","detail.json"),JSON.stringify({before:"Only add existed",after:"divide is available",why:"The requested calculator operation is now implemented",causalPath:[{path:"calculator.mjs",symbol:"divide"}],verification:[{claim:"divide returns three",kind:"test",evidence:"test_calculator.mjs"}]}));
+  assert.equal((await invokeOperation(root,"repo_change_explain",{base:"HEAD",summary:"The calculator now divides numbers with a focused executable test.",detailFile:".engineering-workflow/detail.json"})).exitCode,0);
+  assert.equal((await invokeOperation(root,"workflow_activate",{phase:"deliver",taskMode:"none"})).exitCode,0);
+  const closure=await invokeOperation(root,"workflow_closure_assess",{base:"HEAD"});
+  assert.equal(closure.exitCode,0,JSON.stringify(closure.payload));
+  assert.equal((closure.payload.lanes as {knowledge:{status:string}}).knowledge.status,"no-update-current");
+  const receiptPath=join(root,".engineering-workflow","documentation-receipt.json"),receipt=JSON.parse(await readFile(receiptPath,"utf8")) as Record<string,unknown>;
+  await writeFile(receiptPath,JSON.stringify({...receipt,evidence:"no update"}));
+  assert.equal((await invokeOperation(root,"workflow_closure_assess",{base:"HEAD"})).exitCode,3,"a forged thin receipt cannot clear closure");
+  await writeFile(receiptPath,JSON.stringify(receipt));
+  await writeFile(join(root,"calculator.mjs"),"export function add(a, b) { return a + b; }\nexport function divide(a, b) { if (b === 0) throw new Error('zero'); return a / b; }\n");
+  const stale=await invokeOperation(root,"workflow_closure_assess",{base:"HEAD"});
+  assert.equal(stale.exitCode,3);
+  assert.equal((stale.payload.lanes as {knowledge:{status:string}}).knowledge.status,"stale");
+});
+
+test("EWO-01 refuses no-update disposition for bound or changed canonical knowledge",async t=>{
+  const root=await fixture(t);
+  await mkdir(join(root,"docs","knowledge"),{recursive:true});
+  await mkdir(join(root,".rke"),{recursive:true});
+  await writeFile(join(root,"service.ts"),"export const status = 'old';\n");
+  await writeFile(join(root,"docs","knowledge","service.md"),"---\ntype: Architecture Concept\ntitle: Service\ndescription: Service status.\n---\n\n# Service\n\nThe service reports old status.\n");
+  await writeFile(join(root,".rke","repo-context.json"),JSON.stringify({schemaVersion:1,knowledge:[{path:"docs/knowledge/service.md",sources:["service.ts"]}]}));
+  git(root,"add",".");git(root,"commit","-m","baseline");
+  await writeFile(join(root,"service.ts"),"export const status = 'new';\n");
+  const bound=await invokeOperation(root,"repo_documentation_disposition",{base:"HEAD",reviewedPaths:["service.ts"],evidence:"I reviewed the service status change but want to skip canonical documentation."});
+  assert.equal(bound.exitCode,3);
+  assert.equal((bound.payload.error as {code:string}).code,"documentation_affected_knowledge");
+  await writeFile(join(root,"service.ts"),"export const status = 'old';\n");
+  await writeFile(join(root,"docs","knowledge","service.md"),"---\ntype: Architecture Concept\ntitle: Service\ndescription: Service status.\n---\n\n# Service\n\nThe service reports new status.\n");
+  const canonical=await invokeOperation(root,"repo_documentation_disposition",{base:"HEAD",reviewedPaths:["docs/knowledge/service.md"],evidence:"I reviewed the changed canonical concept and want to skip documentation."});
+  assert.equal(canonical.exitCode,3);
+  assert.equal((canonical.payload.error as {code:string}).code,"documentation_canonical_changed");
+});
+
 test("WTC-01 rejects an empty coordination topology", async t => {
   const root = await fixture(t);
   await writeFile(join(root, "coordination.yml"), "lanes: []\n");
@@ -56,6 +105,39 @@ test("WTC-01 refuses an unresolved base and cyclic lane dependencies",async t=>{
   const result=await invokeOperation(root,"repo_coordination_plan",{manifest:"coordination.yml"});
   assert.notEqual(result.exitCode,0);assert.deepEqual(result.payload.commands,[]);
   assert.match(JSON.stringify(result.payload.errors),/base|cycle/i);
+});
+
+test("WTC-02 blocks stale review tips and checks exact remote integration without deleting work",async t=>{
+  const root=await fixture(t),remote=await mkdtemp(join(tmpdir(),"rke-legacy-remote-"));
+  const lane=basename(root).toLowerCase(),container=resolve(root,"..",".rke-worktrees"),target=join(container,lane);
+  assert.ok(resolve(remote).startsWith(`${resolve(tmpdir())}${sep}`)&&basename(remote).startsWith("rke-legacy-remote-"));
+  await mkdir(container,{recursive:true});
+  git(remote,"init","--bare");
+  await writeFile(join(root,"README.md"),"# Exact-tip integration fixture\n");
+  git(root,"add",".");git(root,"commit","-m","baseline");git(root,"branch","-M","main");
+  git(root,"remote","add","origin",remote);git(root,"push","origin","main");
+  git(root,"worktree","add","-b","feat/cleanup",target,"HEAD");
+  const reviewHead=spawnSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).stdout.trim();
+  const args={lane,branch:"feat/cleanup",reviewHead,remote:"origin",destinationBranch:"main"};
+  const eligible=await invokeOperation(root,"repo_coordination_cleanup_check",args);
+  assert.equal(eligible.exitCode,0,JSON.stringify(eligible.payload));
+  assert.equal(eligible.payload.mutation,"none");
+  git(root,"push","origin","feat/cleanup");
+  const remotePresent=await invokeOperation(root,"repo_coordination_cleanup_check",args);
+  assert.equal(remotePresent.exitCode,3);
+  assert.equal((remotePresent.payload.checks as Record<string,boolean>).sourceRemoteAbsent,false);
+  git(root,"push","origin","--delete","feat/cleanup");
+  await writeFile(join(target,"new.txt"),"new work after review\n");
+  const dirty=await invokeOperation(root,"repo_coordination_cleanup_check",args);
+  assert.equal(dirty.exitCode,3);
+  assert.equal((dirty.payload.checks as Record<string,boolean>).cleanWorktree,false);
+  git(target,"add","new.txt");git(target,"commit","-m","advance branch after review");
+  const advanced=await invokeOperation(root,"repo_coordination_cleanup_check",args);
+  assert.equal(advanced.exitCode,3);
+  assert.equal((advanced.payload.checks as Record<string,boolean>).exactReviewedTip,false);
+  assert.equal(await readFile(join(target,"new.txt"),"utf8"),"new work after review\n");
+  git(root,"worktree","remove",target);
+  await rm(remote,{recursive:true,force:true});
 });
 
 test("LHO-01 max handoff includes the substantive continuation backbone", async t => {
@@ -129,6 +211,32 @@ test("RSA-01 does not call an invalid task lane ready just because no EWF gate w
   await invokeOperation(root, "workflow_activate", {});
   const result = await invokeOperation(root, "workflow_closure_assess", { base: "HEAD" });
   assert.equal(result.payload.ready, false, "closure must independently discover and validate the existing task lane");
+});
+
+test("RTL-01 delegates active-effort validation and repair to the real OKF Tasks CLI",async t=>{
+  if(spawnSync("okf-tasks",["--version"],{encoding:"utf8"}).status!==0){t.skip("OKF Tasks CLI is not installed in this environment");return;}
+  const root=await fixture(t),taskDir=join(root,"tasks","fixture-task");
+  await mkdir(taskDir,{recursive:true});
+  await writeFile(join(root,"tasks","index.md"),'---\nokf_version: "0.1"\nokf_tasks_version: "0.1"\nokf_tasks_profile: https://github.com/polaralias/okf-tasks/blob/v0.1.0/SPEC.md\n---\n\n<!-- Generated by okf-task-lifecycle. Do not edit by hand. -->\n# Task index\n\n## done\n\n- [Fixture task](./fixture-task/task.md) — Exercise task validation.\n');
+  await writeFile(join(taskDir,"task.md"),"---\ntype: Task\ntask: fixture-task\ntitle: Fixture task\ndescription: Exercise task validation.\nstatus: done\ncreated: '2026-07-17T09:00:00Z'\ntimestamp: '2026-07-17T09:00:00Z'\nstarted: '2026-07-17T09:00:00Z'\nfinished: '2026-07-17T10:00:00Z'\neffort_minutes: 0\ntime:\n- id: running-entry\n  status: running\n  actor: agent\n  started: '2026-07-17T09:00:00Z'\n  method: tracked\n  activity: implementation\n  basis: Explicit fixture values.\n---\n\n# Fixture task\n\n## Outcome\n\nProduce the stated outcome.\n\n## Scope\n\n- Included: the fixture contract.\n\n## Acceptance\n\n- [x] The fixture is evaluated.\n\n## Evidence\n\n- Conformance fixture.\n");
+  git(root,"add","tasks");git(root,"commit","-m","task fixture");
+  await invokeOperation(root,"workflow_activate",{phase:"close",taskMode:"full"});
+  const missing=await invokeOperation(root,"workflow_task_check",{cli:"definitely-missing-okf-tasks"});
+  assert.equal(missing.exitCode,2);
+  assert.equal(missing.payload.result,"okf-tasks-unavailable");
+  const incompatible=await invokeOperation(root,"workflow_task_check",{cli:"legacy-task-adapter.py"});
+  assert.equal(incompatible.exitCode,2);
+  assert.equal(incompatible.payload.result,"okf-tasks-incompatible");
+  const invalid=await invokeOperation(root,"workflow_task_check",{});
+  assert.equal(invalid.exitCode,3,JSON.stringify(invalid.payload));
+  assert.match(JSON.stringify(invalid.payload),/running time entries/i);
+  assert.equal((await invokeOperation(root,"workflow_closure_assess",{base:"HEAD"})).exitCode,3);
+  const repaired=spawnSync("okf-tasks",["stop-time","--root",root,"--bundle","tasks","--task","fixture-task","--entry","running-entry","--finished","2026-07-17T10:00:00Z","--effort-minutes","60"],{encoding:"utf8"});
+  assert.equal(repaired.status,0,repaired.stderr||repaired.stdout);
+  const valid=await invokeOperation(root,"workflow_task_check",{});
+  assert.equal(valid.exitCode,0,JSON.stringify(valid.payload));
+  assert.equal((await invokeOperation(root,"workflow_gate_resolve",{gate:"task-reconciliation",evidence:"The authoritative OKF CLI closed effort and strict validation passed."})).exitCode,0);
+  assert.equal((await invokeOperation(root,"workflow_closure_assess",{base:"HEAD"})).exitCode,3,"the task mutation still needs change and documentation receipts before closure");
 });
 
 test("RKE-01 bootstrap does not require fixed filenames in an otherwise verified knowledge foundation", async t => {

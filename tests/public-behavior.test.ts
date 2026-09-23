@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join, resolve, sep } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { invokeOperation, OPERATIONS } from "../src/operations.js";
 
-test("every public operation has an executable success and malformed-input failure contract",async()=>{
+test("every public operation has an executable success and malformed-input failure contract",async t=>{
   const root=await mkdtemp(join(tmpdir(),"rke-public-contract-"));
   spawnSync("git",["init"],{cwd:root});
   spawnSync("git",["config","user.email","tests@example.test"],{cwd:root});
@@ -44,12 +44,29 @@ test("every public operation has an executable success and malformed-input failu
   await call("workflow_legacy_route",{name:"RKE"});
   await call("repo_host_recipe",{host:"codex",base:"HEAD"});
   await call("repo_host_install",{host:"codex",base:"HEAD",force:false});
+  const earlyAssessment=await call("repo_documentation_assess",{base:"HEAD"},[3]);
+  await call("repo_documentation_disposition",{base:"HEAD",reviewedPaths:earlyAssessment.payload.changedPaths as string[],evidence:"The host integration changes need no canonical knowledge update in this fixture."});
   await call("repo_context_benchmark",{corpus:"retrieval-corpus.json"});
   await call("repo_dissection_assess",{});
   const handoff=await call("repo_handoff_write",{topic:"runtime contract",summary:"Public surfaces exercised.",nextAction:"Complete closure.",mode:"standard",visibility:"local",references:["docs/knowledge/architecture.md"]});
   await call("repo_handoff_inspect",{path:String(handoff.payload.path),visibility:"local"});
   await call("repo_coordination_validate",{manifest:"coordination.yml"});
   await call("repo_coordination_plan",{manifest:"coordination.yml"});
+  const remote=await mkdtemp(join(tmpdir(),"rke-public-remote-"));
+  const lane=basename(root).toLowerCase(),worktree=resolve(root,"..",".rke-worktrees",lane);
+  await mkdir(resolve(root,"..",".rke-worktrees"),{recursive:true});
+  assert.equal(spawnSync("git",["init","--bare",remote],{encoding:"utf8"}).status,0);
+  assert.equal(spawnSync("git",["branch","-M","main"],{cwd:root,encoding:"utf8"}).status,0);
+  assert.equal(spawnSync("git",["remote","add","origin",remote],{cwd:root,encoding:"utf8"}).status,0);
+  assert.equal(spawnSync("git",["-c","core.hooksPath=.git/no-hooks","push","origin","main"],{cwd:root,encoding:"utf8"}).status,0);
+  assert.equal(spawnSync("git",["worktree","add","-b","feat/cleanup",worktree,"HEAD"],{cwd:root,encoding:"utf8"}).status,0);
+  t.after(async()=>{
+    assert.ok(resolve(remote).startsWith(`${resolve(tmpdir())}${sep}`)&&basename(remote).startsWith("rke-public-remote-"));
+    spawnSync("git",["worktree","remove",worktree],{cwd:root,encoding:"utf8"});
+    await rm(remote,{recursive:true,force:true});
+  });
+  const reviewHead=spawnSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).stdout.trim();
+  await call("repo_coordination_cleanup_check",{lane,branch:"feat/cleanup",reviewHead,remote:"origin",destinationBranch:"main"});
   const publication=await call("repo_publication_scan",{},[0,3]);
   if(publication.exitCode===3){
     assert.equal(publication.payload.safe,false,"a failed scan must never be reported as safe");

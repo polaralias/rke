@@ -1,0 +1,60 @@
+interface EventSummary {
+  elapsedMs: number;
+  event: string;
+  itemType?: string;
+  itemId?: string;
+  exitCode?: number;
+}
+
+const MAX_LINE = 1_000_000;
+const MAX_EVENTS = 32;
+
+export class AgentEvaluationTrace {
+  private pending = "";
+  private readonly startedAt = Date.now();
+  private lastEventAt = this.startedAt;
+  private count = 0;
+  private readonly recent: EventSummary[] = [];
+
+  accept(chunk: string): void {
+    this.pending += chunk;
+    if (this.pending.length > MAX_LINE) {
+      this.pending = "";
+      return;
+    }
+    let newline = this.pending.indexOf("\n");
+    while (newline >= 0) {
+      const line = this.pending.slice(0, newline);
+      this.pending = this.pending.slice(newline + 1);
+      this.acceptLine(line);
+      newline = this.pending.indexOf("\n");
+    }
+  }
+
+  private acceptLine(line: string): void {
+    let value: Record<string, unknown>;
+    try {
+      const parsed: unknown = JSON.parse(line);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
+      value = parsed as Record<string, unknown>;
+    } catch { return; }
+    if (typeof value.type !== "string") return;
+    const item = value.item && typeof value.item === "object" && !Array.isArray(value.item)
+      ? value.item as Record<string, unknown> : undefined;
+    const entry: EventSummary = {
+      elapsedMs: Date.now() - this.startedAt,
+      event: value.type,
+      ...(typeof item?.type === "string" ? { itemType: item.type } : {}),
+      ...(typeof item?.id === "string" ? { itemId: item.id.slice(0, 80) } : {}),
+      ...(typeof item?.exit_code === "number" ? { exitCode: item.exit_code } : {})
+    };
+    this.count++;
+    this.lastEventAt = Date.now();
+    this.recent.push(entry);
+    if (this.recent.length > MAX_EVENTS) this.recent.shift();
+  }
+
+  snapshot(): {eventCount: number; quietMs: number; recent: EventSummary[]} {
+    return {eventCount: this.count, quietMs: Date.now() - this.lastEventAt, recent: [...this.recent]};
+  }
+}

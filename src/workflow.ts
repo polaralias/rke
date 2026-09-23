@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { git, gitDelta, readJson, run, sha256, utcNow, withFileLock, writeJson } from "./io.js";
+import { git, gitChangedPaths, gitDelta, readJson, run, sha256, utcNow, withFileLock, writeJson } from "./io.js";
 import { safeRelative } from "./paths.js";
 import type { OperationOutcome } from "./types.js";
 
@@ -75,7 +75,7 @@ export async function start(root: string, phase: string, capabilities: string[],
     await save(root, next); return outcome({ result: "new-cycle-started", state_path: path, state: next });
   }
   const now = utcNow(); const state: WorkflowState = { schema_version: 1, revision: 0, status: "active", primary_phase: phase,
-    active_capabilities: unique(capabilities), outstanding_gates: unique(gates), task_tracking: { mode: taskMode, task_ref: null },
+    active_capabilities: unique(taskMode==="none"?capabilities:[...capabilities,"task-lifecycle"]), outstanding_gates: unique(taskMode==="none"?gates:[...gates,"task-reconciliation"]), task_tracking: { mode: taskMode, task_ref: null },
     continuity: { checkpoint: null }, created_at: now, updated_at: now };
   await save(root, state); return outcome({ result: "started", state_path: path, state });
 }
@@ -97,18 +97,34 @@ export async function resolveGate(root:string,gate:string,evidence:string):Promi
 export async function enterJourney(root:string,journey:string):Promise<OperationOutcome>{const state=await load(root);const stop=blocked(root,state);if(stop)return stop;const specification=JOURNEYS[journey]!;const previous=state.primary_phase;state.primary_phase=journey;state.active_capabilities=unique([...state.active_capabilities,...specification.capabilities as string[]]);state.outstanding_gates=unique([...state.outstanding_gates,...specification.gates as string[]]);(state.phase_history??=[]).push({from:previous,to:journey,entered_at:utcNow()});await save(root,state);return outcome({result:"journey-entered",state_path:statePath(root),journey:specification,state});}
 export async function enableCapability(root:string,capability:string):Promise<OperationOutcome>{const state=await load(root);const stop=blocked(root,state);if(stop)return stop;const specification=CAPABILITIES[capability]!;state.active_capabilities=unique([...state.active_capabilities,capability]);state.outstanding_gates=unique([...state.outstanding_gates,...specification.gates as string[]]);await save(root,state);return outcome({result:"capability-enabled",state_path:statePath(root),capability:specification,state});}
 export async function configureTasks(root:string,mode:string,taskRef:string|null,bundle:string,force:boolean):Promise<OperationOutcome>{const state=await load(root);const stop=blocked(root,state);if(stop)return stop;const rank:Record<string,number>={none:0,lightweight:1,full:2};if(rank[mode]!<rank[state.task_tracking.mode]!&&!force)return outcome({result:"task-mode-reduction-requires-force",state},2);if(mode==="none"&&taskRef)return outcome({result:"task-mode-invalid",state},2);state.task_tracking={mode,task_ref:taskRef?safeRelative(taskRef):mode==="none"?null:state.task_tracking.task_ref,bundle:safeRelative(bundle)};if(mode!=="none"){state.active_capabilities=unique([...state.active_capabilities,"task-lifecycle"]);state.outstanding_gates=unique([...state.outstanding_gates,"task-reconciliation"]);}else if(force)state.active_capabilities=state.active_capabilities.filter(v=>v!=="task-lifecycle");await save(root,state);return outcome({result:"task-tracking-configured",state_path:statePath(root),state});}
-export async function checkTasks(root:string,cli?:string):Promise<OperationOutcome>{const state=await load(root);if(state.task_tracking.mode==="none")return outcome({result:"task-tracking-disabled",executed:false,plan:{mode:"none",durable:false},state});const executable=cli??"okf-tasks";if(executable.toLowerCase().endsWith(".py"))return outcome({result:"okf-tasks-incompatible",executed:false,error:"Python task adapters are not supported by the TypeScript runtime."},2);const version=run(executable,["--version"],root);const match=version.stdout.trim().match(/^okf-tasks\s+(\d+(?:\.\d+){2})$/);if(version.code||!match)return outcome({result:"okf-tasks-unavailable",executed:false,error:version.stderr.trim()||"The configured executable did not identify itself as okf-tasks."},2);const bundle=state.task_tracking.bundle??"tasks";const validation=run(executable,["validate","--root",root,"--bundle",bundle,"--strict"],root);return outcome({result:validation.code===0?"task-bundle-valid":"task-bundle-invalid",executed:true,adapter:{name:"okf-tasks",version:match[1]},command:[executable,"validate","--root",root,"--bundle",bundle,"--strict"],bundle,validation:{valid:validation.code===0,stdout:validation.stdout.trim(),stderr:validation.stderr.trim()},state},validation.code===0?0:3);}
-async function receiptStatus(root:string,base:string,file:string):Promise<{status:string;issues:string[]}>{if(git(root,"rev-parse","--verify","HEAD").code)return{status:"not-required",issues:[]};const diff=gitDelta(root,base);if(diff.code)return{status:"invalid-base",issues:["closure-base-invalid"]};if(!diff.stdout)return{status:"not-required",issues:[]};const path=join(root,".engineering-workflow",file);if(!existsSync(path))return{status:"pending",issues:[`${file.replace(".json","")}-missing`]};try{const receipt=await readJson<Record<string,unknown>>(path);return receipt.deltaDigest===sha256(diff.stdout)?{status:"receipt-current",issues:[]}:{status:"stale",issues:[`${file.replace(".json","")}-stale`]};}catch{return{status:"invalid",issues:[`${file.replace(".json","")}-invalid`]};}}
+function validateOkfBundle(root:string,bundle:string,executable:string):OperationOutcome{
+  if(executable.toLowerCase().endsWith(".py"))return outcome({result:"okf-tasks-incompatible",executed:false,error:"Python task adapters are not supported by the TypeScript runtime."},2);
+  const version=run(executable,["--version"],root),match=version.stdout.trim().match(/^okf-tasks\s+(\d+)\.(\d+)\.(\d+)$/);
+  if(version.code||!match)return outcome({result:"okf-tasks-unavailable",executed:false,error:version.stderr.trim()||"The configured executable did not identify itself as okf-tasks."},2);
+  if(match[1]!=="0"||match[2]!=="1")return outcome({result:"okf-tasks-incompatible",executed:false,adapter:{name:"okf-tasks",version:`${match[1]}.${match[2]}.${match[3]}`},error:"RKE 0.10 supports the OKF Tasks 0.1 strict-validation contract."},2);
+  const command=[executable,"validate","--root",root,"--bundle",bundle,"--strict"],validation=run(executable,command.slice(1),root);
+  return outcome({result:validation.code===0?"task-bundle-valid":"task-bundle-invalid",executed:true,adapter:{name:"okf-tasks",version:`${match[1]}.${match[2]}.${match[3]}`},command,bundle,validation:{valid:validation.code===0,stdout:validation.stdout.trim(),stderr:validation.stderr.trim()}},validation.code===0?0:3);
+}
+export async function checkTasks(root:string,cli?:string):Promise<OperationOutcome>{const state=await load(root);if(state.task_tracking.mode==="none")return outcome({result:"task-tracking-disabled",executed:false,plan:{mode:"none",durable:false},state});const checked=validateOkfBundle(root,state.task_tracking.bundle??"tasks",cli??"okf-tasks");return outcome({...checked.payload,state},checked.exitCode);}
+async function receiptStatus(root:string,base:string,file:string):Promise<{status:string;issues:string[]}>{if(git(root,"rev-parse","--verify","HEAD").code)return{status:"not-required",issues:[]};const diff=gitDelta(root,base);if(diff.code)return{status:"invalid-base",issues:["closure-base-invalid"]};if(!diff.stdout)return{status:"not-required",issues:[]};const path=join(root,".engineering-workflow",file);if(!existsSync(path))return{status:"pending",issues:[`${file.replace(".json","")}-missing`]};try{const receipt=await readJson<Record<string,unknown>>(path);if(receipt.deltaDigest!==sha256(diff.stdout))return{status:"stale",issues:[`${file.replace(".json","")}-stale`]};
+  if(file==="documentation-receipt.json"&&receipt.disposition==="no-canonical-update"){
+    const changed=gitChangedPaths(root,base).filter(path=>!/(^|\/)(?:index\.md|log\.md)$/.test(path)&&!path.startsWith(".engineering-workflow/"));
+    const reviewed=receipt.changedPaths;
+    if(receipt.version!==2||!Array.isArray(reviewed)||reviewed.length!==changed.length||reviewed.some((value,index)=>value!==changed[index])||typeof receipt.evidence!=="string"||receipt.evidence.trim().length<24)return{status:"invalid",issues:["documentation-disposition-invalid"]};
+    const {documentationAssess}=await import("./surfaces.js"),assessment=await documentationAssess(root,base);
+    if(assessment.exitCode===2||((assessment.payload.affectedKnowledge as string[]|undefined)??[]).length)return{status:"invalid",issues:["documentation-disposition-affected-knowledge"]};
+    const {readJsonOr}=await import("./io.js");
+    const manifest=await readJsonOr<{knowledge?:{path:string}[]}>(join(root,".rke/repo-context.json"),{knowledge:[]});
+    if(changed.some(path=>path.startsWith("docs/knowledge/")||(manifest.knowledge??[]).some(item=>item.path===path)))return{status:"invalid",issues:["documentation-disposition-canonical-changed"]};
+    return{status:"no-update-current",issues:[]};
+  }
+  return{status:"receipt-current",issues:[]};}catch{return{status:"invalid",issues:[`${file.replace(".json","")}-invalid`]};}}
 export async function closureAssessment(root:string,base="HEAD"):Promise<OperationOutcome>{
   const state=await load(root),change=await receiptStatus(root,base,"change-explanation.json"),documentation=await receiptStatus(root,base,"documentation-receipt.json");
   const validationGates=state.outstanding_gates.filter(g=>["implementation-validation","integrated-tree-validation"].includes(g)),taskGates=state.outstanding_gates.filter(g=>g==="task-reconciliation"),knowledgeGates=state.outstanding_gates.filter(g=>g.includes("knowledge"));
   const bundle=state.task_tracking.bundle??"tasks",taskPath=join(root,bundle),hasTasks=existsSync(taskPath)&&readdirSync(taskPath,{recursive:true}).some(item=>{const name=String(item);if(!name.endsWith(".md"))return false;try{return /^---\r?\n[\s\S]{0,4096}?\btype:\s*(Task|Workstream)\b/m.test(readFileSync(join(taskPath,name),"utf8").slice(0,4096));}catch{return false;}});
   let taskValidation:OperationOutcome|undefined;
-  if(hasTasks){
-    const version=run("okf-tasks",["--version"],root);
-    if(version.code)taskValidation=outcome({result:"task-provider-unavailable",error:version.stderr.trim()},3);
-    else {const checked=run("okf-tasks",["validate","--root",root,"--bundle",bundle,"--strict"],root);taskValidation=outcome({result:checked.code?"task-bundle-invalid":"task-bundle-valid",stdout:checked.stdout.trim(),stderr:checked.stderr.trim()},checked.code?3:0);}
-  }
+  if(hasTasks)taskValidation=validateOkfBundle(root,bundle,"okf-tasks");
   const knowledgeBundle=join(root,"docs","knowledge"),manifest=join(root,".rke","repo-context.json");
   let knowledgeValidation:OperationOutcome|undefined;
   if(existsSync(knowledgeBundle)||existsSync(manifest)){

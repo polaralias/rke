@@ -1,6 +1,7 @@
 
 import { RkeError } from "./errors.js";
 import { readJson } from "./io.js";
+import { assessCoordinationCleanup } from "./coordination-cleanup.js";
 import { repositoryPath, safeRelative } from "./paths.js";
 import { RepositoryEngine } from "./repository-engine.js";
 import { readSourceEvidence, reviewPacket } from "./source-evidence.js";
@@ -44,6 +45,7 @@ const definitions:Array<[string,JsonObject,boolean,boolean,Handler]> = [
   ["repo_handoff_inspect",schema({path:string,visibility:{type:"string",enum:["auto","local","shared"],default:"auto"},directory:string}),true,true,(r,a)=>surfaces.inspectHandoff(r,a)],
   ["repo_coordination_validate",schema({manifest:string},["manifest"]),true,true,(r,a)=>surfaces.coordination(r,value(a,"manifest"))],
   ["repo_coordination_plan",schema({manifest:string},["manifest"]),true,true,(r,a)=>surfaces.coordination(r,value(a,"manifest"),true)],
+  ["repo_coordination_cleanup_check",schema({lane:string,branch:string,reviewHead:string,remote:string,destinationBranch:string},["lane","branch","reviewHead","remote","destinationBranch"]),true,true,(r,a)=>assessCoordinationCleanup(r,{lane:value(a,"lane"),branch:value(a,"branch"),reviewHead:value(a,"reviewHead"),remote:value(a,"remote"),destinationBranch:value(a,"destinationBranch")})],
   ["repo_publication_scan",schema({}),true,true,(r)=>surfaces.publicationScan(r)],
   ["repo_find_context",schema({query:string,limit:{type:"integer",minimum:1,default:8},scope:string},["query"]),true,true,async(r,a)=>ok({result:"context-found",query:value(a,"query"),matches:await engine(r,e=>e.search(value(a,"query"),value(a,"limit",8),a.scope?[String(a.scope)]:[]))})],
   ["repo_context_check",schema({manifest:string}),true,true,async(r,a)=>{const freshness=await engine(r,e=>e.ensureFresh(true));const knowledge=await surfaces.contextCheck(r,a.manifest);return ok({result:"context-checked",freshness,knowledge:knowledge.payload},knowledge.exitCode);} ],
@@ -54,6 +56,7 @@ const definitions:Array<[string,JsonObject,boolean,boolean,Handler]> = [
   ["repo_knowledge_register",schema({knowledge:string,sources:strings,manifest:string},["knowledge","sources"]),false,true,(r,a)=>surfaces.registerKnowledge(r,value(a,"knowledge"),stringsValue(a,"sources"),a.manifest)],
   ["repo_documentation_bootstrap",schema({bundle:string,manifest:string}),true,true,(r,a)=>surfaces.documentationBootstrap(r,value(a,"bundle","docs/knowledge"),a.manifest)],
   ["repo_documentation_assess",schema({base:string,manifest:string},["base"]),true,true,(r,a)=>surfaces.documentationAssess(r,value(a,"base"),a.manifest)],
+  ["repo_documentation_disposition",schema({base:string,reviewedPaths:strings,evidence:string},["base","reviewedPaths","evidence"]),false,false,(r,a)=>surfaces.documentationDisposition(r,value(a,"base"),stringsValue(a,"reviewedPaths"),value(a,"evidence"))],
   ["repo_documentation_apply",schema({base:string,bundle:string,knowledgePaths:strings,evidence:string,readerQueries:strings,manifest:string},["base","bundle","knowledgePaths","evidence","readerQueries"]),false,false,(r,a)=>surfaces.documentationApply(r,a)],
   ["repo_change_explain",schema({base:string,summary:string,detailFile:string},["base","summary"]),false,false,(r,a)=>surfaces.changeExplain(r,value(a,"base"),value(a,"summary"),a.detailFile?String(a.detailFile):undefined)],
   ["repo_file_api",schema({path:string},["path"]),true,true,async(r,a)=>ok({result:"file-api",...await engine(r,e=>e.fileApi(value(a,"path")))})],

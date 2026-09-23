@@ -18,10 +18,10 @@ The runtime is installed once per machine. Every operation selects its repositor
 Use one installed runtime and one EWF entry point:
 
 ```text
-activate → retrieve/trace → change → documentation assess → explain → apply → close
+activate → retrieve/trace → change → documentation assess → explain → disposition or apply → close
 ```
 
-The agent chooses the smallest relevant operations for the work. Retrieval and traces guide inspection; they do not replace source verification. Explanation and documentation receipts are tied to the Git delta; source changes now require a code-level explanation detail, and documentation apply checks bundle conformance, affected coverage, reader rank, and freshness. These deterministic checks do not by themselves prove agent-level legacy parity; review the [parity matrix](docs/legacy-skill-parity-matrix.md).
+The agent chooses the smallest relevant operations for the work. Retrieval and traces guide inspection; they do not replace source verification. Explanation and documentation receipts are tied to the Git delta; source changes require a code-level explanation detail. Documentation apply checks bundle conformance, affected coverage, reader rank, and freshness when canonical knowledge changes. A reviewed no-update disposition can close an unbound small change without inventing a knowledge bundle; it must cover every changed path and becomes stale with the delta. These deterministic checks do not by themselves prove agent-level legacy parity; review the [parity matrix](docs/legacy-skill-parity-matrix.md).
 
 ## Install
 
@@ -63,6 +63,7 @@ rke documentation bootstrap --root C:\repos\service
 rke handoff write --topic credential-runtime --summary "Provider path is mapped." --next-action "Run the integration test." --root C:\repos\service
 rke handoff write --visibility shared --topic credential-runtime --summary "Provider path is mapped." --next-action "Run the integration test." --root C:\repos\service
 rke coordination validate --manifest local-docs/worktrees.json --root C:\repos\service
+rke coordination cleanup-check --lane runtime --branch feat/runtime --review-head <reviewed-commit> --remote origin --destination-branch main --root C:\repos\service
 rke publication scan --root C:\repos\service
 rke documentation assess --base main --root C:\repos\service
 rke change explain --base main --summary "Moved credential hydration behind the provider boundary." --detail-file .engineering-workflow/change-detail.json --root C:\repos\service

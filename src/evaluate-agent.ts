@@ -7,6 +7,7 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { readJson } from "./io.js";
+import { AgentEvaluationTrace } from "./agent-evaluation-trace.js";
 import { repositoryPath, safeRelative } from "./paths.js";
 import { RepositoryEngine } from "./repository-engine.js";
 import { contextCheck, installHost } from "./surfaces.js";
@@ -57,16 +58,17 @@ async function writeSetup(root: string, setup: Record<string, string>): Promise<
   }
 }
 
-async function runCodex(root: string, item: EvaluationCase, config: Options): Promise<{ code: number | null; timedOut: boolean; stdout: string; stderr: string; final: string }> {
+async function runCodex(root: string, item: EvaluationCase, config: Options): Promise<{ code: number | null; timedOut: boolean; stdout: string; stderr: string; final: string; trace: ReturnType<AgentEvaluationTrace["snapshot"]> }> {
   const finalPath = join(root, ".evaluation-final.txt");
-  const args = ["exec", "--ephemeral", "--sandbox", "workspace-write", "--color", "never", "--cd", root, "--output-last-message", finalPath];
+  const args = ["exec", "--ephemeral", "--sandbox", "workspace-write", "--color", "never", "--json", "--cd", root, "--output-last-message", finalPath];
   if (config.model) args.push("--model", config.model);
   args.push(item.prompt);
   let timedOut = false;
   const child = spawn(config.codex, args, { cwd: root, detached: process.platform !== "win32", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
   let stdout = "", stderr = "";
+  const timeline = new AgentEvaluationTrace();
   child.stdout.setEncoding("utf8"); child.stderr.setEncoding("utf8");
-  child.stdout.on("data", chunk => { stdout = (stdout + String(chunk)).slice(-MAX_CAPTURE); });
+  child.stdout.on("data", chunk => { const value = String(chunk); stdout = (stdout + value).slice(-MAX_CAPTURE); timeline.accept(value); });
   child.stderr.on("data", chunk => { stderr = (stderr + String(chunk)).slice(-MAX_CAPTURE); });
   const timer = setTimeout(() => {
     timedOut = true;
@@ -75,7 +77,7 @@ async function runCodex(root: string, item: EvaluationCase, config: Options): Pr
   }, config.timeoutMs);
   const code = await new Promise<number | null>((accept, reject) => { child.once("error", reject); child.once("close", accept); }).finally(() => clearTimeout(timer));
   const final = existsSync(finalPath) ? await readFile(finalPath, "utf8") : "";
-  return { code, timedOut, stdout, stderr, final };
+  return { code, timedOut, stdout, stderr, final, trace: timeline.snapshot() };
 }
 
 async function grade(root: string, item: EvaluationCase, execution: Awaited<ReturnType<typeof runCodex>>): Promise<{ passed: boolean; checks: Record<string, unknown>[] }> {
@@ -142,7 +144,7 @@ async function evaluate(item: EvaluationCase, config: Options): Promise<Record<s
     git(root, "add", "-A"); git(root, "commit", "-m", "evaluation fixture");
     const execution = await runCodex(root, item, config);
     const result = await grade(root, item, execution);
-    return { id: item.id, category: item.category, ...result, execution: { code: execution.code, timedOut: execution.timedOut, stdoutTail: execution.stdout, stderrTail: execution.stderr, final: execution.final } };
+    return { id: item.id, category: item.category, ...result, execution: { code: execution.code, timedOut: execution.timedOut, trace: execution.trace, stdoutTail: execution.stdout.slice(-4000), stderrTail: execution.stderr.slice(-4000), final: execution.final } };
   } catch (error) {
     return { id: item.id, category: item.category, passed: false, error: error instanceof Error ? error.message : String(error) };
   } finally { await rm(root, { recursive: true, force: true }); }

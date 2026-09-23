@@ -7,8 +7,8 @@ import { CLI_ROUTES } from "./cli-routes.js";
 import { invokeOperation } from "./operations.js";
 import { VERSION } from "./version.js";
 
-const KEYS:Record<string,string>={"task-mode":"taskMode","new-cycle":"newCycle","next-action":"nextAction","task-ref":"taskRef","changed":"changedPaths","source":"sources","knowledge":"knowledgePaths","reader-query":"readerQueries","reference":"references","scope":"scopes","review-file":"reviewFile"};
-const ARRAYS=new Set(["capability","gate","changedPaths","sources","knowledgePaths","readerQueries","references","scopes"]);
+const KEYS:Record<string,string>={"task-mode":"taskMode","new-cycle":"newCycle","next-action":"nextAction","task-ref":"taskRef","changed":"changedPaths","reviewed-path":"reviewedPaths","source":"sources","knowledge":"knowledgePaths","reader-query":"readerQueries","reference":"references","scope":"scopes","review-file":"reviewFile"};
+const ARRAYS=new Set(["capability","gate","changedPaths","reviewedPaths","sources","knowledgePaths","readerQueries","references","scopes"]);
 const BOOLEANS=new Set(["force","newCycle"]);
 const NUMBERS=new Set(["limit","depth"]);
 

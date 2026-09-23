@@ -111,6 +111,24 @@ export async function documentationBootstrap(root:string,bundle="docs/knowledge"
   return out({result:"documentation-bootstrap-assessed",bundle:rel,startingState,outcome,preserve,review,supersede:[],recommendedFoundation,gaps,knowledgeFreshness:{fresh:freshness.freshPaths,stale:freshness.stale,unverified:freshness.unverified,missing:freshness.missing}});
 }
 export async function documentationAssess(root:string,base:string,manifest?:unknown):Promise<OperationOutcome>{let changed:string[];try{changed=gitChangedPaths(root,base).filter(path=>!/(^|\/)(?:index\.md|log\.md)$/.test(path)&&!path.startsWith(".engineering-workflow/"));}catch(error){return out({result:"documentation-assessment-failed",base,error:String(error)},2);}const impact=await knowledgeImpact(root,changed,manifest);const affected=impact.payload.affectedKnowledge as string[];const outcome=changed.length?(affected.length?"update":"decision-required"):"no-op";return out({result:"documentation-assessed",base,outcome,changedPathCount:changed.length,changedPaths:changed.slice(0,20),detailsTruncated:changed.length>20,affectedKnowledge:affected,classification:outcome},changed.length?3:0);}
+export async function documentationDisposition(root:string,base:string,reviewedPaths:string[],evidence:string):Promise<OperationOutcome>{
+  const assessment=await documentationAssess(root,base);
+  if(assessment.exitCode===2)return out({result:"documentation-disposition-refused",error:{code:"documentation_base_invalid",details:assessment.payload}},2);
+  if(assessment.payload.outcome==="no-op")return out({result:"documentation-no-material-change",base,receiptRequired:false});
+  const affected=assessment.payload.affectedKnowledge as string[];
+  if(affected.length)return out({result:"documentation-disposition-refused",error:{code:"documentation_affected_knowledge",affected}},3);
+  const changed=gitChangedPaths(root,base).filter(path=>!/(^|\/)(?:index\.md|log\.md)$/.test(path)&&!path.startsWith(".engineering-workflow/"));
+  const loaded=await loadManifest(root),registered=new Set((loaded.data.knowledge??[]).map(item=>String(item.path)));
+  if(changed.some(path=>path.startsWith("docs/knowledge/")||registered.has(path)))return out({result:"documentation-disposition-refused",error:{code:"documentation_canonical_changed"}},3);
+  if(changed.length>100)return out({result:"documentation-disposition-refused",error:{code:"documentation_review_unbounded",changedPathCount:changed.length}},3);
+  const reviewed=[...new Set(reviewedPaths.map(safeRelative))].sort();
+  if(reviewed.length!==changed.length||reviewed.some((path,index)=>path!==changed[index]))return out({result:"documentation-disposition-refused",error:{code:"documentation_review_incomplete",changedPaths:changed,reviewedPaths:reviewed}},3);
+  if(evidence.trim().length<24||containsSecret(evidence))return out({result:"documentation-disposition-refused",error:{code:"documentation_evidence_insufficient"}},3);
+  const diff=gitDelta(root,base);if(diff.code)return out({result:"documentation-disposition-refused",error:{code:"documentation_base_invalid",message:diff.stderr.trim()}},2);
+  const receipt={version:2,base,disposition:"no-canonical-update",changedPaths:changed,evidence:evidence.trim(),deltaDigest:sha256(diff.stdout),recordedAt:utcNow()};
+  const target=join(root,".engineering-workflow/documentation-receipt.json");await withFileLock(target,()=>writeJson(target,receipt));
+  return out({result:"documentation-disposition-recorded",receipt});
+}
 export async function changeExplain(root:string,base:string,summary:string,detailFile?:string):Promise<OperationOutcome>{
   const diff=gitDelta(root,base);if(diff.code)return out({result:"change-explanation-failed",error:diff.stderr},2);
   if(summary.trim().length<12||/^(updated|changed|fixed) (files|code|stuff)\.?$/i.test(summary.trim()))return out({result:"change-explanation-insufficient",error:"Provide a causal explanation of what behaviour changed and why."},3);
