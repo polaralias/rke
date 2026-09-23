@@ -50,7 +50,13 @@ test("every public operation has an executable success and malformed-input failu
   await call("repo_handoff_inspect",{path:String(handoff.payload.path),visibility:"local"});
   await call("repo_coordination_validate",{manifest:"coordination.yml"});
   await call("repo_coordination_plan",{manifest:"coordination.yml"});
-  await call("repo_publication_scan",{});
+  const publication=await call("repo_publication_scan",{},[0,3]);
+  if(publication.exitCode===3){
+    assert.equal(publication.payload.safe,false,"a failed scan must never be reported as safe");
+    assert.equal((publication.payload.gitleaks as {available:boolean}).available,false,"only an unavailable scanner may explain this fixture's failed scan");
+  }else{
+    assert.equal(publication.payload.safe,true);
+  }
   await call("repo_find_context",{query:"calculate invoice",limit:5});
   await call("repo_knowledge_register",{knowledge:"docs/knowledge/architecture.md",sources:["src/**/*.ts"]});
   await call("repo_knowledge_verify",{knowledge:"docs/knowledge/architecture.md",evidence:"Reviewed service and architecture."});
