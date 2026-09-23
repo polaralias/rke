@@ -23,8 +23,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-23T13:11:23.399Z",
-        "evidence": "Reviewed architecture parity wording against the 16-case priority matrix, contract scorecard, and current test outcomes.",
+        "verifiedAt": "2026-09-23T14:23:53.696Z",
+        "evidence": "Reviewed final TypeScript architecture, EWF and priority/parity wording against the implementation, tests and current open agent/provider gaps.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -482,5 +482,5 @@
       }
     }
   ],
-  "revision": 38
+  "revision": 39
 }
