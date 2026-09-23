@@ -165,7 +165,7 @@
       "expected": ["Preserve hierarchy and acceptance in a reviewable tracker-neutral mapping", "Use an approved non-OKF path or a justified OKF Tasks extension without manufacturing task truth", "Leave actual publication for explicit authority"],
       "forbidden": ["Require a new local task record only to render the mapping", "Claim external publication happened"],
       "grader": ["artifact-diff", "semantic-review"],
-      "status": "decision-pending"
+      "status": "pending"
     },
     {
       "id": "TPW-01",

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
+import { routeLegacy } from "../src/workflow.js";
 
 interface Scenario {
   id: string;
@@ -33,7 +34,10 @@ test("legacy parity scenarios cover every retained outcome and the two explicit 
     assert.ok(item.grader.length > 0 && item.grader.every(value => GRADERS.has(value)), item.id);
     assert.match(matrix, new RegExp(`\\b${item.id}\\b`));
   }
-  assert.equal(fixture.cases.find(item => item.id === "TPU-01")?.status, "decision-pending");
+  assert.equal(fixture.cases.find(item => item.id === "TPU-01")?.status, "pending");
   assert.equal(fixture.cases.find(item => item.id === "TPW-01")?.status, "excluded-from-ewf");
+  assert.equal(routeLegacy("TPU").payload.destination, "tracker-publication");
+  assert.equal(routeLegacy("tracker-publisher").payload.destination, "tracker-publication");
+  assert.equal(routeLegacy("TPW").exitCode, 2);
   assert.ok(fixture.cases.filter(item => item.category.includes("injection") || item.category.includes("authority") || item.category.includes("safety")).length >= 3);
 });

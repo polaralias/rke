@@ -21,7 +21,7 @@ Use one installed runtime and one EWF entry point:
 activate → retrieve/trace → change → documentation assess → explain → apply → close
 ```
 
-The agent chooses the smallest relevant operations for the work. Retrieval and traces guide inspection; they do not replace source verification. Explanation and documentation receipts are tied to the Git delta, but current `change explain` and `documentation apply` do not yet enforce the full legacy comprehension and knowledge-validation contracts. Review the [open parity matrix](docs/legacy-skill-parity-matrix.md) before relying on those receipts as completion evidence.
+The agent chooses the smallest relevant operations for the work. Retrieval and traces guide inspection; they do not replace source verification. Explanation and documentation receipts are tied to the Git delta; source changes now require a code-level explanation detail, and documentation apply checks bundle conformance, affected coverage, reader rank, and freshness. These deterministic checks do not by themselves prove agent-level legacy parity; review the [parity matrix](docs/legacy-skill-parity-matrix.md).
 
 ## Install
 
@@ -65,7 +65,7 @@ rke handoff write --visibility shared --topic credential-runtime --summary "Prov
 rke coordination validate --manifest local-docs/worktrees.json --root C:\repos\service
 rke publication scan --root C:\repos\service
 rke documentation assess --base main --root C:\repos\service
-rke change explain --base main --summary "Moved credential hydration behind the provider boundary." --root C:\repos\service
+rke change explain --base main --summary "Moved credential hydration behind the provider boundary." --detail-file .engineering-workflow/change-detail.json --root C:\repos\service
 ```
 
 Register the optional machine-wide MCP adapter once:
@@ -105,9 +105,9 @@ Run `npm run benchmark` to measure cold indexing, warm retrieval, memory, and to
 Query-to-Knowledge and Repository Change Comprehension remain distinct named concepts:
 
 - **Query-to-Knowledge (QTK)** is a human clarification loop. It groups consequential questions, recommends answers with rationale, and keeps a hard `shared-understanding` gate open until the user and agent agree on an implementation target. It is not ordinary repository orientation.
-- **Repository Change Comprehension (RCC)** is intended to reconstruct the causal behaviour of the final Git delta. The current `change explain` command only records a caller-authored summary and delta fingerprint; full RCC parity remains an open v0.10 qualification item.
+- **Repository Change Comprehension (RCC)** reconstructs the causal behaviour of the final Git delta. `change explain` rejects summary-only source changes and requires a code-level detail file with before/after, why, changed symbols, and evidence-labelled verification. The agent must still inspect the code and communicate the full account; the receipt cannot prove its semantic correctness.
 
-The formerly separate repository-dissection, design/decomposition, session-alignment, local handoff/pickup, and worktree-coordination behaviours are routed through EWF, but their outcome-level parity is not yet proven. The [legacy skill parity matrix](docs/legacy-skill-parity-matrix.md) records the open contracts and adversarial tests. Tracker integration for non-OKF work packages remains a design decision; standalone QA-plan writing is outside EWF.
+The formerly separate repository-dissection, design/decomposition, session-alignment, local handoff/pickup, and worktree-coordination behaviours are routed through EWF. Runtime adversarial probes now cover several previously open gaps, while agent-level outcome parity still needs evaluation. TPU supports both OKF Tasks as the durable-execution default and stable non-OKF work packages for tracker mapping; standalone QA-plan writing is outside EWF.
 
 ## Source layout
 

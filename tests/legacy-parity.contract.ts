@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { basename, join, resolve, sep } from "node:path";
 import test, { type TestContext } from "node:test";
 
-import { invokeOperation } from "../src/operations.js";
+import { invokeOperation, releaseRepository } from "../src/operations.js";
 
 function git(root: string, ...args: string[]): void {
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8", windowsHide: true });
@@ -17,6 +17,7 @@ function git(root: string, ...args: string[]): void {
 async function fixture(t: TestContext): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "rke-legacy-parity-"));
   t.after(async () => {
+    await releaseRepository(root);
     const actual = resolve(root), temporary = resolve(tmpdir());
     assert.ok(actual.startsWith(`${temporary}${sep}`) && basename(actual).startsWith("rke-legacy-parity-"));
     await rm(actual, { recursive: true, force: true });
@@ -24,6 +25,7 @@ async function fixture(t: TestContext): Promise<string> {
   git(root, "init");
   git(root, "config", "user.email", "parity@example.invalid");
   git(root, "config", "user.name", "RKE Parity Fixture");
+  await writeFile(join(root, ".gitignore"), "local-docs/\n.engineering-workflow/\n");
   return root;
 }
 
@@ -36,15 +38,24 @@ test("WTC-01 rejects an empty coordination topology", async t => {
 
 test("WTC-01 plans worktrees outside the primary checkout", async t => {
   const root = await fixture(t);
-  await writeFile(join(root, "coordination.yml"), "lanes:\n  - name: runtime\n    branch: feat/runtime\n    paths:\n      - src/runtime.ts\n");
+  await writeFile(join(root, "coordination.yml"), "base: HEAD\nlanes:\n  - name: runtime\n    branch: feat/runtime\n    paths:\n      - src/runtime.ts\n");
+  await writeFile(join(root, "README.md"), "# Worktree fixture\n");git(root,"add","README.md");git(root,"commit","-m","baseline");
   const result = await invokeOperation(root, "repo_coordination_plan", { manifest: "coordination.yml" });
   const commands = result.payload.commands as string[][];
   assert.ok(commands.length > 0, "the fixture must produce an allocation plan");
   for (const command of commands) {
-    const target = command[3]!;
+    const target = command[5]!;
     const resolved = resolve(root, target);
     assert.ok(resolved !== resolve(root) && !resolved.startsWith(`${resolve(root)}${sep}`), "worktrees must use a sibling container");
   }
+});
+
+test("WTC-01 refuses an unresolved base and cyclic lane dependencies",async t=>{
+  const root=await fixture(t);
+  await writeFile(join(root,"coordination.yml"),"base: missing-ref\nlanes:\n  - name: first\n    paths: [src/first.ts]\n    dependsOn: [second]\n  - name: second\n    paths: [src/second.ts]\n    dependsOn: [first]\n");
+  const result=await invokeOperation(root,"repo_coordination_plan",{manifest:"coordination.yml"});
+  assert.notEqual(result.exitCode,0);assert.deepEqual(result.payload.commands,[]);
+  assert.match(JSON.stringify(result.payload.errors),/base|cycle/i);
 });
 
 test("LHO-01 max handoff includes the substantive continuation backbone", async t => {
@@ -55,11 +66,30 @@ test("LHO-01 max handoff includes the substantive continuation backbone", async 
     assert.ok(body.includes(heading), `max handoff omitted ${heading}`);
 });
 
+test("LHO-01 supersedes only an older active handoff for the same stream", async t => {
+  const root=await fixture(t);
+  const first=await invokeOperation(root,"repo_handoff_write",{topic:"runtime",summary:"First pass.",nextAction:"Continue runtime.",visibility:"local"});
+  const other=await invokeOperation(root,"repo_handoff_write",{topic:"docs",summary:"Docs pass.",nextAction:"Continue docs.",visibility:"local"});
+  const second=await invokeOperation(root,"repo_handoff_write",{topic:"runtime",summary:"Second pass.",nextAction:"Check runtime.",visibility:"local"});
+  assert.equal(second.exitCode,0);
+  assert.match(await readFile(join(root,String(first.payload.path)),"utf8"),/\*\*Status:\*\* superseded/);
+  assert.match(await readFile(join(root,String(other.payload.path)),"utf8"),/\*\*Status:\*\* active/);
+  assert.deepEqual(second.payload.superseded,[first.payload.path]);
+});
+
 test("LPK-01 rejects a local handoff when shared visibility is requested", async t => {
   const root = await fixture(t);
   const written = await invokeOperation(root, "repo_handoff_write", { topic: "runtime", summary: "Unfinished.", nextAction: "Inspect current Git state.", visibility: "local" });
   const inspected = await invokeOperation(root, "repo_handoff_inspect", { path: String(written.payload.path), visibility: "shared" });
   assert.notEqual(inspected.exitCode, 0, "an ignored local file cannot be accepted as a tracked shared handoff");
+});
+
+test("LPK-01 labels a handoff stale after HEAD changes",async t=>{
+  const root=await fixture(t);await writeFile(join(root,"README.md"),"# Before\n");git(root,"add","README.md");git(root,"commit","-m","before");
+  const written=await invokeOperation(root,"repo_handoff_write",{topic:"runtime",summary:"Current work.",nextAction:"Inspect code.",visibility:"local"});
+  await writeFile(join(root,"README.md"),"# After\n");git(root,"add","README.md");git(root,"commit","-m","after");
+  const result=await invokeOperation(root,"repo_handoff_inspect",{path:String(written.payload.path),visibility:"local"});
+  assert.notEqual(result.exitCode,0);assert.ok((result.payload.drift as string[]).includes("head-changed"));
 });
 
 test("RPF-01 reports a tracked machine-local path before declaring publish safety", async t => {
@@ -78,6 +108,17 @@ test("RCC-01 rejects or enriches a vacuous explanation rather than accepting it 
   await writeFile(join(root, "service.ts"), "export function calculateTotal(value: number) { return value * 2; }\n");
   const result = await invokeOperation(root, "repo_change_explain", { base: "HEAD", summary: "Updated files." });
   assert.ok(result.exitCode !== 0 || JSON.stringify(result.payload).includes("calculateTotal"), "a receipt must contain inspected code-level evidence or refuse the claim");
+});
+
+test("RCC-01 stores a code-level before/after account tied to the delta",async t=>{
+  const root=await fixture(t);
+  await writeFile(join(root,"service.ts"),"export function calculateTotal(value: number) { return value; }\n");git(root,"add","service.ts");git(root,"commit","-m","baseline");
+  await writeFile(join(root,"service.ts"),"export function calculateTotal(value: number) { return value * 2; }\n");
+  await mkdir(join(root,".engineering-workflow"),{recursive:true});
+  await writeFile(join(root,".engineering-workflow","detail.json"),JSON.stringify({before:"calculateTotal returned the input",after:"calculateTotal doubles the input",why:"the accepted total rule changed",causalPath:[{path:"service.ts",symbol:"calculateTotal"}],verification:[{claim:"the implementation doubles",kind:"code-only",evidence:"service.ts"}]}));
+  const result=await invokeOperation(root,"repo_change_explain",{base:"HEAD",summary:"The calculation now doubles the supplied total.",detailFile:".engineering-workflow/detail.json"});
+  assert.equal(result.exitCode,0);const detail=(result.payload.receipt as Record<string,unknown>).detail as Record<string,unknown>;
+  assert.match(String(detail.after),/doubles/);
 });
 
 test("RSA-01 does not call an invalid task lane ready just because no EWF gate was registered", async t => {

@@ -20,7 +20,7 @@ test("every public operation has an executable success and malformed-input failu
   await writeFile(join(root,"docs","knowledge","architecture.md"),"---\ntype: Architecture Concept\ntitle: Runtime architecture\ndescription: Explains invoice runtime behavior.\n---\n\n# Runtime architecture\n\nThe runtime architecture uses calculateInvoice and its helper.\n");
   await writeFile(join(root,"retrieval-corpus.json"),JSON.stringify({queries:[{id:"invoice",query:"calculate invoice",relevantPaths:["src/service.ts"]}]},null,2));
   await writeFile(join(root,"structure-corpus.json"),JSON.stringify({cases:[{id:"service",kind:"file-api",path:"src/service.ts",expected:["calculateInvoice","helper"]}]},null,2));
-  await writeFile(join(root,"coordination.yml"),"lanes:\n  - name: runtime\n    paths:\n      - src/service.ts\n");
+  await writeFile(join(root,"coordination.yml"),"base: HEAD\nlanes:\n  - name: runtime\n    paths:\n      - src/service.ts\n");
   spawnSync("git",["add","."],{cwd:root});
   const committed=spawnSync("git",["commit","-m","baseline"],{cwd:root,encoding:"utf8"});
   assert.equal(committed.status,0,committed.stderr);

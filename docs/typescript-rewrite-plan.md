@@ -4,7 +4,7 @@ Status: TypeScript runtime implemented for v0.10.0; legacy-skill outcome parity 
 Date: 2026-09-21
 Scope: complete RKE runtime rewrite, Engineering Workflow convergence update, distribution migration, and Python removal
 
-The [legacy skill parity matrix](legacy-skill-parity-matrix.md) is the v0.10 outcome-level acceptance baseline. Its opt-in adversarial contract probes are deliberately failing at this point; green public-operation smoke tests do not supersede those failures. TPU integration ownership is open, while standalone TPW is excluded from EWF by user decision.
+The [legacy skill parity matrix](legacy-skill-parity-matrix.md) is the v0.10 outcome-level acceptance baseline. Green public-operation smoke tests do not supersede its adversarial and agent-level requirements. TPU now supports both independent OKF Tasks (the durable-execution default) and non-OKF stable work packages; standalone TPW is excluded from EWF by user decision.
 
 ## Decision
 

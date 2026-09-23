@@ -17,6 +17,7 @@ function value<T>(args:Record<string,unknown>,name:string,fallback?:T):T{const r
 function stringsValue(args:Record<string,unknown>,name:string):string[]{return value<string[]>(args,name,[]);}
 const ENGINES=new Map<string,RepositoryEngine>(),OPENING=new Map<string,Promise<RepositoryEngine>>();
 async function engine<T>(root:string,fn:(engine:RepositoryEngine)=>Promise<T>):Promise<T>{let instance=ENGINES.get(root);if(!instance){let pending=OPENING.get(root);if(!pending){pending=RepositoryEngine.open(root);OPENING.set(root,pending);}instance=await pending;OPENING.delete(root);ENGINES.set(root,instance);}return fn(instance);}
+export async function releaseRepository(root:string):Promise<void>{const pending=OPENING.get(root);if(pending)await pending;OPENING.delete(root);const instance=ENGINES.get(root);if(instance){instance.close();ENGINES.delete(root);}}
 process.once("beforeExit",()=>{for(const instance of ENGINES.values())instance.close();ENGINES.clear();});
 function ok(payload:Record<string,unknown>,exitCode=0):OperationOutcome{return{payload,exitCode};}
 
@@ -54,7 +55,7 @@ const definitions:Array<[string,JsonObject,boolean,boolean,Handler]> = [
   ["repo_documentation_bootstrap",schema({bundle:string,manifest:string}),true,true,(r,a)=>surfaces.documentationBootstrap(r,value(a,"bundle","docs/knowledge"),a.manifest)],
   ["repo_documentation_assess",schema({base:string,manifest:string},["base"]),true,true,(r,a)=>surfaces.documentationAssess(r,value(a,"base"),a.manifest)],
   ["repo_documentation_apply",schema({base:string,bundle:string,knowledgePaths:strings,evidence:string,readerQueries:strings,manifest:string},["base","bundle","knowledgePaths","evidence","readerQueries"]),false,false,(r,a)=>surfaces.documentationApply(r,a)],
-  ["repo_change_explain",schema({base:string,summary:string},["base","summary"]),false,false,(r,a)=>surfaces.changeExplain(r,value(a,"base"),value(a,"summary"))],
+  ["repo_change_explain",schema({base:string,summary:string,detailFile:string},["base","summary"]),false,false,(r,a)=>surfaces.changeExplain(r,value(a,"base"),value(a,"summary"),a.detailFile?String(a.detailFile):undefined)],
   ["repo_file_api",schema({path:string},["path"]),true,true,async(r,a)=>ok({result:"file-api",...await engine(r,e=>e.fileApi(value(a,"path")))})],
   ["repo_prepare_code_review",schema({path:string},["path"]),true,true,prepareReview],
   ["repo_record_code_review",schema({path:string,review:{type:"object"}},["path","review"]),false,true,recordReview],

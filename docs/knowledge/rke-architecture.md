@@ -2,14 +2,15 @@
 type: Architecture Concept
 title: RKE architecture
 description: Defines the independently installed Repository Knowledge Engineering runtime, its shared CLI and MCP operation layer, repository boundaries, and relationship with EWF and OKF Tasks.
-timestamp: 2026-09-23T07:07:00+01:00
+timestamp: 2026-09-23T12:42:00+01:00
 authority: canonical
 verification: verified-working
-reviewed_at: 2026-09-23T07:07:00+01:00
+reviewed_at: 2026-09-23T12:42:00+01:00
 verified_against:
   - src/operations.ts
   - src/cli.ts
   - src/workflow.ts
+  - src/surfaces.ts
   - src/io.ts
   - src/security.ts
   - src/parser.ts
@@ -50,7 +51,7 @@ The registry contains every public lifecycle, gate, journey, task, closure, host
 
 Yes: the CLI and MCP expose the same complete public operation registry, argument schemas, handlers and structured outcomes. The CLI adds shell parsing and exit codes; MCP adds tool discovery, repository selection and protocol error mapping. Neither transport owns separate domain behavior.
 
-Transport parity does not establish legacy-skill outcome parity. The [legacy skill parity matrix](../legacy-skill-parity-matrix.md) records the remaining behavioural contracts and deliberately red acceptance probes.
+Transport parity does not establish legacy-skill outcome parity. The [legacy skill parity matrix](../legacy-skill-parity-matrix.md) records the remaining behavioural contracts; the deterministic adversarial probes now pass, while agent and delegated-provider evaluation remains open.
 
 Workflow state and authored receipts use atomic replacement. Repository indexing uses SQLite WAL mode, foreign keys and an immediate transaction per changed or deleted file. A failed parse or transaction cannot leave half of a file's symbols, chunks or edges visible. The disposable database can always be rebuilt and is never canonical knowledge.
 
@@ -63,9 +64,9 @@ At 1.0, that contract stabilises CLI operation names and principal arguments, MC
 
 ## Documentation bootstrap
 
-`rke documentation bootstrap` is the read-only deterministic entry point for “document this repository.” It classifies a repository as `no-rke`, `partial-rke`, or `mature-rke`; inventories existing canonical knowledge and instructions; and reports preserve/review candidates and `fresh`/`stale`/`unverified` binding sets. It compares registered source hashes with receipts without writing the disposable context index. Receipt presence alone does not establish freshness. The current implementation still recommends fixed `system-overview.md` and `runtime.md` filenames, even when a different verified foundation exists; the parity contract marks this as a defect.
+`rke documentation bootstrap` is the read-only deterministic entry point for “document this repository.” It classifies a repository as `no-rke`, `partial-rke`, or `mature-rke`; inventories existing canonical knowledge and instructions; and reports preserve/review candidates and `fresh`/`stale`/`unverified` binding sets. It compares registered source hashes with receipts without writing the disposable context index. Receipt presence alone does not establish freshness. A verified existing foundation is preserved regardless of its filenames; a missing foundation receives one minimal candidate rather than a fixed document set.
 
-The model or EWF journey traces real runtime evidence and writes the necessary human-readable content. Knowledge registration, documentation apply, and context verification provide machine receipts, but the current apply handler does not yet perform every bundle and affected-coverage check promised by the skill contract. Until the parity probes pass, review those surfaces independently rather than treating an apply success as complete documentation validation.
+The model or EWF journey traces real runtime evidence and writes the necessary human-readable content. Knowledge registration, documentation apply, and context verification provide machine receipts. Apply now validates bundle conformance, affected-concept coverage, top-five reader retrieval, index generation, and source-binding freshness before writing a completion receipt. These checks do not establish semantic truth: the source review and agent-level legacy parity still require separate evidence.
 
 The frontmatter `reviewed_at` records the human content-review point. The verification receipt and current source hashes in `.rke/repo-context.json` are the authoritative machine freshness record.
 
