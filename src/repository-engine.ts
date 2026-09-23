@@ -7,11 +7,16 @@ import { git, sha256 } from "./io.js";
 import { repositoryPath, safeRelative } from "./paths.js";
 import { EXTRACTOR_VERSION, SourceParser } from "./parser.js";
 import { containsSecret, isExcludedPath } from "./security.js";
+import { readSourceEvidence, reviewPacket } from "./source-evidence.js";
+import { BoundedRegexSearch } from "./regex-search.js";
+import { loadReview, loadReviews } from "./agent-reviews.js";
 import type { ParsedFile } from "./types.js";
 
 const MAX_FILE_BYTES = 1_048_576;
 const CACHE_PATH = ".engineering-workflow/cache/rke.sqlite";
 const SCHEMA_VERSION = "4";
+function normalizedScopes(scopes:readonly string[]):string[]{return scopes.map(scope=>safeRelative(scope).replace(/\/+$/, ""));}
+function inScope(path:string,scopes:readonly string[]):boolean{return !scopes.length||scopes.some(scope=>path===scope||path.startsWith(`${scope}/`));}
 
 interface FileFingerprint { path: string; size: number; mtimeMs: number; ctimeMs:number; hash?: string; gitOid?:string }
 interface FileRow extends Record<string, unknown> { id: number; path: string; size: number; mtime_ms: number; ctime_ms:number; content_hash: string; git_oid:string|null; extractor_version: string }
@@ -31,7 +36,7 @@ export interface FreshnessResult {
 }
 
 export class RepositoryEngine {
-  private refreshInFlight:Promise<FreshnessResult>|undefined;
+  private refreshInFlight:{promise:Promise<FreshnessResult>;verified:boolean}|undefined;
   private gitProcessCount=0;
   private refreshCount=0;
   private lastGitHead:string|undefined;
@@ -119,7 +124,8 @@ export class RepositoryEngine {
     const identities=new Map<string,string>();
     for(const path of paths){
       if(isExcludedPath(path)||path===CACHE_PATH||!this.parser.supports(path))continue;
-      const absolute=repositoryPath(this.root,path);
+      let absolute:string;
+      try{absolute=repositoryPath(this.root,path);}catch{identities.set(path,"outside-repository");continue;}
       let details;
       try{details=await stat(absolute);}catch{identities.set(path,"missing");continue;}
       if(!details.isFile()){identities.set(path,"not-file");continue;}
@@ -156,10 +162,13 @@ export class RepositoryEngine {
 
   async ensureFresh(forceVerification=false): Promise<FreshnessResult> {
     const started=performance.now();
-    if(this.refreshInFlight)return this.refreshInFlight;
+    if(this.refreshInFlight){const active=this.refreshInFlight;if(!forceVerification||active.verified)return active.promise;await active.promise;return this.ensureFresh(true);}
     if(!forceVerification&&this.lastFresh&&await this.hotStateMatches())return{...this.lastFresh,hashedFiles:0,changed:0,rowsChanged:0,parsed:0,reused:this.lastFresh.checked,reusedFiles:this.lastFresh.checked,failed:0,omittedSensitive:0,elapsedMs:Math.round((performance.now()-started)*100)/100};
-    if(!this.refreshInFlight)this.refreshInFlight=this.refresh(forceVerification).finally(()=>{this.refreshInFlight=undefined;});
-    return this.refreshInFlight;
+    if(this.refreshInFlight)return this.ensureFresh(forceVerification);
+    const active={promise:Promise.resolve(null as unknown as FreshnessResult),verified:forceVerification};
+    active.promise=this.refresh(forceVerification).finally(()=>{if(this.refreshInFlight===active)this.refreshInFlight=undefined;});
+    this.refreshInFlight=active;
+    return active.promise;
   }
 
   private async refresh(verifyContent=false): Promise<FreshnessResult> {
@@ -173,7 +182,8 @@ export class RepositoryEngine {
     for (const candidate of candidates) {
       const previous = existing.get(candidate.path);
       if(!verifyContent&&discovery.gitBacked&&candidate.gitOid&&!discovery.dirty.has(candidate.path)&&previous?.extractor_version===EXTRACTOR_VERSION&&previous.git_oid===candidate.gitOid){seen.add(candidate.path);reused++;continue;}
-      const absolute = repositoryPath(this.root, candidate.path);
+      let absolute:string;
+      try{absolute=repositoryPath(this.root,candidate.path);}catch{continue;}
       let details;
       try { details = await stat(absolute); } catch { continue; }
       if (!details.isFile() || details.size > MAX_FILE_BYTES) continue;
@@ -240,11 +250,12 @@ export class RepositoryEngine {
     await this.ensureFresh();
     const terms = queryTerms(query);
     if (!terms.length) return [];
-    const scopeSql = scopes.length ? ` AND (${scopes.map(() => "c.path LIKE ?").join(" OR ")})` : "";
+    const selectedScopes=normalizedScopes(scopes);
+    const scopeSql = selectedScopes.length ? ` AND (${selectedScopes.map(() => "(c.path=? OR substr(c.path,1,length(?))=?)").join(" OR ")})` : "";
     const rows = this.db.prepare(`SELECT c.path,c.symbol,c.heading,c.start_line AS startLine,c.end_line AS endLine,
       snippet(chunks_fts,4,'','', ' … ',24) AS excerpt,bm25(chunks_fts,2.5,3.0,2.0,1.5,1.0) AS rank
       FROM chunks_fts JOIN chunks c ON c.id=chunks_fts.rowid WHERE chunks_fts MATCH ?${scopeSql} ORDER BY rank LIMIT ?`)
-      .all(terms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" OR "), ...scopes.map((scope) => `${safeRelative(scope).replace(/[%_]/g, "\\$&")}%`), limit);
+      .all(terms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" OR "), ...selectedScopes.flatMap(scope=>[scope,`${scope}/`,`${scope}/`]), limit);
     return rows as Record<string, unknown>[];
   }
 
@@ -252,61 +263,81 @@ export class RepositoryEngine {
     await this.ensureFresh();
     const relative = safeRelative(path);
     const file = this.db.prepare("SELECT * FROM files WHERE path=?").get(relative) as Record<string, unknown> | undefined;
-    if (!file) return { path: relative, found: false };
-    return { path: relative, found: true, file,
-      symbols: this.db.prepare(`SELECT s.id,s.name,s.qualname,s.kind,s.signature,s.start_line AS startLine,s.end_line AS endLine,
-        s.start_column AS startColumn,s.end_column AS endColumn,s.origin,s.confidence FROM symbols s JOIN files f ON f.id=s.file_id WHERE f.path=? ORDER BY s.start_line`).all(relative),
-      imports: this.db.prepare("SELECT local_name AS local,imported_name AS imported,source,kind FROM imports i JOIN files f ON f.id=i.file_id WHERE f.path=?").all(relative) };
+    const symbols=file?this.db.prepare(`SELECT s.id,s.name,s.qualname,s.kind,s.signature,s.start_line AS startLine,s.end_line AS endLine,
+        s.start_column AS startColumn,s.end_column AS endColumn,s.origin,s.confidence FROM symbols s JOIN files f ON f.id=s.file_id WHERE f.path=? ORDER BY s.start_line`).all(relative):[];
+    const imports=file?this.db.prepare("SELECT local_name AS local,imported_name AS imported,source,kind FROM imports i JOIN files f ON f.id=i.file_id WHERE f.path=?").all(relative):[];
+    if(file&&symbols.length)return{path:relative,found:true,file,symbols,imports,analysisMode:"parser"};
+    const review=await loadReview(this.root,relative);
+    if(review)return{path:relative,found:true,file:file??null,analysisMode:"agent-reviewed",digest:review.digest,symbols:review.review.symbols.map(symbol=>({...symbol,origin:"agent-review"})),imports:imports.length?imports:review.review.imports,calls:review.review.calls,diagnostics:review.review.diagnostics};
+    let packet:Record<string,unknown>|undefined;
+    try{packet=reviewPacket(await readSourceEvidence(this.root,relative));}catch{/* Unsafe or absent source is not returned. */}
+    if(!file&&!packet)return{path:relative,found:false};
+    return{path:relative,found:true,file:file??null,symbols:[],imports,analysisMode:"agent-review-required",reviewPacket:packet??null};
   }
 
-  async trace(symbol: string, direction: "callers" | "callees" | "both" = "both", depth = 2): Promise<Record<string, unknown>> {
+  async trace(symbol: string, direction: "callers" | "callees" | "both" = "both", depth = 2, scopes:string[]=[]): Promise<Record<string, unknown>> {
     await this.ensureFresh();
-    return this.traceCurrentIndex(symbol,direction,depth);
+    return this.traceCurrentIndex(symbol,direction,depth,normalizedScopes(scopes),await this.reviewEdges());
   }
 
-  private traceCurrentIndex(symbol:string,direction:"callers"|"callees"|"both",depth:number):Record<string,unknown>{
+  private async reviewEdges():Promise<{source:string;target:string;kind:string;path:string;origin:string;confidence:string}[]>{
+    const reviews=await loadReviews(this.root),edges:{source:string;target:string;kind:string;path:string;origin:string;confidence:string}[]=[];
+    for(const receipt of reviews){const count=this.db.prepare("SELECT COUNT(s.id) AS symbols FROM files f LEFT JOIN symbols s ON s.file_id=f.id WHERE f.path=?").get(receipt.path) as {symbols:number}|undefined;if(count?.symbols)continue;for(const call of receipt.review.calls)edges.push({...call,path:receipt.path,origin:"agent-review"});}
+    return edges;
+  }
+
+  private traceCurrentIndex(symbol:string,direction:"callers"|"callees"|"both",depth:number,scopes:string[]=[],reviewEdges:{source:string;target:string;kind:string;path:string;origin:string;confidence:string}[]=[]):Record<string,unknown>{
     const seed=symbol.split("::").at(-1)??symbol;
     const nodes = new Set([seed]); const edges: Record<string, unknown>[] = []; let frontier = new Set([seed]);
     for (let level = 0; level < Math.max(1, depth); level++) {
       const next = new Set<string>();
       for (const current of frontier) {
-        if (direction !== "callers") for (const row of this.db.prepare("SELECT source_symbol AS source,target_symbol AS target,kind FROM edges WHERE source_symbol=? OR source_symbol LIKE ?").all(current, `%.${current}`) as {source:string;target:string;kind:string}[]) { edges.push(row); if (!nodes.has(row.target)) next.add(row.target); nodes.add(row.target); }
-        if (direction !== "callees") for (const row of this.db.prepare("SELECT source_symbol AS source,target_symbol AS target,kind FROM edges WHERE target_symbol=? OR target_symbol LIKE ?").all(current, `%.${current}`) as {source:string;target:string;kind:string}[]) { edges.push(row); if (!nodes.has(row.source)) next.add(row.source); nodes.add(row.source); }
+        if (direction !== "callers") for (const row of this.db.prepare("SELECT e.source_symbol AS source,e.target_symbol AS target,e.kind,f.path FROM edges e JOIN files f ON f.id=e.file_id WHERE e.source_symbol=? OR e.source_symbol LIKE ?").all(current, `%.${current}`) as {source:string;target:string;kind:string;path:string}[]) { if(!inScope(row.path,scopes))continue;edges.push(row); if (!nodes.has(row.target)) next.add(row.target); nodes.add(row.target); }
+        if (direction !== "callees") for (const row of this.db.prepare("SELECT e.source_symbol AS source,e.target_symbol AS target,e.kind,f.path FROM edges e JOIN files f ON f.id=e.file_id WHERE e.target_symbol=? OR e.target_symbol LIKE ?").all(current, `%.${current}`) as {source:string;target:string;kind:string;path:string}[]) { if(!inScope(row.path,scopes))continue;edges.push(row); if (!nodes.has(row.source)) next.add(row.source); nodes.add(row.source); }
+        for(const row of reviewEdges){if(!inScope(row.path,scopes))continue;if(direction!=="callers"&&(row.source===current||row.source.endsWith(`.${current}`))){edges.push(row);if(!nodes.has(row.target))next.add(row.target);nodes.add(row.target);}if(direction!=="callees"&&(row.target===current||row.target.endsWith(`.${current}`))){edges.push(row);if(!nodes.has(row.source))next.add(row.source);nodes.add(row.source);}}
       }
       frontier = next;
     }
-    return { symbol, direction, depth, nodes: [...nodes], edges };
+    return { symbol, direction, depth, scopes, nodes: [...nodes], edges };
   }
 
   async repositoryMap(limit = 200, scopes: string[] = []): Promise<Record<string, unknown>> {
     await this.ensureFresh();
-    const where = scopes.length ? `WHERE ${scopes.map(() => "f.path LIKE ?").join(" OR ")}` : "";
-    const parameters = scopes.map((scope) => `${safeRelative(scope)}%`);
+    const selectedScopes=normalizedScopes(scopes);
+    const where = selectedScopes.length ? `WHERE ${selectedScopes.map(() => "(f.path=? OR substr(f.path,1,length(?))=?)").join(" OR ")}` : "";
+    const parameters = selectedScopes.flatMap(scope=>[scope,`${scope}/`,`${scope}/`]);
     return { files: this.db.prepare(`SELECT f.path,f.language,f.status,COUNT(s.id) AS symbolCount FROM files f LEFT JOIN symbols s ON s.file_id=f.id ${where} GROUP BY f.id ORDER BY f.path LIMIT ?`).all(...parameters, limit),
-      totals: this.db.prepare("SELECT (SELECT COUNT(*) FROM files) AS files,(SELECT COUNT(*) FROM symbols) AS symbols,(SELECT COUNT(*) FROM edges) AS edges,(SELECT COUNT(*) FROM chunks) AS chunks").get() };
+      totals: this.db.prepare(`WITH selected AS (SELECT f.id FROM files f ${where}) SELECT (SELECT COUNT(*) FROM selected) AS files,(SELECT COUNT(*) FROM symbols WHERE file_id IN (SELECT id FROM selected)) AS symbols,(SELECT COUNT(*) FROM edges WHERE file_id IN (SELECT id FROM selected)) AS edges,(SELECT COUNT(*) FROM chunks WHERE file_id IN (SELECT id FROM selected)) AS chunks`).get(...parameters) };
   }
 
-  async changeImpact(paths: string[], depth = 2): Promise<Record<string, unknown>> {
+  async changeImpact(paths: string[], depth = 2, scopes:string[]=[]): Promise<Record<string, unknown>> {
     await this.ensureFresh();
-    const changed = paths.map(safeRelative);
-    const symbols = this.db.prepare(`SELECT s.qualname FROM symbols s JOIN files f ON f.id=s.file_id WHERE f.path IN (${changed.map(() => "?").join(",")})`).all(...changed) as {qualname:string}[];
-    const traces = symbols.slice(0,100).map(({qualname})=>this.traceCurrentIndex(qualname,"callers",depth));
-    return { changedPaths: changed, symbols: symbols.map((row) => row.qualname), traces };
+    const normalized=normalizedScopes(scopes),changed=paths.map(safeRelative),selected=changed.filter(path=>inScope(path,normalized));
+    const symbols = selected.length?this.db.prepare(`SELECT s.qualname FROM symbols s JOIN files f ON f.id=s.file_id WHERE f.path IN (${selected.map(() => "?").join(",")})`).all(...selected) as {qualname:string}[]:[];
+    const names=symbols.map(row=>row.qualname),reviews=await loadReviews(this.root);
+    for(const receipt of reviews){if(!selected.includes(receipt.path))continue;const count=this.db.prepare("SELECT COUNT(s.id) AS symbols FROM files f LEFT JOIN symbols s ON s.file_id=f.id WHERE f.path=?").get(receipt.path) as {symbols:number}|undefined;if(!count?.symbols)names.push(...receipt.review.symbols.map(symbol=>symbol.qualname));}
+    const reviewEdges=await this.reviewEdges();
+    const traces = names.slice(0,100).map(qualname=>this.traceCurrentIndex(qualname,"callers",depth,normalized,reviewEdges));
+    return { changedPaths: changed, scopes:normalized, symbols:names, traces };
   }
 
   async findAll(pattern: string, limit = 100, scopes: string[] = []): Promise<Record<string, unknown>[]> {
     await this.ensureFresh();
-    const matcher = new RegExp(pattern, "i");
-    const files = (await this.discover()).candidates.filter(({ path }) => !scopes.length || scopes.some((scope) => path.startsWith(safeRelative(scope))));
+    const selectedScopes=normalizedScopes(scopes);
+    const files = (await this.discover()).candidates.filter(({ path }) => inScope(path,selectedScopes));
     const results: Record<string, unknown>[] = [];
-    for (const file of files) {
-      const content = await readFile(join(this.root, file.path), "utf8");
-      for (const [index, line] of content.split(/\r?\n/).entries()) if (matcher.test(line)) {
-        results.push({ path: file.path, line: index + 1, text: line.slice(0, 1000) });
-        if (results.length >= limit) return results;
+    const search=new BoundedRegexSearch(pattern);
+    try{
+      for (const file of files) {
+        let source;
+        try{source=await readSourceEvidence(this.root,file.path);}catch{continue;}
+        for(const match of await search.matches(source.text,limit-results.length)){
+          results.push({path:file.path,...match});
+          if(results.length>=limit)return results;
+        }
       }
-    }
-    return results;
+      return results;
+    }finally{await search.close();}
   }
 
   async fileIdentities(paths?:readonly string[]):Promise<Record<string,unknown>>{await this.ensureFresh();const selected=paths?.map(safeRelative)??[];const rows=selected.length?this.db.prepare(`SELECT path,size,mtime_ms AS mtimeMs,content_hash AS contentHash,language,status FROM files WHERE path IN (${selected.map(()=>"?").join(",")}) ORDER BY path`).all(...selected):this.db.prepare("SELECT path,size,mtime_ms AS mtimeMs,content_hash AS contentHash,language,status FROM files ORDER BY path").all();return{repository:this.root,files:rows};}

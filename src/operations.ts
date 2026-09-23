@@ -1,10 +1,10 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 
 import { RkeError } from "./errors.js";
-import { readJson, sha256, writeJson } from "./io.js";
+import { readJson } from "./io.js";
 import { repositoryPath, safeRelative } from "./paths.js";
 import { RepositoryEngine } from "./repository-engine.js";
+import { readSourceEvidence, reviewPacket } from "./source-evidence.js";
+import { saveReview } from "./agent-reviews.js";
 import * as surfaces from "./surfaces.js";
 import type { JsonObject, OperationDefinition, OperationOutcome } from "./types.js";
 import * as workflow from "./workflow.js";
@@ -58,9 +58,9 @@ const definitions:Array<[string,JsonObject,boolean,boolean,Handler]> = [
   ["repo_file_api",schema({path:string},["path"]),true,true,async(r,a)=>ok({result:"file-api",...await engine(r,e=>e.fileApi(value(a,"path")))})],
   ["repo_prepare_code_review",schema({path:string},["path"]),true,true,prepareReview],
   ["repo_record_code_review",schema({path:string,review:{type:"object"}},["path","review"]),false,true,recordReview],
-  ["repo_trace_symbol",schema({symbol:string,direction:{type:"string",enum:["in","out","both"],default:"in"},depth:{type:"integer",minimum:1,maximum:5,default:2},scopes:optionalStrings},["symbol"]),true,true,async(r,a)=>{const direction=String(a.direction??"in");return ok({result:"symbol-traced",...await engine(r,e=>e.trace(value(a,"symbol"),direction==="in"?"callers":direction==="out"?"callees":"both",value(a,"depth",2)))});}],
+  ["repo_trace_symbol",schema({symbol:string,direction:{type:"string",enum:["in","out","both"],default:"in"},depth:{type:"integer",minimum:1,maximum:5,default:2},scopes:optionalStrings},["symbol"]),true,true,async(r,a)=>{const direction=String(a.direction??"in");return ok({result:"symbol-traced",...await engine(r,e=>e.trace(value(a,"symbol"),direction==="in"?"callers":direction==="out"?"callees":"both",value(a,"depth",2),value(a,"scopes",[])))});}],
   ["repo_structure_map",schema({limit:{type:"integer",minimum:1,maximum:100,default:20},scopes:optionalStrings}),true,true,async(r,a)=>ok({result:"structure-map",...await engine(r,e=>e.repositoryMap(value(a,"limit",20),value(a,"scopes",[])))})],
-  ["repo_change_impact",schema({changedPaths:strings,depth:{type:"integer",minimum:1,maximum:5,default:2},scopes:optionalStrings},["changedPaths"]),true,true,async(r,a)=>ok({result:"change-impact",...await engine(r,e=>e.changeImpact(stringsValue(a,"changedPaths"),value(a,"depth",2)))})],
+  ["repo_change_impact",schema({changedPaths:strings,depth:{type:"integer",minimum:1,maximum:5,default:2},scopes:optionalStrings},["changedPaths"]),true,true,async(r,a)=>ok({result:"change-impact",...await engine(r,e=>e.changeImpact(stringsValue(a,"changedPaths"),value(a,"depth",2),value(a,"scopes",[])))})],
   ["repo_structure_benchmark",schema({corpus:string},["corpus"]),true,true,benchmark("structure")],
   ["repo_find_all",schema({pattern:string,limit:{type:"integer",minimum:1,maximum:100,default:50},scopes:optionalStrings},["pattern"]),true,true,async(r,a)=>ok({result:"matches-found",pattern:value(a,"pattern"),matches:await engine(r,e=>e.findAll(value(a,"pattern"),value(a,"limit",50),value(a,"scopes",[])))})],
 ];
@@ -76,8 +76,8 @@ function benchmark(kind:"context"|"structure"):Handler{return async(root,args)=>
   for(const entry of cases){let payload:unknown;const kindValue=String(entry.kind);if(kindValue==="file-api")payload=await engine(root,e=>e.fileApi(String(entry.path)));else if(kindValue==="impact")payload=await engine(root,e=>e.changeImpact(entry.changedPaths as string[],Number(entry.depth??2)));else{const direction=String(entry.direction??"both");payload=await engine(root,e=>e.trace(String(entry.symbol),direction==="in"?"callers":direction==="out"?"callees":"both",Number(entry.depth??2)));}const serialized=JSON.stringify(payload);const expected=entry.expected as string[];const missing=expected.filter(item=>!serialized.includes(item));if(!missing.length)passed++;results.push({id:entry.id,passed:!missing.length,missing});}
   return ok({result:"structure-benchmark",corpus:corpusRelative,caseCount:cases.length,passed,cases:results,elapsedMs:Math.round((performance.now()-started)*100)/100},passed===cases.length?0:3);
 };}
-async function prepareReview(root:string,args:Record<string,unknown>):Promise<OperationOutcome>{const rel=safeRelative(value(args,"path"));const content=await readFile(repositoryPath(root,rel),"utf8");return ok({result:"code-review-prepared",path:rel,digest:sha256(content),numberedSource:content.split(/\r?\n/).slice(0,500).map((line,index)=>`${index+1}: ${line}`).join("\n"),schema:{symbols:"array",imports:"array",calls:"array",diagnostics:"array"}});}
-async function recordReview(root:string,args:Record<string,unknown>):Promise<OperationOutcome>{const rel=safeRelative(value(args,"path"));const content=await readFile(repositoryPath(root,rel),"utf8");const receipt={path:rel,digest:sha256(content),review:value(args,"review"),recordedAt:new Date().toISOString()};await writeJson(join(root,".engineering-workflow/cache/reviews",`${sha256(rel)}.json`),receipt);return ok({result:"code-review-recorded",receipt});}
+async function prepareReview(root:string,args:Record<string,unknown>):Promise<OperationOutcome>{const source=await readSourceEvidence(root,value(args,"path"));return ok({result:"code-review-prepared",...reviewPacket(source)});}
+async function recordReview(root:string,args:Record<string,unknown>):Promise<OperationOutcome>{const receipt=await saveReview(root,value(args,"path"),value(args,"review"));return ok({result:"code-review-recorded",receipt});}
 
 export const OPERATIONS:OperationDefinition[]=definitions.map(([name,inputSchema,readOnly,idempotent,handler])=>({name,title:name.replaceAll("_"," "),description:`RKE operation ${name}.`,inputSchema,readOnly,idempotent,handler}));
 export const OPERATION_BY_NAME=new Map(OPERATIONS.map(operation=>[operation.name,operation]));

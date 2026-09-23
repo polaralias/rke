@@ -5,7 +5,7 @@ description: Defines the independently installed Repository Knowledge Engineerin
 timestamp: 2026-09-21T12:00:00+01:00
 authority: canonical
 verification: verified-working
-reviewed_at: 2026-09-21T12:00:00+01:00
+reviewed_at: 2026-09-23T12:00:00+01:00
 verified_against:
   - src/operations.ts
   - src/cli.ts
@@ -77,11 +77,13 @@ Continuation defaults to ignored, untracked `local-docs/handoff/` artefacts. Whe
 
 ## Retrieval and structural analysis
 
-Retrieval and structural analysis share one persistent `RepositoryEngine` per repository. A hot Git query checks status and HEAD, then hashes dirty paths against the last indexed state. This detects another ordinary edit to an already dirty file while avoiding a whole-index rebuild for a stable modified working tree. `context check` performs full content verification and hashes clean tracked files. Git can miss a same-size edit when timestamps are deliberately restored; search results may therefore be stale in that edge case until a full check. Excluded, sensitive, binary and oversized paths never enter the database. Concurrent callers coalesce one freshness pass, and composed impact traces operate on that refreshed SQLite snapshot. Changed records are replaced transactionally. SQLite FTS5 ranks bounded chunks without constructing a repository-wide JavaScript postings graph.
+Retrieval and structural analysis share one persistent `RepositoryEngine` per repository. A hot Git query checks status and HEAD, then hashes dirty paths against the last indexed state. This detects another ordinary edit to an already dirty file while avoiding a whole-index rebuild for a stable modified working tree. `context check` performs full content verification and hashes clean tracked files. A forced verification arriving during an ordinary refresh waits for that pass and then verifies content; weaker work never satisfies the stronger request. Git can miss a same-size edit when timestamps are deliberately restored; search results may therefore be stale in that edge case until a full check. Excluded, sensitive, binary and oversized paths never enter the database. Source-returning search and review use the same repository-contained, one-MiB, secret-aware read boundary. Regex matching runs in a worker with a per-file timeout. Changed records are replaced transactionally. SQLite FTS5 ranks bounded chunks without constructing a repository-wide JavaScript postings graph.
 
 Tree-sitter runs in the persistent Node process through version-pinned WASM grammars. The same `ParsedFile` contract supplies symbols, imports, calls and chunks to both search and structural operations, eliminating parser subprocesses and duplicate extraction paths. The database stores normalized files, symbols, imports, edges, chunks and FTS terms; queries retain only bounded result rows in memory.
 
-`npm run benchmark` creates an isolated, clean tracked mixed Python, TypeScript and C# repository and reports cold, hot-cache, full content-verification and changed-file freshness time, process memory, measured Git subprocesses and the zero parser-child-process invariant. `RKE_BENCHMARK_FILES` selects the scale. Deterministic tests prove a hot clean check hashes and parses zero tracked files, full verification hashes them without reparsing unchanged content, a one-file edit reparses only that file, concurrent dirty queries coalesce freshness, and change impact refreshes once before tracing current SQLite state.
+Trace, map, impact and search accept explicit repository-relative scopes; no scope selection is automatic. When parser evidence is unavailable, file API returns a bounded agent-review packet. A validated review remains outside the parser cache, is bound to the exact source digest, and can supply confidence-labelled file, trace and impact evidence until the source changes. Extracted parser symbols take precedence.
+
+`npm run benchmark` creates an isolated, clean tracked mixed Python, TypeScript and C# repository and reports cold, hot-cache, full content-verification and changed-file freshness time, repeated-query total/mean/p95 latency, process memory, measured Git subprocesses and the zero parser-child-process invariant. `RKE_BENCHMARK_FILES` selects the scale. Deterministic tests prove a hot clean check hashes and parses zero tracked files, full verification hashes them without reparsing unchanged content, a one-file edit reparses only that file, concurrent dirty queries coalesce freshness without weakening a forced check, and scoped impact refreshes once before tracing current SQLite state.
 
 ## Installation and release
 

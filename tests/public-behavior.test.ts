@@ -61,8 +61,9 @@ test("every public operation has an executable success and malformed-input failu
   await call("repo_documentation_bootstrap",{bundle:"docs/knowledge"});
   await call("repo_file_api",{path:"src/service.ts"});
   const review=await call("repo_prepare_code_review",{path:"src/service.ts"});
-  await call("repo_record_code_review",{path:"src/service.ts",review:{symbols:["calculateInvoice"],sourceDigest:review.payload.digest}});
-  await call("repo_trace_symbol",{symbol:"calculateInvoice",direction:"out",depth:2,scopes:["src"]});
+  await call("repo_record_code_review",{path:"src/service.ts",review:{sourceDigest:review.payload.digest,symbols:[{name:"calculateInvoice",qualname:"calculateInvoice",kind:"function",signature:"export function calculateInvoice()",startLine:2,endLine:2,confidence:"high"}],imports:[],calls:[],diagnostics:[]}});
+  assert.equal((await call("repo_file_api",{path:"src/service.ts"})).payload.analysisMode,"parser");
+  assert.match(JSON.stringify((await call("repo_trace_symbol",{symbol:"calculateInvoice",direction:"out",depth:2,scopes:["src"]})).payload),/helper/);
   await call("repo_structure_map",{limit:20,scopes:["src"]});
   await call("repo_change_impact",{changedPaths:["src/service.ts"],depth:2,scopes:["src"]});
   await call("repo_structure_benchmark",{corpus:"structure-corpus.json"});

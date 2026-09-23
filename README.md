@@ -88,7 +88,7 @@ The gate lives at `.githooks/pre-push`; installation configures `core.hooksPath=
 
 Repository retrieval uses SQLite FTS5 and SHA-256 content identity. Each search checks Git status and HEAD and hashes dirty paths against the last indexed state; a stable modified working tree reuses the index, while another ordinary edit triggers refresh. `rke context check` performs full content verification, hashing clean tracked files too. Git can miss a same-size edit when timestamps are deliberately restored, so a search may reuse stale content in that edge case until a full check. Concurrent public operations coalesce one freshness pass, and composed structural operations query the already-refreshed SQLite state rather than recursively refreshing. Only changed files are parsed and replaced in a transaction. The Node process loads Tree-sitter grammars in-process and both retrieval and structural analysis consume the same parsed-file records. Known credential locations and secret-like source are omitted from persistence and results.
 
-Structural operations query normalized SQLite files, symbols, imports, edges and chunks without reconstructing a whole-repository object graph. Use repeatable `--scope <relative-path>` options to constrain results. Tree-sitter is preferred; `rke structure review` and `review-apply` provide an explicit bounded agent-review path where deeper evidence is required.
+Structural operations query normalized SQLite files, symbols, imports, edges and chunks without reconstructing a whole-repository object graph. Use repeatable `--scope <relative-path>` options to constrain trace, map, impact and search; scopes are never inferred automatically. Tree-sitter evidence takes precedence. When it is unavailable, `rke structure review` returns bounded, secret-aware source slices and `review-apply` records digest-bound agent evidence consumed by file API, trace and impact. Regex search runs in an isolated worker with a per-file time limit.
 
 ## Evaluation and release
 
@@ -96,7 +96,7 @@ The `0.10.x` line is the pre-1.0 qualification series: it ships the sole TypeScr
 
 `rke-eval` loads its packaged corpus without a repository-relative data dependency. It invokes a configured model and consumes model usage, so deterministic tests remain the default inner loop.
 
-Run `npm run benchmark` to measure cold indexing and warm retrieval over a realistic mixed Python, TypeScript and C# corpus. Set `RKE_BENCHMARK_FILES` to select the corpus size; large runs are intentionally kept out of routine CI.
+Run `npm run benchmark` to measure cold indexing, warm retrieval, memory, and total/mean/p95 latency across 50 repeated searches over a realistic mixed Python, TypeScript and C# corpus. Set `RKE_BENCHMARK_FILES` to select the corpus size; large runs are intentionally kept out of routine CI.
 
 `package.json` is the sole release version source; `src/version.ts` reads its runtime identity directly from that package metadata. Release Drafter prepares one serialized draft from that version. A matching `vX.Y.Z` tag runs type checking, deterministic tests, the no-Python audit and a clean package smoke test, then attests and publishes the npm tarball with provenance before promoting the GitHub release. Published tags are immutable.
 
