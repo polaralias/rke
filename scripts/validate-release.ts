@@ -10,7 +10,7 @@ const packageDocument=JSON.parse(await readFile("package.json","utf8")) as {vers
 assert.equal(packageDocument.version,VERSION,"package and runtime versions differ");
 assert.equal(packageDocument.engines?.node,">=24.15.0","supported Node floor changed without release-contract update");
 for(const command of ["rke","rke-mcp","rke-eval","rke-session-start","rke-pre-compaction","rke-pre-push"])assert.ok(packageDocument.bin?.[command],`missing executable: ${command}`);
-assert.equal(OPERATIONS.length,44,"public operation inventory changed without fixture update");
+assert.equal(OPERATIONS.length,45,"public operation inventory changed without fixture update");
 
 const database=new DatabaseSync(":memory:");
 try{database.exec("CREATE VIRTUAL TABLE release_fts USING fts5(body); INSERT INTO release_fts(body) VALUES ('release validation');");assert.equal((database.prepare("SELECT COUNT(*) AS count FROM release_fts WHERE release_fts MATCH 'validation'").get() as {count:number}).count,1,"SQLite FTS5 is unavailable");}finally{database.close();}
@@ -27,4 +27,4 @@ const grammarFixtures:Record<string,string>={
 for(const [path,source] of Object.entries(grammarFixtures)){const parsed=await parser.parse(path,source);assert.notEqual(parsed.status,"failed",`grammar failed to load: ${path}: ${parsed.diagnostics.join("; ")}`);}
 parser.close();
 
-console.log(`Release contract validated for RKE ${VERSION}: version identity, bins, 44 operations, SQLite FTS5, and ${Object.keys(grammarFixtures).length} grammar fixtures.`);
+console.log(`Release contract validated for RKE ${VERSION}: version identity, bins, 45 operations, SQLite FTS5, and ${Object.keys(grammarFixtures).length} grammar fixtures.`);

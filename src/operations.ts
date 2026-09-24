@@ -1,7 +1,7 @@
 
 import { RkeError } from "./errors.js";
 import { readJson } from "./io.js";
-import { assessCoordinationCleanup } from "./coordination-cleanup.js";
+import { assessCoordinationCleanup, cleanupCoordination } from "./coordination-cleanup.js";
 import { trackerPreview } from "./tracker-preview.js";
 import { repositoryPath, safeRelative } from "./paths.js";
 import { RepositoryEngine } from "./repository-engine.js";
@@ -42,11 +42,12 @@ const definitions:Array<[string,JsonObject,boolean,boolean,Handler]> = [
   ["repo_host_install",schema({host:{type:"string",enum:["codex","claude","git"]},base:{type:"string",default:"main"},force:{type:"boolean",default:false}},["host"]),false,true,(r,a)=>surfaces.installHost(r,value(a,"host"),value(a,"base","main"),value(a,"force",false))],
   ["repo_context_benchmark",schema({corpus:string},["corpus"]),true,true,benchmark("context")],
   ["repo_dissection_assess",schema({}),true,true,(r)=>surfaces.dissection(r)],
-  ["repo_handoff_write",schema({topic:string,summary:string,nextAction:string,mode:{type:"string",enum:["standard","max"],default:"standard"},visibility:{type:"string",enum:["local","shared"],default:"local"},directory:string,references:optionalStrings},["topic","summary","nextAction"]),false,false,(r,a)=>surfaces.writeHandoff(r,a)],
+  ["repo_handoff_write",schema({topic:string,summary:string,nextAction:string,mode:{type:"string",enum:["standard","max"],default:"standard"},visibility:{type:"string",enum:["local","shared"],default:"local"},directory:string,references:optionalStrings,verification:optionalStrings,risks:optionalStrings,changes:optionalStrings},["topic","summary","nextAction"]),false,false,(r,a)=>surfaces.writeHandoff(r,a)],
   ["repo_handoff_inspect",schema({path:string,visibility:{type:"string",enum:["auto","local","shared"],default:"auto"},directory:string}),true,true,(r,a)=>surfaces.inspectHandoff(r,a)],
   ["repo_coordination_validate",schema({manifest:string},["manifest"]),true,true,(r,a)=>surfaces.coordination(r,value(a,"manifest"))],
   ["repo_coordination_plan",schema({manifest:string},["manifest"]),true,true,(r,a)=>surfaces.coordination(r,value(a,"manifest"),true)],
   ["repo_coordination_cleanup_check",schema({lane:string,branch:string,reviewHead:string,remote:string,destinationBranch:string},["lane","branch","reviewHead","remote","destinationBranch"]),true,true,(r,a)=>assessCoordinationCleanup(r,{lane:value(a,"lane"),branch:value(a,"branch"),reviewHead:value(a,"reviewHead"),remote:value(a,"remote"),destinationBranch:value(a,"destinationBranch")})],
+  ["repo_coordination_cleanup",schema({lane:string,branch:string,reviewHead:string,remote:string,destinationBranch:string},["lane","branch","reviewHead","remote","destinationBranch"]),false,false,(r,a)=>cleanupCoordination(r,{lane:value(a,"lane"),branch:value(a,"branch"),reviewHead:value(a,"reviewHead"),remote:value(a,"remote"),destinationBranch:value(a,"destinationBranch")})],
   ["repo_tracker_preview",schema({packages:string,tracker:string,scope:string},["packages","tracker","scope"]),true,true,(r,a)=>trackerPreview(r,value(a,"packages"),value(a,"tracker"),value(a,"scope"))],
   ["repo_publication_scan",schema({}),true,true,(r)=>surfaces.publicationScan(r)],
   ["repo_find_context",schema({query:string,limit:{type:"integer",minimum:1,default:8},scope:string},["query"]),true,true,async(r,a)=>ok({result:"context-found",query:value(a,"query"),matches:await engine(r,e=>e.search(value(a,"query"),value(a,"limit",8),a.scope?[String(a.scope)]:[]))})],

@@ -54,3 +54,21 @@ export function assessCoordinationCleanup(root:string,request:CleanupRequest):Op
   const integrated=Boolean(exactTip&&destinationObserved&&git(root,"merge-base","--is-ancestor",tip,remoteDestinationTip!).code===0);
   return result({ownedWorktree:worktreeKnown,cleanWorktree:status.code===0&&!status.stdout.trim(),exactReviewedTip:exactTip,remoteReachable,destinationObserved,exactTipIntegrated:integrated,sourceRemoteAbsent},{lane,branch,reviewHead,currentTip:tip||null,remote,destinationBranch,remoteDestinationTip:remoteDestinationTip??null,worktree:target,remoteError:remoteReachable?null:(remoteRefs.error?.message??"remote verification failed")});
 }
+
+export function cleanupCoordination(root:string,request:CleanupRequest):OperationOutcome{
+  const assessment=assessCoordinationCleanup(root,request);
+  if(assessment.exitCode)return{exitCode:3,payload:{...assessment.payload,result:"coordination-cleanup-blocked"}};
+  const evidence=assessment.payload.evidence as Record<string,unknown>;
+  const target=String(evidence.worktree);
+  // Recheck immediately before the first mutation. The caller must separately
+  // authorise invoking this operation; an eligibility check alone never does.
+  const current=assessCoordinationCleanup(root,request);
+  if(current.exitCode)return{exitCode:3,payload:{...current.payload,result:"coordination-cleanup-blocked"}};
+  const repaired=git(root,"worktree","repair",target);
+  if(repaired.code)return{exitCode:3,payload:{result:"coordination-cleanup-partial",mutation:"none",worktree:target,branch:request.branch,error:repaired.stderr.trim()||"Git refused worktree link repair."}};
+  const removed=git(root,"worktree","remove",target);
+  if(removed.code)return{exitCode:3,payload:{result:"coordination-cleanup-partial",mutation:"none",worktree:target,branch:request.branch,error:removed.stderr.trim()||"Git refused worktree removal."}};
+  const deleted=git(root,"branch","-d","--",request.branch);
+  if(deleted.code)return{exitCode:3,payload:{result:"coordination-cleanup-partial",mutation:"worktree-removed",worktree:target,branch:request.branch,error:deleted.stderr.trim()||"Git refused branch deletion. The local branch remains."}};
+  return{exitCode:0,payload:{result:"coordination-cleanup-complete",mutation:"worktree-and-local-branch-removed",worktree:target,branch:request.branch,reviewHead:request.reviewHead,remote:request.remote,destinationBranch:request.destinationBranch,remoteBranchDeleted:false}};
+}

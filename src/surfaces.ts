@@ -13,24 +13,49 @@ import type { OperationOutcome } from "./types.js";
 function out(payload:Record<string,unknown>,exitCode=0):OperationOutcome{return{payload,exitCode};}
 async function walk(root:string, extension?:string):Promise<string[]>{const result:string[]=[];const visit=async(dir:string):Promise<void>=>{for(const entry of await readdir(dir,{withFileTypes:true})){if([".git","node_modules","dist","build","__pycache__"].includes(entry.name))continue;const path=join(dir,entry.name);if(entry.isDirectory())await visit(path);else if(!extension||extname(entry.name)===extension)result.push(relative(root,path).replaceAll("\\","/"));}};await visit(root);return result.sort();}
 
-export async function dissection(root:string):Promise<OperationOutcome>{const files=await walk(root);const packageFiles=files.filter(p=>/(^|\/)(package\.json|Cargo\.toml|go\.mod|pom\.xml|pyproject\.toml)$/.test(p));const tests=files.filter(p=>/(^|\/)(tests?|specs?)(\/|$)|\.(test|spec)\./.test(p));const docs=files.filter(p=>/\.md$/i.test(p));return out({result:"repository-dissected",root,entryPoints:files.filter(p=>/(^|\/)(cli|main|index|mcp)\.[^.]+$/.test(p)),packageFiles,tests,documentation:docs,knowledge:docs.filter(p=>p.includes("knowledge")),trustGaps:["runtime behaviour remains unverified until relevant commands are executed"]});}
+export async function dissection(root:string):Promise<OperationOutcome>{
+  const files=await walk(root);
+  const packageFiles=files.filter(p=>/(^|\/)(package\.json|Cargo\.toml|go\.mod|pom\.xml|pyproject\.toml)$/.test(p));
+  const tests=files.filter(p=>/(^|\/)(tests?|specs?)(\/|$)|\.(test|spec)\./.test(p));
+  const docs=files.filter(p=>/\.md$/i.test(p));
+  const declaredLaunchers:Record<string,unknown>[]=[];
+  for(const manifest of packageFiles.filter(p=>basename(p)==="package.json"&&p.split("/").length<=3)){
+    try{
+      const data=JSON.parse(await readFile(repositoryPath(root,manifest),"utf8")) as Record<string,unknown>;
+      const bin=typeof data.bin==="string"?{[String(data.name??"bin")]:data.bin}:data.bin&&typeof data.bin==="object"?data.bin as Record<string,unknown>:{};
+      for(const [name,target] of Object.entries(bin)){
+        if(typeof target!=="string")continue;
+        let resolved:string|null=null;
+        try{resolved=relativePosix(root,repositoryPath(root,join(manifest,"..",target)));}catch{/* An unsafe declaration is a gap, never a path to execute. */}
+        declaredLaunchers.push({manifest,name,target,sourcePath:resolved,sourceExists:Boolean(resolved&&existsSync(repositoryPath(root,resolved))),trust:"declared-not-executed"});
+      }
+    }catch{declaredLaunchers.push({manifest,trust:"manifest-unreadable"});}
+  }
+  return out({result:"repository-dissected",root,entryPoints:files.filter(p=>/(^|\/)(cli|main|index|mcp)\.[^.]+$/.test(p)),packageFiles,declaredLaunchers,tests,documentation:docs,knowledge:docs.filter(p=>p.includes("knowledge")),runtimeVerification:"not-performed",trustGaps:["Declared launchers and source paths do not prove packaged runtime support; exercise each consequential public path separately."]});
+}
 
 function slug(value:string):string{return value.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"handoff";}
+function handoffLine(value:string):string{return value.replace(/\s+/g," ").trim();}
+function handoffBullets(values:string[]):string{return values.length?values.map(value=>`- ${handoffLine(value)}`).join("\n"):"- None recorded.";}
 export async function writeHandoff(root:string,args:Record<string,unknown>):Promise<OperationOutcome>{
-  const topic=String(args.topic),summary=String(args.summary),next=String(args.nextAction);
+  const raw=[String(args.topic),String(args.summary),String(args.nextAction),...((args.references as string[]|undefined)??[]),...((args.verification as string[]|undefined)??[]),...((args.risks as string[]|undefined)??[]),...((args.changes as string[]|undefined)??[])];
+  if(containsSecret(raw.join("\n")))return out({result:"handoff-rejected",error:"content resembles a secret"},2);
+  const topic=handoffLine(String(args.topic)),summary=handoffLine(String(args.summary)),next=handoffLine(String(args.nextAction));
   const visibility=String(args.visibility??"local"),mode=String(args.mode??"standard");
   const directory=String(args.directory??(visibility==="local"?"local-docs/handoff":".rke/handoffs"));
-  if(containsSecret([topic,summary,next,...(args.references as string[]??[])].join("\n")))return out({result:"handoff-rejected",error:"content resembles a secret"},2);
   const dir=repositoryPath(root,safeRelative(directory));await mkdir(dir,{recursive:true});
   const name=`${new Date().toISOString().replace(/[-:.]/g,"")}-${slug(topic)}-${randomBytes(4).toString("hex")}.md`,path=join(dir,name);
   const rel=relativePosix(root,path),ignored=git(root,"check-ignore","-q","--",rel).code===0,tracked=git(root,"ls-files","--error-unmatch","--",rel).code===0;
   if((visibility==="local"&&(!ignored||tracked))||(visibility==="shared"&&ignored))return out({result:"handoff-visibility-invalid",path:rel,error:visibility==="local"?"Local handoffs must be ignored and untracked.":"Shared handoffs must be commit-capable."},3);
   const branch=git(root,"branch","--show-current").stdout.trim()||"unknown",head=git(root,"rev-parse","HEAD").stdout.trim()||"unknown";
-  const references=((args.references as string[]|undefined)??[]).map(v=>`- ${v}`).join("\n")||"- None recorded.";
+  const references=handoffBullets((args.references as string[]|undefined)??[]);
+  const verification=handoffBullets((args.verification as string[]|undefined)??[]);
+  const risks=handoffBullets((args.risks as string[]|undefined)??[]);
+  const suppliedChanges=(args.changes as string[]|undefined)??[];
   const status=git(root,"status","--porcelain=v1"),changed=status.code?[]:status.stdout.split(/\r?\n/).filter(Boolean).map(line=>line.slice(3)).slice(0,30);
   const workflowPath=join(root,".engineering-workflow","state.json"),workflowState=existsSync(workflowPath)?await readJsonOr<Record<string,unknown>>(workflowPath,{}):{};
   const gates=Array.isArray(workflowState.outstanding_gates)?workflowState.outstanding_gates as string[]:[];
-  const backbone=mode==="max"?`## Current State\n\n${summary}\n\n## Verification State\n\nGit branch and HEAD were observed at write time. Runtime and acceptance evidence must be rechecked from their owning surfaces.\n\n## Workflow State\n\nPhase: ${String(workflowState.primary_phase??"not activated")}; outstanding gates: ${gates.join(", ")||"none recorded"}.\n\n## Changes Made\n\n${changed.length?changed.map(item=>`- Git status: ${item}`).join("\n"):"No uncommitted paths observed."}\n\n## Open Issues Or Risks\n\n${gates.length?`Outstanding gates: ${gates.join(", ")}.`:"No outstanding workflow gates observed; recheck task, knowledge, and Git truth independently."}\n\n`:"## Verification State\n\nRe-verify repository, runtime, and workflow truth before mutation.\n\n";
+  const backbone=mode==="max"?`## Current State\n\n${summary}\n\n## Verification State\n\n${verification}\n\nGit branch and HEAD were observed at write time. Runtime and acceptance evidence must be rechecked from their owning surfaces.\n\n## Workflow State\n\nPhase: ${String(workflowState.primary_phase??"not activated")}; outstanding gates: ${gates.join(", ")||"none recorded"}.\n\n## Changes Made\n\n${suppliedChanges.length?`${handoffBullets(suppliedChanges)}\n`:""}${changed.length?changed.map(item=>`- Git status: ${handoffLine(item)}`).join("\n"):"No uncommitted paths observed."}\n\n## Open Issues Or Risks\n\n${risks}\n\n${gates.length?`Outstanding gates: ${gates.join(", ")}.`:"No outstanding workflow gates observed; recheck task, knowledge, and Git truth independently."}\n\n`:"## Verification State\n\nRe-verify repository, runtime, and workflow truth before mutation.\n\n";
   const body=`# Handoff: ${topic}\n\n**As of:** ${utcNow()}; branch \`${branch}\`; commit \`${head}\`\n**Status:** active\n**Review after:** ${new Date(Date.now()+14*86400000).toISOString().slice(0,10)}\n**Mode:** ${mode}\n**Visibility:** ${visibility}\n\n## Session Goal\n\n${summary}\n\n${backbone}## Canonical References\n\n${references}\n\n## Suggested Next Step\n\n${next}\n`;
   if(containsSecret(body))return out({result:"handoff-rejected",error:"rendered content resembles a secret"},2);
   const superseded:string[]=[];
@@ -56,7 +81,14 @@ export async function inspectHandoff(root:string,args:Record<string,unknown>):Pr
   if((actual==="local"&&(!ignored||tracked))||(actual==="shared"&&(ignored||!tracked)))return out({result:"handoff-visibility-invalid",path:rel,visibility:actual,reason:actual==="shared"&&!tracked?"pending-commit":"storage-mismatch"},3);
   const recorded=text.match(/^\*\*As of:\*\* [^\n]*branch `([^`]+)`; commit `([^`]+)`$/m),currentBranch=git(root,"branch","--show-current").stdout.trim(),currentHead=git(root,"rev-parse","HEAD").stdout.trim();
   const drift=[...(reviewAfter&&reviewAfter<new Date().toISOString().slice(0,10)?["review-expired"]:[]),...(recorded&&recorded[1]!==currentBranch?["branch-changed"]:[]),...(recorded&&recorded[2]!==currentHead?["head-changed"]:[])];
-  return out({result:drift.length?"handoff-stale":"handoff-inspected",path:rel,visibility:actual,reviewAfter,drift,currentGit:{branch:currentBranch,head:currentHead},claims:{nextAction:text.match(/^## Suggested Next Step\s+([\s\S]*?)(?=\n## |$)/m)?.[1]?.trim()??null},requiresReverification:true},drift.length?3:0);
+  const referenceSection=text.match(/^## Canonical References\s+([\s\S]*?)(?=\n## |$)/m)?.[1]??"";
+  const references=referenceSection.split(/\r?\n/).map(line=>line.match(/^- (.+)$/)?.[1]?.trim()).filter((item):item is string=>Boolean(item)&&item!=="None recorded.").map(item=>{
+    if(/^https?:\/\//i.test(item))return{reference:item,status:"external-unverified"};
+    try{const candidate=safeRelative(item);return{reference:item,status:existsSync(repositoryPath(root,candidate))?"exists":"missing"};}catch{return{reference:item,status:"unresolved"};}
+  });
+  if(references.some(item=>item.status==="missing"))drift.push("reference-missing");
+  const nextAction=text.match(/^## Suggested Next Step\s+([\s\S]*?)(?=\n## |$)/m)?.[1]?.trim()??null;
+  return out({result:drift.length?"handoff-stale":"handoff-inspected",path:rel,visibility:actual,reviewAfter,drift,currentGit:{branch:currentBranch,head:currentHead},references,claims:{nextAction},proposedNextAction:drift.length?null:nextAction,requiresReverification:true},drift.length?3:0);
 }
 
 export async function publicationScan(root:string):Promise<OperationOutcome>{

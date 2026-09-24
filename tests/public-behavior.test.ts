@@ -68,6 +68,7 @@ test("every public operation has an executable success and malformed-input failu
   });
   const reviewHead=spawnSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).stdout.trim();
   await call("repo_coordination_cleanup_check",{lane,branch:"feat/cleanup",reviewHead,remote:"origin",destinationBranch:"main"});
+  await call("repo_coordination_cleanup",{lane,branch:"feat/cleanup",reviewHead,remote:"origin",destinationBranch:"main"});
   await call("repo_tracker_preview",{packages:"packages.yml",tracker:"github",scope:"team/invoices"});
   const publication=await call("repo_publication_scan",{},[0,3]);
   if(publication.exitCode===3){

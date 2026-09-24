@@ -10,7 +10,7 @@ import { invokeOperation, OPERATIONS } from "../src/operations.js";
 import { CLI_ROUTES } from "../src/cli-routes.js";
 import { VERSION } from "../src/version.js";
 
-test("publishes the complete 44-operation surface",()=>{assert.equal(OPERATIONS.length,44);assert.equal(new Set(OPERATIONS.map(v=>v.name)).size,44);assert.ok(OPERATIONS.every(v=>v.inputSchema.type==="object"));});
+test("publishes the complete 45-operation surface",()=>{assert.equal(OPERATIONS.length,45);assert.equal(new Set(OPERATIONS.map(v=>v.name)).size,45);assert.ok(OPERATIONS.every(v=>v.inputSchema.type==="object"));});
 test("CLI routes and MCP operation discovery cover the same registry",()=>{assert.deepEqual([...new Set(Object.values(CLI_ROUTES).map(route=>route.operation))].sort(),OPERATIONS.map(operation=>operation.name).sort());});
 test("matches the frozen public-operation inventory",async()=>{const fixture=JSON.parse(await readFile(join(process.cwd(),"tests/fixtures/public-operations.json"),"utf8")) as {operations:string[]};assert.deepEqual(OPERATIONS.map(value=>value.name),fixture.operations);});
 test("runtime and npm package versions are identical",async()=>{const packageJson=JSON.parse(await readFile(join(process.cwd(),"package.json"),"utf8")) as {version:string};assert.equal(VERSION,packageJson.version);});
