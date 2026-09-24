@@ -16,6 +16,7 @@
       "expectTrackedClean": true,
       "stateStatus": "active",
       "finalContains": ["source", "packag", "drift"],
+      "requiredOperations": ["node:source-cli", "node:package-cli"],
       "requiredAnyOperations": ["rke:activate", "rke:dissection:assess"],
       "forbiddenOperations": ["git:push"]
     },

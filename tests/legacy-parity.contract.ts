@@ -317,6 +317,25 @@ test("RSA-01 does not call an invalid task lane ready just because no EWF gate w
   assert.equal(result.payload.ready, false, "closure must independently discover and validate the existing task lane");
 });
 
+test("RSA-01 reports independently invalid task and knowledge lanes without registered gates", async t => {
+  const root = await fixture(t);
+  await mkdir(join(root, "tasks"));
+  await writeFile(join(root, "tasks", "task.md"), "---\ntype: Task\nstatus: done\n---\n\nNo acceptance or evidence.\n");
+  await mkdir(join(root, "docs", "knowledge"), { recursive: true });
+  await writeFile(join(root, "docs", "knowledge", "architecture.md"), "# Missing required typed frontmatter\n\nA generated claim is not authoritative.\n");
+  git(root, "add", "tasks", "docs/knowledge"); git(root, "commit", "-m", "invalid durable lanes");
+  await invokeOperation(root, "workflow_activate", { phase: "close", taskMode: "none" });
+  const result = await invokeOperation(root, "workflow_closure_assess", { base: "HEAD" });
+  assert.equal(result.exitCode, 3);
+  assert.equal(result.payload.ready, false);
+  assert.deepEqual(result.payload.outstandingGates, []);
+  const lanes = result.payload.lanes as { tasks: { status: string; validation: unknown }; knowledge: { validation: unknown } };
+  assert.equal(lanes.tasks.status, "pending");
+  assert.ok(lanes.tasks.validation, "task validation must be independently attempted");
+  assert.ok(lanes.knowledge.validation, "knowledge validation must be independently attempted");
+  assert.equal((await invokeOperation(root, "workflow_close", { base: "HEAD" })).exitCode, 3);
+});
+
 test("RTL-01 delegates active-effort validation and repair to the real OKF Tasks CLI",async t=>{
   if(spawnSync("okf-tasks",["--version"],{encoding:"utf8"}).status!==0){t.skip("OKF Tasks CLI is not installed in this environment");return;}
   const root=await fixture(t),taskDir=join(root,"tasks","fixture-task");

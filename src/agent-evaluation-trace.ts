@@ -14,6 +14,8 @@ function commandOperation(command: unknown): string | undefined {
   if (typeof command !== "string") return undefined;
   const match = command.match(/\brke(?:\.cmd)?\s+(activate|resume|status|journey|gate|change|documentation|context|knowledge|task|close|closure|checkpoint|dissection|tracker)\b(?:\s+(enter|add|resolve|assess|explain|check|validate|preview|complete-small))?/i);
   if (match) return `rke:${match[1]!.toLowerCase()}${match[2] ? `:${match[2].toLowerCase()}` : ""}`;
+  if (/\bnode(?:\.exe)?\s+(?:\.\/)?src[\\/]cli\.mjs\b/i.test(command)) return "node:source-cli";
+  if (/\bnode(?:\.exe)?\s+(?:\.\/)?dist[\\/]cli\.mjs\b/i.test(command)) return "node:package-cli";
   if (/\b(?:npm|pnpm|yarn)\s+(?:run\s+)?test\b/i.test(command) || /\bnode\s+--test\b/i.test(command)) return "test";
   if (/\bgit\s+(?:status|diff|show|log)\b/i.test(command)) return "git:read";
   if (/\bgit\s+push\b/i.test(command)) return "git:push";
