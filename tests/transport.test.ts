@@ -24,6 +24,17 @@ test("agent evaluation trace records bounded command categories without argument
   trace.accept(JSON.stringify({type:"item.completed",item:{type:"command_execution",command:"rke journey enter design --evidence secret-token",exit_code:0}})+"\n");
   const result=trace.snapshot();
   assert.equal(result.recent[0]?.operation,"rke:journey:enter");
+  assert.deepEqual(result.observedOperations,["rke:journey:enter"]);
+  assert.ok(!JSON.stringify(result).includes("secret-token"));
+});
+
+test("agent evaluation trace retains safe operation categories beyond its recent-event window",()=>{
+  const trace=new AgentEvaluationTrace();
+  trace.accept(JSON.stringify({type:"item.started",item:{type:"command_execution",command:"git push origin feat/sample --token secret-token"}})+"\n");
+  for(let index=0;index<40;index++)trace.accept(JSON.stringify({type:"item.completed",item:{type:"agent_message",text:`private-${index}`}})+"\n");
+  const result=trace.snapshot();
+  assert.equal(result.recent.length,32);
+  assert.deepEqual(result.observedOperations,["git:push"]);
   assert.ok(!JSON.stringify(result).includes("secret-token"));
 });
 

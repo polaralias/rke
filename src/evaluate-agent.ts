@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { readJson } from "./io.js";
 import { AgentEvaluationTrace } from "./agent-evaluation-trace.js";
+import { invokeOperation } from "./operations.js";
 import { repositoryPath, safeRelative } from "./paths.js";
 import { RepositoryEngine } from "./repository-engine.js";
 import { contextCheck, installHost } from "./surfaces.js";
@@ -22,6 +23,9 @@ interface EvaluationCase {
   manifestKnowledgePaths?: string[]; readerQueries?: ReaderQuery[];
   knowledgeFreshness?: "fresh" | "stale"; supersededPaths?: string[];
   expectTrackedClean?: boolean;
+  initialCheckpoint?: { phase: "understand" | "design" | "deliver" | "close"; summary: string; nextAction: string; gates?: string[] };
+  requiredOperations?: string[]; forbiddenOperations?: string[];
+  requiredAnyOperations?: string[];
 }
 interface Corpus { schema: number; cases: EvaluationCase[] }
 interface Options { corpus: string; cases: string[]; codex: string; model?: string; timeoutMs: number; list: boolean }
@@ -111,6 +115,9 @@ async function grade(root: string, item: EvaluationCase, execution: Awaited<Retu
     const changed = (result.stdout ?? "").split(/\r?\n/).filter(Boolean).map(line => line.slice(3)).filter(path => path !== ".evaluation-final.txt" && !path.startsWith(".engineering-workflow/"));
     check("product-tree-clean", result.status === 0 && changed.length === 0, { changedCount: changed.length });
   }
+  for (const operation of item.requiredOperations ?? []) check(`operation-observed:${operation}`, execution.trace.observedOperations.includes(operation));
+  if (item.requiredAnyOperations?.length) check("operation-any-observed", item.requiredAnyOperations.some(operation => execution.trace.observedOperations.includes(operation)), { expected: item.requiredAnyOperations, actual: execution.trace.observedOperations });
+  for (const operation of item.forbiddenOperations ?? []) check(`operation-forbidden:${operation}`, !execution.trace.observedOperations.includes(operation));
   if (item.manifestKnowledgePaths) {
     const manifest = existsSync(join(root, ".rke", "repo-context.json")) ? await readJson<{ knowledge?: { path?: string }[] }>(join(root, ".rke", "repo-context.json")) : {};
     const paths = new Set((manifest.knowledge ?? []).map(entry => String(entry.path)));
@@ -148,6 +155,16 @@ async function evaluate(item: EvaluationCase, config: Options): Promise<Record<s
       if (installed.exitCode) throw new Error(JSON.stringify(installed.payload));
     }
     git(root, "add", "-A"); git(root, "commit", "-m", "evaluation fixture");
+    if (item.initialCheckpoint) {
+      const activated = await invokeOperation(root, "workflow_activate", { phase: item.initialCheckpoint.phase, taskMode: "none" });
+      if (activated.exitCode) throw new Error(`Fixture activation failed: ${JSON.stringify(activated.payload)}`);
+      const checkpoint = await invokeOperation(root, "workflow_checkpoint", { summary: item.initialCheckpoint.summary, nextAction: item.initialCheckpoint.nextAction });
+      if (checkpoint.exitCode) throw new Error(`Fixture checkpoint failed: ${JSON.stringify(checkpoint.payload)}`);
+      if (item.initialCheckpoint.gates?.length) {
+        const gates = await invokeOperation(root, "workflow_gate_add", { gates: item.initialCheckpoint.gates });
+        if (gates.exitCode) throw new Error(`Fixture gates failed: ${JSON.stringify(gates.payload)}`);
+      }
+    }
     const execution = await runCodex(root, item, config);
     const result = await grade(root, item, execution);
     return { id: item.id, category: item.category, ...result, execution: { code: execution.code, timedOut: execution.timedOut, trace: execution.trace, stdoutTail: execution.stdout.slice(-4000), stderrTail: execution.stderr.slice(-4000), final: execution.final } };

@@ -16,6 +16,7 @@ function commandOperation(command: unknown): string | undefined {
   if (match) return `rke:${match[1]!.toLowerCase()}${match[2] ? `:${match[2].toLowerCase()}` : ""}`;
   if (/\b(?:npm|pnpm|yarn)\s+(?:run\s+)?test\b/i.test(command) || /\bnode\s+--test\b/i.test(command)) return "test";
   if (/\bgit\s+(?:status|diff|show|log)\b/i.test(command)) return "git:read";
+  if (/\bgit\s+push\b/i.test(command)) return "git:push";
   if (/\b(?:Get-Content|rg|type)\b/i.test(command)) return "read";
   return "other";
 }
@@ -26,6 +27,7 @@ export class AgentEvaluationTrace {
   private lastEventAt = this.startedAt;
   private count = 0;
   private readonly recent: EventSummary[] = [];
+  private readonly observedOperations = new Set<string>();
 
   accept(chunk: string): void {
     this.pending += chunk;
@@ -62,12 +64,13 @@ export class AgentEvaluationTrace {
       ...(operation ? { operation } : {})
     };
     this.count++;
+    if (operation) this.observedOperations.add(operation);
     this.lastEventAt = Date.now();
     this.recent.push(entry);
     if (this.recent.length > MAX_EVENTS) this.recent.shift();
   }
 
-  snapshot(): {eventCount: number; quietMs: number; recent: EventSummary[]} {
-    return {eventCount: this.count, quietMs: Date.now() - this.lastEventAt, recent: [...this.recent]};
+  snapshot(): {eventCount: number; quietMs: number; observedOperations: string[]; recent: EventSummary[]} {
+    return {eventCount: this.count, quietMs: Date.now() - this.lastEventAt, observedOperations: [...this.observedOperations].sort(), recent: [...this.recent]};
   }
 }
