@@ -44,6 +44,7 @@ test("agent evaluation trace distinguishes executed source and package launchers
   trace.accept(JSON.stringify({type:"item.completed",item:{type:"command_execution",command:"node dist/cli.mjs --secret token-two",exit_code:1}})+"\n");
   const result=trace.snapshot();
   assert.deepEqual(result.observedOperations,["node:package-cli","node:source-cli"]);
+  assert.deepEqual(result.operationExitCodes,{"node:source-cli":[0],"node:package-cli":[1]});
   assert.ok(!JSON.stringify(result).includes("token-one"));
   assert.ok(!JSON.stringify(result).includes("token-two"));
 });

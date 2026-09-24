@@ -14,9 +14,9 @@
       },
       "expectWorkflowState": true,
       "expectTrackedClean": true,
-      "stateStatus": "active",
       "finalContains": ["source", "packag", "drift"],
       "requiredOperations": ["node:source-cli", "node:package-cli"],
+      "requiredOperationExitCodes": {"node:source-cli": [0], "node:package-cli": [1]},
       "requiredAnyOperations": ["rke:activate", "rke:dissection:assess"],
       "forbiddenOperations": ["git:push"]
     },

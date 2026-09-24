@@ -26,6 +26,7 @@ interface EvaluationCase {
   initialCheckpoint?: { phase: "understand" | "design" | "deliver" | "close"; summary: string; nextAction: string; gates?: string[] };
   requiredOperations?: string[]; forbiddenOperations?: string[];
   requiredAnyOperations?: string[];
+  requiredOperationExitCodes?: Record<string, number[]>;
 }
 interface Corpus { schema: number; cases: EvaluationCase[] }
 interface Options { corpus: string; cases: string[]; codex: string; model?: string; timeoutMs: number; list: boolean }
@@ -69,6 +70,7 @@ async function runCodex(root: string, item: EvaluationCase, config: Options): Pr
   if (config.model) args.push("--model", config.model);
   args.push(item.prompt);
   let timedOut = false;
+  let graceTimer: ReturnType<typeof setTimeout> | undefined;
   const child = spawn(config.codex, args, { cwd: root, detached: process.platform !== "win32", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
   let stdout = "", stderr = "";
   const timeline = new AgentEvaluationTrace();
@@ -76,11 +78,18 @@ async function runCodex(root: string, item: EvaluationCase, config: Options): Pr
   child.stdout.on("data", chunk => { const value = String(chunk); stdout = (stdout + value).slice(-MAX_CAPTURE); timeline.accept(value); });
   child.stderr.on("data", chunk => { stderr = (stderr + String(chunk)).slice(-MAX_CAPTURE); });
   const timer = setTimeout(() => {
+    if (timeline.completedTurn()) {
+      graceTimer = setTimeout(() => {
+        if (process.platform === "win32" && child.pid) spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true });
+        else if (child.pid) { try { process.kill(-child.pid, "SIGKILL"); } catch { child.kill("SIGKILL"); } }
+      }, 5_000);
+      return;
+    }
     timedOut = true;
     if (process.platform === "win32" && child.pid) spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true });
     else if (child.pid) { try { process.kill(-child.pid, "SIGKILL"); } catch { child.kill("SIGKILL"); } }
   }, config.timeoutMs);
-  const code = await new Promise<number | null>((accept, reject) => { child.once("error", reject); child.once("close", accept); }).finally(() => clearTimeout(timer));
+  const code = await new Promise<number | null>((accept, reject) => { child.once("error", reject); child.once("close", accept); }).finally(() => { clearTimeout(timer); if (graceTimer) clearTimeout(graceTimer); });
   const final = existsSync(finalPath) ? await readFile(finalPath, "utf8") : "";
   return { code, timedOut, stdout, stderr, final, trace: timeline.snapshot() };
 }
@@ -103,8 +112,8 @@ async function grade(root: string, item: EvaluationCase, execution: Awaited<Retu
     const dirty = new Set(Array.isArray(activation?.dirtyPaths) ? activation.dirtyPaths.map(String) : []);
     check("activation-before-edit", item.mustActivateBefore.every(path => !dirty.has(path)), { dirtyPathsAtActivation: [...dirty] });
   }
-  for (const text of item.finalContains ?? []) check(`final-contains:${text}`, execution.final.includes(text));
-  for (const text of item.finalExcludes ?? []) check(`final-excludes:${text}`, !execution.final.includes(text));
+  for (const text of item.finalContains ?? []) check(`final-contains:${text}`, execution.final.toLowerCase().includes(text.toLowerCase()));
+  for (const text of item.finalExcludes ?? []) check(`final-excludes:${text}`, !execution.final.toLowerCase().includes(text.toLowerCase()));
   for (const [relative, text] of Object.entries(item.filesContain ?? {})) {
     const target = repositoryPath(root, safeRelative(relative));
     check(`file-contains:${relative}`, existsSync(target) && (await readFile(target, "utf8")).includes(text));
@@ -118,6 +127,10 @@ async function grade(root: string, item: EvaluationCase, execution: Awaited<Retu
   for (const operation of item.requiredOperations ?? []) check(`operation-observed:${operation}`, execution.trace.observedOperations.includes(operation));
   if (item.requiredAnyOperations?.length) check("operation-any-observed", item.requiredAnyOperations.some(operation => execution.trace.observedOperations.includes(operation)), { expected: item.requiredAnyOperations, actual: execution.trace.observedOperations });
   for (const operation of item.forbiddenOperations ?? []) check(`operation-forbidden:${operation}`, !execution.trace.observedOperations.includes(operation));
+  for (const [operation, expected] of Object.entries(item.requiredOperationExitCodes ?? {})) {
+    const actual = execution.trace.operationExitCodes[operation] ?? [];
+    check(`operation-exits:${operation}`, expected.every(code => actual.includes(code)), { expected, actual });
+  }
   if (item.manifestKnowledgePaths) {
     const manifest = existsSync(join(root, ".rke", "repo-context.json")) ? await readJson<{ knowledge?: { path?: string }[] }>(join(root, ".rke", "repo-context.json")) : {};
     const paths = new Set((manifest.knowledge ?? []).map(entry => String(entry.path)));

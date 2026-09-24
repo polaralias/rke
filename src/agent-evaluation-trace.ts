@@ -30,6 +30,8 @@ export class AgentEvaluationTrace {
   private count = 0;
   private readonly recent: EventSummary[] = [];
   private readonly observedOperations = new Set<string>();
+  private readonly operationExitCodes = new Map<string, Set<number>>();
+  private turnCompleted = false;
 
   accept(chunk: string): void {
     this.pending += chunk;
@@ -54,6 +56,7 @@ export class AgentEvaluationTrace {
       value = parsed as Record<string, unknown>;
     } catch { return; }
     if (typeof value.type !== "string") return;
+    if (value.type === "turn.completed") this.turnCompleted = true;
     const item = value.item && typeof value.item === "object" && !Array.isArray(value.item)
       ? value.item as Record<string, unknown> : undefined;
     const operation = item?.type === "command_execution" ? commandOperation(item.command) : undefined;
@@ -67,12 +70,19 @@ export class AgentEvaluationTrace {
     };
     this.count++;
     if (operation) this.observedOperations.add(operation);
+    if (operation && value.type === "item.completed" && typeof item?.exit_code === "number") {
+      const exits = this.operationExitCodes.get(operation) ?? new Set<number>();
+      exits.add(item.exit_code);
+      this.operationExitCodes.set(operation, exits);
+    }
     this.lastEventAt = Date.now();
     this.recent.push(entry);
     if (this.recent.length > MAX_EVENTS) this.recent.shift();
   }
 
-  snapshot(): {eventCount: number; quietMs: number; observedOperations: string[]; recent: EventSummary[]} {
-    return {eventCount: this.count, quietMs: Date.now() - this.lastEventAt, observedOperations: [...this.observedOperations].sort(), recent: [...this.recent]};
+  completedTurn(): boolean { return this.turnCompleted; }
+
+  snapshot(): {eventCount: number; quietMs: number; turnCompleted: boolean; observedOperations: string[]; operationExitCodes: Record<string, number[]>; recent: EventSummary[]} {
+    return {eventCount: this.count, quietMs: Date.now() - this.lastEventAt, turnCompleted: this.turnCompleted, observedOperations: [...this.observedOperations].sort(), operationExitCodes: Object.fromEntries([...this.operationExitCodes].map(([operation, exits]) => [operation, [...exits].sort((left, right) => left - right)])), recent: [...this.recent]};
   }
 }
