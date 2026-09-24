@@ -4,10 +4,21 @@ interface EventSummary {
   itemType?: string;
   itemId?: string;
   exitCode?: number;
+  operation?: string;
 }
 
 const MAX_LINE = 1_000_000;
 const MAX_EVENTS = 32;
+
+function commandOperation(command: unknown): string | undefined {
+  if (typeof command !== "string") return undefined;
+  const match = command.match(/\brke(?:\.cmd)?\s+(activate|resume|status|journey|gate|change|documentation|context|knowledge|task|close|closure|checkpoint|dissection|tracker)\b(?:\s+(enter|add|resolve|assess|explain|check|validate|preview|complete-small))?/i);
+  if (match) return `rke:${match[1]!.toLowerCase()}${match[2] ? `:${match[2].toLowerCase()}` : ""}`;
+  if (/\b(?:npm|pnpm|yarn)\s+(?:run\s+)?test\b/i.test(command) || /\bnode\s+--test\b/i.test(command)) return "test";
+  if (/\bgit\s+(?:status|diff|show|log)\b/i.test(command)) return "git:read";
+  if (/\b(?:Get-Content|rg|type)\b/i.test(command)) return "read";
+  return "other";
+}
 
 export class AgentEvaluationTrace {
   private pending = "";
@@ -41,12 +52,14 @@ export class AgentEvaluationTrace {
     if (typeof value.type !== "string") return;
     const item = value.item && typeof value.item === "object" && !Array.isArray(value.item)
       ? value.item as Record<string, unknown> : undefined;
+    const operation = item?.type === "command_execution" ? commandOperation(item.command) : undefined;
     const entry: EventSummary = {
       elapsedMs: Date.now() - this.startedAt,
       event: value.type,
       ...(typeof item?.type === "string" ? { itemType: item.type } : {}),
       ...(typeof item?.id === "string" ? { itemId: item.id.slice(0, 80) } : {}),
-      ...(typeof item?.exit_code === "number" ? { exitCode: item.exit_code } : {})
+      ...(typeof item?.exit_code === "number" ? { exitCode: item.exit_code } : {}),
+      ...(operation ? { operation } : {})
     };
     this.count++;
     this.lastEventAt = Date.now();

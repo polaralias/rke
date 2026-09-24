@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { git, gitChangedPaths, gitDelta, readJson, run, sha256, utcNow, withFileLock, writeJson } from "./io.js";
+import { git, gitChangedPaths, gitDelta, readJson, run, sha256, utcNow, withFileLock, writeJson, type CommandResult } from "./io.js";
 import { safeRelative } from "./paths.js";
 import type { OperationOutcome } from "./types.js";
 
@@ -97,12 +97,12 @@ export async function resolveGate(root:string,gate:string,evidence:string):Promi
 export async function enterJourney(root:string,journey:string):Promise<OperationOutcome>{const state=await load(root);const stop=blocked(root,state);if(stop)return stop;const specification=JOURNEYS[journey]!;const previous=state.primary_phase;state.primary_phase=journey;state.active_capabilities=unique([...state.active_capabilities,...specification.capabilities as string[]]);state.outstanding_gates=unique([...state.outstanding_gates,...specification.gates as string[]]);(state.phase_history??=[]).push({from:previous,to:journey,entered_at:utcNow()});await save(root,state);return outcome({result:"journey-entered",state_path:statePath(root),journey:specification,state});}
 export async function enableCapability(root:string,capability:string):Promise<OperationOutcome>{const state=await load(root);const stop=blocked(root,state);if(stop)return stop;const specification=CAPABILITIES[capability]!;state.active_capabilities=unique([...state.active_capabilities,capability]);state.outstanding_gates=unique([...state.outstanding_gates,...specification.gates as string[]]);await save(root,state);return outcome({result:"capability-enabled",state_path:statePath(root),capability:specification,state});}
 export async function configureTasks(root:string,mode:string,taskRef:string|null,bundle:string,force:boolean):Promise<OperationOutcome>{const state=await load(root);const stop=blocked(root,state);if(stop)return stop;const rank:Record<string,number>={none:0,lightweight:1,full:2};if(rank[mode]!<rank[state.task_tracking.mode]!&&!force)return outcome({result:"task-mode-reduction-requires-force",state},2);if(mode==="none"&&taskRef)return outcome({result:"task-mode-invalid",state},2);state.task_tracking={mode,task_ref:taskRef?safeRelative(taskRef):mode==="none"?null:state.task_tracking.task_ref,bundle:safeRelative(bundle)};if(mode!=="none"){state.active_capabilities=unique([...state.active_capabilities,"task-lifecycle"]);state.outstanding_gates=unique([...state.outstanding_gates,"task-reconciliation"]);}else if(force)state.active_capabilities=state.active_capabilities.filter(v=>v!=="task-lifecycle");await save(root,state);return outcome({result:"task-tracking-configured",state_path:statePath(root),state});}
-function validateOkfBundle(root:string,bundle:string,executable:string):OperationOutcome{
+export function validateOkfBundle(root:string,bundle:string,executable:string,runner:(command:string,args:string[],cwd:string)=>CommandResult=run):OperationOutcome{
   if(executable.toLowerCase().endsWith(".py"))return outcome({result:"okf-tasks-incompatible",executed:false,error:"Python task adapters are not supported by the TypeScript runtime."},2);
-  const version=run(executable,["--version"],root),match=version.stdout.trim().match(/^okf-tasks\s+(\d+)\.(\d+)\.(\d+)$/);
+  const version=runner(executable,["--version"],root),match=version.stdout.trim().match(/^okf-tasks\s+(\d+)\.(\d+)\.(\d+)$/);
   if(version.code||!match)return outcome({result:"okf-tasks-unavailable",executed:false,error:version.stderr.trim()||"The configured executable did not identify itself as okf-tasks."},2);
   if(match[1]!=="0"||match[2]!=="1")return outcome({result:"okf-tasks-incompatible",executed:false,adapter:{name:"okf-tasks",version:`${match[1]}.${match[2]}.${match[3]}`},error:"RKE 0.10 supports the OKF Tasks 0.1 strict-validation contract."},2);
-  const command=[executable,"validate","--root",root,"--bundle",bundle,"--strict"],validation=run(executable,command.slice(1),root);
+  const command=[executable,"validate","--root",root,"--bundle",bundle,"--strict"],validation=runner(executable,command.slice(1),root);
   return outcome({result:validation.code===0?"task-bundle-valid":"task-bundle-invalid",executed:true,adapter:{name:"okf-tasks",version:`${match[1]}.${match[2]}.${match[3]}`},command,bundle,validation:{valid:validation.code===0,stdout:validation.stdout.trim(),stderr:validation.stderr.trim()}},validation.code===0?0:3);
 }
 export async function checkTasks(root:string,cli?:string):Promise<OperationOutcome>{const state=await load(root);if(state.task_tracking.mode==="none")return outcome({result:"task-tracking-disabled",executed:false,plan:{mode:"none",durable:false},state});const checked=validateOkfBundle(root,state.task_tracking.bundle??"tasks",cli??"okf-tasks");return outcome({...checked.payload,state},checked.exitCode);}
@@ -137,4 +137,21 @@ export async function closureAssessment(root:string,base="HEAD"):Promise<Operati
   return outcome({result:ready?"closure-ready":"closure-blocked",ready,base,state_path:statePath(root),lanes,outstandingGates:state.outstanding_gates,state},ready?0:3);
 }
 export async function close(root:string,base="HEAD"):Promise<OperationOutcome>{const state=await load(root);if(state.status==="closed")return outcome({result:"already-closed",state_path:statePath(root),outstanding_gates:state.outstanding_gates,state});const assessment=await closureAssessment(root,base);if(assessment.exitCode)return outcome({result:"closure-blocked",state_path:statePath(root),outstanding_gates:state.outstanding_gates,assessment:assessment.payload,state},3);state.status="closed";state.primary_phase="close";state.closed_at=utcNow();await save(root,state);return outcome({result:"closed",state_path:statePath(root),outstanding_gates:[],assessment:assessment.payload,state});}
+export async function completeSmallChange(root:string,base:string,summary:string,detailFile:string,reviewedPaths:string[],evidence:string):Promise<OperationOutcome>{
+  const state=await load(root),stop=blocked(root,state);if(stop)return stop;
+  if(state.task_tracking.mode!=="none"||state.outstanding_gates.length||existsSync(join(root,"docs","knowledge"))||existsSync(join(root,".rke","repo-context.json")))
+    return outcome({result:"small-change-ineligible",reason:"A task lane, open gate, or canonical knowledge surface requires ordinary reconciliation."},3);
+  const surfaces=await import("./surfaces.js"),assessment=await surfaces.documentationAssess(root,base);
+  if(assessment.exitCode===2)return assessment;
+  const changed=assessment.payload.changedPaths as string[];
+  if(assessment.payload.detailsTruncated||!changed.length||changed.length>10||assessment.payload.outcome!=="decision-required")
+    return outcome({result:"small-change-ineligible",assessment:assessment.payload},3);
+  const reviewed=[...new Set(reviewedPaths.map(safeRelative))].sort();
+  if(reviewed.length!==changed.length||reviewed.some((path,index)=>path!==changed[index]))
+    return outcome({result:"small-change-review-incomplete",changedPaths:changed,reviewedPaths:reviewed},3);
+  const explanation=await surfaces.changeExplain(root,base,summary,detailFile);if(explanation.exitCode)return explanation;
+  const disposition=await surfaces.documentationDisposition(root,base,reviewed,evidence);if(disposition.exitCode)return disposition;
+  const finished=await close(root,base);
+  return outcome({result:finished.exitCode?"small-change-blocked":"small-change-closed",base,changedPaths:changed,receipts:{explanation:explanation.payload.result,documentation:disposition.payload.result},closure:{result:finished.payload.result,ready:!finished.exitCode,...(finished.exitCode?{assessment:finished.payload.assessment}:{})}},finished.exitCode);
+}
 export function routeLegacy(value:string):OperationOutcome{const normalized=value.trim().toLowerCase();const item=Object.entries(LEGACY).find(([alias,[name]])=>alias.toLowerCase()===normalized||name.toLowerCase()===normalized);if(!item)return outcome({result:"legacy-route-unknown",requested:value,knownAliases:Object.keys(LEGACY).sort()},2);const [alias,[legacyName,destination,command]]=item;return outcome({result:"legacy-route",alias,legacyName,destination,command,deprecatedPeer:alias!=="RST",separateCapability:alias==="RST"});}

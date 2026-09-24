@@ -1,13 +1,15 @@
 // Opt-in acceptance probes. These are intentionally red at the baseline recorded
 // in docs/legacy-skill-parity-matrix.md; do not invert them to bless current gaps.
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { spawn, spawnSync } from "node:child_process";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { basename, join, resolve, sep } from "node:path";
 import test, { type TestContext } from "node:test";
 
 import { invokeOperation, releaseRepository } from "../src/operations.js";
+import { validateOkfBundle } from "../src/workflow.js";
 
 function git(root: string, ...args: string[]): void {
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8", windowsHide: true });
@@ -71,11 +73,35 @@ test("EWO-01 refuses no-update disposition for bound or changed canonical knowle
   const bound=await invokeOperation(root,"repo_documentation_disposition",{base:"HEAD",reviewedPaths:["service.ts"],evidence:"I reviewed the service status change but want to skip canonical documentation."});
   assert.equal(bound.exitCode,3);
   assert.equal((bound.payload.error as {code:string}).code,"documentation_affected_knowledge");
+  await invokeOperation(root,"workflow_activate",{phase:"deliver",taskMode:"none"});
+  const small=await invokeOperation(root,"workflow_complete_small_change",{base:"HEAD",summary:"The service status changed after source review.",detailFile:".engineering-workflow/detail.json",reviewedPaths:["service.ts"],evidence:"Reviewed the service status; there is a bound canonical concept."});
+  assert.equal(small.payload.result,"small-change-ineligible");
   await writeFile(join(root,"service.ts"),"export const status = 'old';\n");
   await writeFile(join(root,"docs","knowledge","service.md"),"---\ntype: Architecture Concept\ntitle: Service\ndescription: Service status.\n---\n\n# Service\n\nThe service reports new status.\n");
   const canonical=await invokeOperation(root,"repo_documentation_disposition",{base:"HEAD",reviewedPaths:["docs/knowledge/service.md"],evidence:"I reviewed the changed canonical concept and want to skip documentation."});
   assert.equal(canonical.exitCode,3);
   assert.equal((canonical.payload.error as {code:string}).code,"documentation_canonical_changed");
+});
+
+test("EWO-01 complete-small closes a reviewed bounded delta and refuses hidden obligations",async t=>{
+  const root=await fixture(t);
+  await writeFile(join(root,"calculator.mjs"),"export const add = (a, b) => a + b;\n");
+  git(root,"add",".");git(root,"commit","-m","baseline");
+  await invokeOperation(root,"workflow_activate",{phase:"deliver",taskMode:"none"});
+  await writeFile(join(root,"calculator.mjs"),"export const add = (a, b) => a + b;\nexport const divide = (a, b) => a / b;\n");
+  await writeFile(join(root,".engineering-workflow","detail.json"),JSON.stringify({before:"Only add was exported",after:"divide is exported",why:"The requested calculator operation is available",causalPath:[{path:"calculator.mjs",symbol:"divide"}],verification:[]}));
+  const args={base:"HEAD",summary:"The calculator now exports a divide operation.",detailFile:".engineering-workflow/detail.json",reviewedPaths:["calculator.mjs"],evidence:"Reviewed the focused source delta; no durable knowledge update is warranted."};
+  const incomplete=await invokeOperation(root,"workflow_complete_small_change",{...args,reviewedPaths:["README.md"]});
+  assert.equal(incomplete.exitCode,3);
+  assert.equal((await readFile(join(root,".engineering-workflow","change-explanation.json"),"utf8").then(()=>true,()=>false)),false);
+  await invokeOperation(root,"workflow_gate_add",{gates:["acceptance-defined"]});
+  assert.equal((await invokeOperation(root,"workflow_complete_small_change",args)).payload.result,"small-change-ineligible");
+  await invokeOperation(root,"workflow_gate_resolve",{gate:"acceptance-defined",evidence:"Acceptance is now established."});
+  const finished=await invokeOperation(root,"workflow_complete_small_change",args);
+  assert.equal(finished.exitCode,0,JSON.stringify(finished.payload));
+  assert.equal(finished.payload.result,"small-change-closed");
+  const resumed=await invokeOperation(root,"workflow_resume",{});
+  assert.equal((resumed.payload.state as {status:string}).status,"closed");
 });
 
 test("RDS-01 distinguishes a declared package launcher from observed runtime support",async t=>{
@@ -87,6 +113,21 @@ test("RDS-01 distinguishes a declared package launcher from observed runtime sup
   assert.equal(result.payload.runtimeVerification,"not-performed");
   assert.deepEqual((result.payload.declaredLaunchers as Record<string,unknown>[])[0],{manifest:"package.json",name:"fixture",target:"dist/cli.js",sourcePath:"dist/cli.js",sourceExists:false,trust:"declared-not-executed"});
   assert.ok((result.payload.entryPoints as string[]).includes("src/cli.ts"));
+});
+
+test("RDS-01 source and packaged entrypoints have independently observed outcomes",async t=>{
+  const root=await fixture(t);
+  await mkdir(join(root,"src"));await mkdir(join(root,"bin"));
+  await writeFile(join(root,"src","cli.mjs"),"process.stdout.write('source-ok\\n');\n");
+  await writeFile(join(root,"bin","cli.mjs"),"process.stderr.write('package-broken\\n'); process.exitCode = 7;\n");
+  await writeFile(join(root,"package.json"),JSON.stringify({name:"drift-fixture",bin:{fixture:"bin/cli.mjs"}}));
+  const declared=await invokeOperation(root,"repo_dissection_assess",{});
+  assert.equal(declared.payload.runtimeVerification,"not-performed");
+  const source=spawnSync(process.execPath,[join(root,"src","cli.mjs")],{cwd:root,encoding:"utf8"});
+  const packaged=spawnSync(process.execPath,[join(root,"bin","cli.mjs")],{cwd:root,encoding:"utf8"});
+  assert.equal(source.status,0);assert.match(source.stdout,/source-ok/);
+  assert.equal(packaged.status,7);assert.match(packaged.stderr,/package-broken/);
+  assert.equal((declared.payload.declaredLaunchers as {sourceExists:boolean}[])[0]?.sourceExists,true);
 });
 
 test("WTC-01 rejects an empty coordination topology", async t => {
@@ -302,6 +343,32 @@ test("RTL-01 delegates active-effort validation and repair to the real OKF Tasks
   assert.equal((await invokeOperation(root,"workflow_closure_assess",{base:"HEAD"})).exitCode,3,"the task mutation still needs change and documentation receipts before closure");
 });
 
+test("RTL-01 rejects invalid durable relationships through authoritative strict validation",async t=>{
+  if(spawnSync("okf-tasks",["--version"],{encoding:"utf8"}).status!==0){t.skip("OKF Tasks CLI is not installed");return;}
+  const source=resolve(process.cwd(),"..","okf-tasks","conformance","generated","invalid","disconnected-durable-links","tasks");
+  if(!await readFile(join(source,"index.md"),"utf8").then(()=>true,()=>false)){t.skip("Adjacent OKF conformance fixture is unavailable");return;}
+  const root=await fixture(t);await cp(source,join(root,"tasks"),{recursive:true});
+  await invokeOperation(root,"workflow_activate",{phase:"close",taskMode:"full"});
+  const result=await invokeOperation(root,"workflow_task_check",{});
+  assert.equal(result.exitCode,3,JSON.stringify(result.payload));
+  assert.match(JSON.stringify(result.payload),/orphan concept|durable link graph/i);
+  const closure=await invokeOperation(root,"workflow_closure_assess",{base:"HEAD"});
+  assert.equal(closure.exitCode,3);
+  assert.equal((closure.payload.lanes as {tasks:{status:string}}).tasks.status,"pending");
+});
+
+test("RTL-01 refuses an unsupported OKF CLI before task validation",async t=>{
+  const root=await fixture(t),calls:string[][]=[];
+  const result=validateOkfBundle(root,"tasks","mock-okf",(_command,args)=>{
+    calls.push(args);
+    return{code:0,stdout:"okf-tasks 0.2.0\n",stderr:""};
+  });
+  assert.equal(result.exitCode,2);
+  assert.equal(result.payload.result,"okf-tasks-incompatible");
+  assert.equal(result.payload.executed,false);
+  assert.deepEqual(calls,[["--version"]],"an unsupported adapter must not inspect or mutate the task bundle");
+});
+
 test("TPU-01 renders accepted non-OKF packages without task or provider mutation",async t=>{
   const root=await fixture(t);
   await writeFile(join(root,"work-packages.yml"),"schemaVersion: 1\nstatus: accepted\npackages:\n  - id: WP-1\n    title: Invoice lookup\n    summary: Add an invoice lookup endpoint.\n    acceptance: [An existing invoice is returned by ID.]\n  - id: WP-2\n    title: Error handling\n    summary: Return a bounded missing-invoice response.\n    parent: WP-1\n    dependsOn: [WP-1]\n    acceptance: [A missing invoice produces a documented 404.]\n    labels: [api]\n");
@@ -323,6 +390,50 @@ test("TPU-01 renders accepted non-OKF packages without task or provider mutation
   const cyclic=await invokeOperation(root,"repo_tracker_preview",{packages:"work-packages.yml",tracker:"github",scope:"team/invoices"});
   assert.equal(cyclic.exitCode,3);
   assert.match(JSON.stringify(cyclic.payload.errors),/Dependency cycle/);
+});
+
+test("TPU-01 delegates OKF create, sync and binding readback to its owning CLI",async t=>{
+  if(spawnSync("okf-tasks",["--version"],{encoding:"utf8"}).status!==0){t.skip("OKF Tasks CLI is not installed");return;}
+  const root=await fixture(t),taskDir=join(root,"tasks","fixture-task"),profiles=join(root,"tasks","trackers");
+  await mkdir(taskDir,{recursive:true});await mkdir(profiles,{recursive:true});
+  await writeFile(join(taskDir,"task.md"),"---\ntype: Task\ntask: fixture-task\ntitle: Fixture task\ndescription: Verify delegated tracker publication.\nstatus: ready\ncreated: '2026-07-17T09:00:00Z'\ntimestamp: '2026-07-17T09:00:00Z'\n---\n\n# Fixture task\n\n## Outcome\n\nPublish one bounded task.\n\n## Scope\n\n- Included: loopback provider only.\n\n## Acceptance\n\n- [ ] The provider readback matches.\n\n## Evidence\n\n- Local mock provider.\n");
+  await writeFile(join(profiles,"github-main.md"),"---\ntype: Tracker Profile\ntracker: github-main\nsystem: github\nhost: https://github.com\nresource: issue\nscope:\n  kind: repository\n  id: 101\n  key: example/repo\nsync:\n  mode: bidirectional\n  authority: repository\nstatus_map:\n  proposed: open\n  ready: open\n  in-progress: open\n  blocked: open\n  validation: open\n  done: closed\n  superseded: closed\n  deferred: open\nfield_map:\n  tags:\n    remote: labels\n    strategy: managed-subset\n    managed_prefix: 'okf:'\ndiscovery:\n  observed_at: '2026-07-18T12:00:00Z'\n  fingerprint: 'sha256:fixture'\n---\n\n# GitHub main\n");
+  let title="Fixture task",revision=1;const requests:{method:string;path:string}[]=[];
+  const server=createServer(async(req,res)=>{
+    const chunks:Buffer[]=[];for await(const chunk of req)chunks.push(Buffer.from(chunk));
+    const payload=chunks.length?JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<string,unknown>:{};
+    requests.push({method:req.method??"",path:req.url??""});
+    if(req.method==="POST"&&req.url==="/repos/example/repo/issues")title=String(payload.title??title);
+    else if(req.method==="PATCH"&&req.url==="/repos/example/repo/issues/7"){title=String(payload.title??title);revision++;}
+    else if(req.method!=="GET"||req.url!=="/repos/example/repo/issues/7"){res.writeHead(404);res.end("{}");return;}
+    res.writeHead(200,{"content-type":"application/json"});
+    res.end(JSON.stringify({id:11,node_id:"I_fixture",number:7,html_url:"https://github.com/example/repo/issues/7",title,state:"open",body:"Safe body.",labels:[],updated_at:`r${revision}`,closed_at:null}));
+  });
+  await new Promise<void>(resolve=>server.listen(0,"127.0.0.1",resolve));
+  t.after(()=>new Promise<void>(resolve=>server.close(()=>resolve())));
+  const address=server.address();assert.ok(address&&typeof address!=="string");
+  const apiBase=`http://127.0.0.1:${address.port}`;
+  const runCli=(args:string[])=>new Promise<{code:number|null;stdout:string;stderr:string}>((resolve,reject)=>{
+    const child=spawn("okf-tasks",args,{cwd:root,env:{...process.env,GITHUB_TOKEN:"fixture-token"},windowsHide:true});
+    let stdout="",stderr="";child.stdout.setEncoding("utf8");child.stderr.setEncoding("utf8");
+    child.stdout.on("data",chunk=>stdout+=String(chunk));child.stderr.on("data",chunk=>stderr+=String(chunk));
+    child.once("error",reject);child.once("close",code=>resolve({code,stdout,stderr}));
+  });
+  const create=await runCli(["tracker","create","--root",root,"--bundle","tasks","--task","fixture-task","--tracker","github-main","--api-base",apiBase]);
+  assert.equal(create.code,0,create.stderr||create.stdout);
+  assert.match(create.stdout,/Created and verified/);
+  let task=await readFile(join(taskDir,"task.md"),"utf8");assert.match(task,/id: I_fixture/);assert.match(task,/remote_revision: r1/);
+  const sync=await runCli(["tracker","sync","--root",root,"--bundle","tasks","--task","fixture-task","--tracker","github-main","--direction","push","--api-base",apiBase]);
+  assert.equal(sync.code,0,sync.stderr||sync.stdout);
+  task=await readFile(join(taskDir,"task.md"),"utf8");assert.match(task,/id: I_fixture/);
+  assert.ok(requests.some(item=>item.method==="POST"));assert.ok(requests.some(item=>item.method==="PATCH"));
+  assert.ok(requests.filter(item=>item.method==="GET").length>=3,"create and sync must read back provider state");
+  const writes=requests.filter(item=>item.method==="POST"||item.method==="PATCH").length;
+  revision++;
+  const conflict=await runCli(["tracker","sync","--root",root,"--bundle","tasks","--task","fixture-task","--tracker","github-main","--direction","push","--api-base",apiBase]);
+  assert.notEqual(conflict.code,0,"a changed provider revision must block an unapproved overwrite");
+  assert.match(conflict.stderr+conflict.stdout,/changed since the reconciliation base/i);
+  assert.equal(requests.filter(item=>item.method==="POST"||item.method==="PATCH").length,writes);
 });
 
 test("RKE-01 bootstrap does not require fixed filenames in an otherwise verified knowledge foundation", async t => {

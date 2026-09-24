@@ -21,6 +21,7 @@ interface EvaluationCase {
   filesContain?: Record<string, string>; forbiddenPaths?: string[];
   manifestKnowledgePaths?: string[]; readerQueries?: ReaderQuery[];
   knowledgeFreshness?: "fresh" | "stale"; supersededPaths?: string[];
+  expectTrackedClean?: boolean;
 }
 interface Corpus { schema: number; cases: EvaluationCase[] }
 interface Options { corpus: string; cases: string[]; codex: string; model?: string; timeoutMs: number; list: boolean }
@@ -105,6 +106,11 @@ async function grade(root: string, item: EvaluationCase, execution: Awaited<Retu
     check(`file-contains:${relative}`, existsSync(target) && (await readFile(target, "utf8")).includes(text));
   }
   for (const relative of item.forbiddenPaths ?? []) check(`forbidden-path:${relative}`, !existsSync(repositoryPath(root, safeRelative(relative))));
+  if (item.expectTrackedClean) {
+    const result = spawnSync("git", ["status", "--porcelain", "--untracked-files=all"], { cwd: root, encoding: "utf8", windowsHide: true });
+    const changed = (result.stdout ?? "").split(/\r?\n/).filter(Boolean).map(line => line.slice(3)).filter(path => path !== ".evaluation-final.txt" && !path.startsWith(".engineering-workflow/"));
+    check("product-tree-clean", result.status === 0 && changed.length === 0, { changedCount: changed.length });
+  }
   if (item.manifestKnowledgePaths) {
     const manifest = existsSync(join(root, ".rke", "repo-context.json")) ? await readJson<{ knowledge?: { path?: string }[] }>(join(root, ".rke", "repo-context.json")) : {};
     const paths = new Set((manifest.knowledge ?? []).map(entry => String(entry.path)));

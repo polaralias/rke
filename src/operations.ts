@@ -37,6 +37,7 @@ const definitions:Array<[string,JsonObject,boolean,boolean,Handler]> = [
   ["workflow_task_check",schema({cli:string}),true,true,(r,a)=>workflow.checkTasks(r,a.cli?String(a.cli):undefined)],
   ["workflow_capability_enable",schema({capability:{type:"string",enum:["query-to-knowledge","parallel-delivery","publication"]}},["capability"]),false,true,(r,a)=>workflow.enableCapability(r,value(a,"capability"))],
   ["workflow_closure_assess",schema({base:string}),true,true,(r,a)=>workflow.closureAssessment(r,value(a,"base","HEAD"))],
+  ["workflow_complete_small_change",schema({base:string,summary:string,detailFile:string,reviewedPaths:strings,evidence:string},["base","summary","detailFile","reviewedPaths","evidence"]),false,false,(r,a)=>workflow.completeSmallChange(r,value(a,"base"),value(a,"summary"),value(a,"detailFile"),stringsValue(a,"reviewedPaths"),value(a,"evidence"))],
   ["workflow_legacy_route",schema({name:string},["name"]),true,true,(_r,a)=>workflow.routeLegacy(value(a,"name"))],
   ["repo_host_recipe",schema({host:{type:"string",enum:["codex","claude","git"]},base:{type:"string",default:"main"}},["host"]),true,true,(r,a)=>surfaces.hostRecipe(r,value(a,"host"),value(a,"base","main"))],
   ["repo_host_install",schema({host:{type:"string",enum:["codex","claude","git"]},base:{type:"string",default:"main"},force:{type:"boolean",default:false}},["host"]),false,true,(r,a)=>surfaces.installHost(r,value(a,"host"),value(a,"base","main"),value(a,"force",false))],
