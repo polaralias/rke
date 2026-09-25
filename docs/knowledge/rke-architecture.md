@@ -2,10 +2,10 @@
 type: Architecture Concept
 title: RKE architecture
 description: Defines the independently installed Repository Knowledge Engineering runtime, its shared CLI and MCP operation layer, repository boundaries, and relationship with EWF and OKF Tasks.
-timestamp: 2026-09-23T12:42:00+01:00
+timestamp: 2026-09-24T16:33:00+01:00
 authority: canonical
 verification: verified-working
-reviewed_at: 2026-09-23T12:42:00+01:00
+reviewed_at: 2026-09-24T16:33:00+01:00
 verified_against:
   - src/operations.ts
   - src/cli.ts
@@ -16,6 +16,9 @@ verified_against:
   - src/parser.ts
   - src/repository-engine.ts
   - src/mcp.ts
+  - src/coordination-cleanup.ts
+  - src/evaluate-agent.ts
+  - src/agent-evaluation-trace.ts
   - .github/workflows/ci.yml
   - .github/workflows/release-drafter.yml
   - .github/workflows/publish-release.yml
@@ -78,6 +81,8 @@ Each repository owns tracked RKE knowledge bindings under `.rke/` and separate E
 
 Continuation defaults to ignored, untracked `local-docs/handoff/` artefacts. When the user deliberately needs durable collaboration, the same handoff core can write a commit-capable shared artefact under `.rke/handoffs/`; shared handoffs remain coordination evidence rather than canonical knowledge.
 
+Worktree cleanup compares Git's reported worktree path with the expected sibling path through resolved filesystem identity. This accepts OS aliases for the same existing directory, including macOS `/var` and Windows short-name paths, while retaining the branch, clean-tree, exact reviewed tip and remote integration checks before local removal.
+
 ## Retrieval and structural analysis
 
 Retrieval and structural analysis share one persistent `RepositoryEngine` per repository. A hot Git query checks status and HEAD, then hashes dirty paths against the last indexed state. This detects another ordinary edit to an already dirty file while avoiding a whole-index rebuild for a stable modified working tree. `context check` performs full content verification and hashes clean tracked files. A forced verification arriving during an ordinary refresh waits for that pass and then verifies content; weaker work never satisfies the stronger request. Git can miss a same-size edit when timestamps are deliberately restored; search results may therefore be stale in that edge case until a full check. Excluded, sensitive, binary and oversized paths never enter the database. Source-returning search and review use the same repository-contained, one-MiB, secret-aware read boundary. Regex matching runs in a worker with a per-file timeout. Changed records are replaced transactionally. SQLite FTS5 ranks bounded chunks without constructing a repository-wide JavaScript postings graph.
@@ -93,6 +98,8 @@ Trace, map, impact and search accept explicit repository-relative scopes; no sco
 RKE `0.10.x` is the pre-1.0 qualification series and ships only the TypeScript runtime. Runtime cutover is implemented, but legacy-skill outcome parity is not yet complete; the open matrix is a merge qualification boundary. There is no Python runway or selectable dogfood engine; `1.0.0` follows successful release qualification of the stability contract in real repositories.
 
 `rke host install` records repository-local integration derived from the installed commands and preserves independently owned configuration unless `--force` is explicit. The packaged `rke-eval` command is part of the same npm distribution.
+
+Isolated agent evaluation can stage an installed RKE package inside its disposable fixture with `--rke-package-root`. The agent then invokes the local Node CLI script, so a stale host shim or an external executable denied by the sandbox cannot masquerade as a workflow failure. The copied EWF skill and staged package are Git-ignored in the fixture; they remain available to the agent without contaminating product retrieval. Documentation authoring cases grade a registered concept's content, reading-order link, reader rank and freshness without requiring one fixed filename.
 
 `package.json` is the sole release version source and `src/version.ts` reads the MCP and CLI identity from it at runtime. CI covers Node 24.15 and 25 on Linux, Windows, and macOS, strict TypeScript checking, deterministic tests, release-contract validation, the no-Python architecture audit, and clean npm artefact smoke tests that exercise version identity, parser retrieval, MCP discovery, and the bundled agent-evaluation corpus. Catalogue validation and digest parity run in the adjacent skills repository during release qualification. A matching `vX.Y.Z` tag builds, smokes, attests and publishes the npm tarball with provenance before promoting the GitHub release.
 

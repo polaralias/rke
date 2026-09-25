@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { appendFile, cp, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +14,7 @@ import { RepositoryEngine } from "./repository-engine.js";
 import { contextCheck, installHost } from "./surfaces.js";
 
 interface ReaderQuery { query: string; expectedPaths: string[] }
+interface KnowledgeDocument { contains: string[]; readerQuery: string; navigationPath?: string }
 interface EvaluationCase {
   id: string; category: string; prompt: string; setup: Record<string, string>;
   installCodexRouting?: boolean; expectWorkflowState: boolean; mustActivateBefore?: string[];
@@ -21,6 +22,7 @@ interface EvaluationCase {
   finalContains?: string[]; finalExcludes?: string[];
   filesContain?: Record<string, string>; forbiddenPaths?: string[];
   manifestKnowledgePaths?: string[]; readerQueries?: ReaderQuery[];
+  knowledgeDocument?: KnowledgeDocument;
   knowledgeFreshness?: "fresh" | "stale"; supersededPaths?: string[];
   expectTrackedClean?: boolean;
   initialCheckpoint?: { phase: "understand" | "design" | "deliver" | "close"; summary: string; nextAction: string; gates?: string[] };
@@ -29,7 +31,7 @@ interface EvaluationCase {
   requiredOperationExitCodes?: Record<string, number[]>;
 }
 interface Corpus { schema: number; cases: EvaluationCase[] }
-interface Options { corpus: string; cases: string[]; codex: string; model?: string; timeoutMs: number; list: boolean }
+interface Options { corpus: string; cases: string[]; codex: string; model?: string; rkePackageRoot?: string; timeoutMs: number; list: boolean }
 
 const DEFAULT_CORPUS = resolve(dirname(fileURLToPath(import.meta.url)), "../../src/evals/agent-behaviour.json");
 const PACKAGED_EWF = resolve(dirname(fileURLToPath(import.meta.url)), "../../skills/engineering-workflow");
@@ -44,10 +46,12 @@ function options(argv: string[]): Options {
     else if (flag === "--case") result.cases.push(argv[++index] ?? "");
     else if (flag === "--codex") result.codex = argv[++index] ?? "codex";
     else if (flag === "--model") result.model = argv[++index] ?? "";
+    else if (flag === "--rke-package-root") result.rkePackageRoot = resolve(argv[++index] ?? "");
     else if (flag === "--timeout") result.timeoutMs = Number(argv[++index]) * 1000;
     else throw new Error(`Unknown argument: ${flag}`);
   }
   if (!Number.isFinite(result.timeoutMs) || result.timeoutMs <= 0) throw new Error("--timeout must be a positive number of seconds");
+  if (result.rkePackageRoot && (!existsSync(join(result.rkePackageRoot,"package.json")) || !existsSync(join(result.rkePackageRoot,"dist","src","cli.js")) || !existsSync(join(result.rkePackageRoot,"node_modules")))) throw new Error("--rke-package-root must name an installed RKE package with its dependencies");
   return result;
 }
 
@@ -136,6 +140,32 @@ async function grade(root: string, item: EvaluationCase, execution: Awaited<Retu
     const paths = new Set((manifest.knowledge ?? []).map(entry => String(entry.path)));
     check("manifest-knowledge", item.manifestKnowledgePaths.every(path => paths.has(path)), { paths: [...paths] });
   }
+  if (item.knowledgeDocument) {
+    const manifestPath=join(root,".rke","repo-context.json");
+    const manifest=existsSync(manifestPath)?await readJson<{knowledge?:{path?:string}[]}>(manifestPath):{};
+    const matching:string[]=[];
+    for(const entry of manifest.knowledge??[]){
+      if(typeof entry.path!=="string")continue;
+      try{
+        const target=repositoryPath(root,safeRelative(entry.path));
+        if(!existsSync(target))continue;
+        const body=(await readFile(target,"utf8")).toLowerCase();
+        if(item.knowledgeDocument.contains.every(term=>body.includes(term.toLowerCase())))matching.push(entry.path);
+      }catch{/* An invalid manifest path cannot satisfy the document contract. */}
+    }
+    check("registered-knowledge-content",matching.length>0,{matchingPaths:matching});
+    if(item.knowledgeDocument.navigationPath){
+      try{
+        const navigation=await readFile(repositoryPath(root,safeRelative(item.knowledgeDocument.navigationPath)),"utf8");
+        check("canonical-reading-order",matching.some(path=>navigation.includes(path)),{navigationPath:item.knowledgeDocument.navigationPath,matchingPaths:matching});
+      }catch{check("canonical-reading-order",false,{navigationPath:item.knowledgeDocument.navigationPath});}
+    }
+    const engine=await RepositoryEngine.open(root);
+    try{
+      const ranked=(await engine.search(item.knowledgeDocument.readerQuery,5)).map(hit=>hit.path);
+      check("registered-knowledge-reader-rank",matching.some(path=>ranked.includes(path)),{rankedPaths:ranked,matchingPaths:matching});
+    }finally{engine.close();}
+  }
   if (item.readerQueries?.length) {
     const engine = await RepositoryEngine.open(root);
     try {
@@ -152,7 +182,7 @@ async function grade(root: string, item: EvaluationCase, execution: Awaited<Retu
   for (const relative of item.supersededPaths ?? []) {
     const target = repositoryPath(root, safeRelative(relative));
     const content = existsSync(target) ? await readFile(target, "utf8") : "";
-    check(`superseded:${relative}`, !existsSync(target) || /supersed|deprecated|archiv/i.test(content));
+    check(`superseded:${relative}`, !existsSync(target) || /supersed|deprecated|archiv|historical|outdated|no longer current/i.test(content));
   }
   return { passed: checks.every(item => item.passed === true), checks };
 }
@@ -166,6 +196,14 @@ async function evaluate(item: EvaluationCase, config: Options): Promise<Record<s
       await cp(PACKAGED_EWF, join(root, ".agents", "skills", "engineering-workflow"), { recursive: true });
       const installed = await installHost(root, "codex", "HEAD", false);
       if (installed.exitCode) throw new Error(JSON.stringify(installed.payload));
+      await appendFile(join(root,".gitignore"),"\n.agents/skills/engineering-workflow/\n");
+    }
+    if (config.rkePackageRoot && item.expectWorkflowState) {
+      const packageMetadata = await readJson<{name?:string}>(join(config.rkePackageRoot,"package.json"));
+      if(packageMetadata.name!=="@polaralias/rke")throw new Error("--rke-package-root is not an RKE installation");
+      await cp(config.rkePackageRoot,join(root,".rke-eval-tools"),{recursive:true});
+      await appendFile(join(root,".gitignore"),"\n.rke-eval-tools/\n");
+      await appendFile(join(root,"AGENTS.md"),"\nFor this isolated evaluation, invoke the installed RKE runtime with `node .rke-eval-tools/dist/src/cli.js` for workflow commands.\n");
     }
     git(root, "add", "-A"); git(root, "commit", "-m", "evaluation fixture");
     if (item.initialCheckpoint) {

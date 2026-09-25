@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { resolve, sep } from "node:path";
 
 import { git } from "./io.js";
@@ -18,6 +18,14 @@ function result(checks:Record<string,boolean>,evidence:Record<string,unknown>):O
   return{exitCode:eligible?0:3,payload:{result:eligible?"coordination-cleanup-eligible":"coordination-cleanup-blocked",eligible,checks,evidence,mutation:"none"}};
 }
 
+function sameExistingPath(left:string,right:string):boolean{
+  try{
+    const actual=realpathSync.native(left);
+    const expected=realpathSync.native(right);
+    return process.platform==="win32"?actual.toLowerCase()===expected.toLowerCase():actual===expected;
+  }catch{return false;}
+}
+
 export function assessCoordinationCleanup(root:string,request:CleanupRequest):OperationOutcome{
   const {lane,branch,reviewHead,remote,destinationBranch}=request;
   const validLane=/^[a-z0-9][a-z0-9_-]*$/i.test(lane);
@@ -33,7 +41,7 @@ export function assessCoordinationCleanup(root:string,request:CleanupRequest):Op
   const blocks=worktrees.code===0?worktrees.stdout.split(/\r?\n\r?\n/):[];
   const owned=blocks.some(block=>{
     const lines=block.split(/\r?\n/),path=lines.find(line=>line.startsWith("worktree "))?.slice(9);
-    return path&&resolve(path)===target&&lines.includes(`branch refs/heads/${branch}`);
+    return path&&sameExistingPath(path,target)&&lines.includes(`branch refs/heads/${branch}`);
   });
   const targetWithinContainer=target.startsWith(`${container}${sep}`);
   const worktreeKnown=Boolean(targetWithinContainer&&owned&&existsSync(target));

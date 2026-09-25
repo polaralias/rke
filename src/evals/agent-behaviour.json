@@ -54,7 +54,7 @@
     {
       "id": "zero-state-inherited-repository-becomes-documented",
       "category": "documentation-bootstrap",
-      "prompt": "I inherited this repository. Document how it actually works so another developer can understand and maintain it. Trace and exercise the real runtime rather than guessing, preserve useful truth, do not trust contradictory old documentation, create only the minimum canonical foundation, register and verify its bindings, prove likely reader questions retrieve it, and close the workflow. Do not commit or publish.",
+      "prompt": "I inherited this repository. Document how it actually works so another developer can understand and maintain it. Trace and exercise the real runtime rather than guessing, preserve useful truth, do not trust contradictory old documentation, create only the minimum canonical foundation, register and verify its bindings, and close the workflow. A maintainer will ask: Where does authentication happen and which tokens are accepted? Make that question retrieve the canonical answer. Do not commit or publish.",
       "installCodexRouting": true,
       "setup": {
         "README.md": "# Inherited service\n\nAn old API.\n",
@@ -65,20 +65,14 @@
         "old-docs/architecture-old.md": "# Old architecture\n\nThe service accepts every token. This contradicts the implementation.\n"
       },
       "expectWorkflowState": true,
-      "mustActivateBefore": ["README.md", "docs/knowledge/system-overview.md"],
+      "mustActivateBefore": ["README.md"],
       "stateStatus": "closed",
       "finalContains": ["engineering-workflow was used in this response."],
-      "filesContain": {
-        "README.md": "src/api.py",
-        "docs/knowledge/system-overview.md": "src/auth.py"
+      "knowledgeDocument": {
+        "contains": ["src/api.py", "src/auth.py", "configured-token"],
+        "readerQuery": "Where does authentication happen and which tokens are accepted?",
+        "navigationPath": "README.md"
       },
-      "manifestKnowledgePaths": ["docs/knowledge/system-overview.md"],
-      "readerQueries": [
-        {
-          "query": "Where does authentication happen and which tokens are accepted?",
-          "expectedPaths": ["docs/knowledge/system-overview.md"]
-        }
-      ],
       "knowledgeFreshness": "fresh",
       "supersededPaths": ["old-docs/architecture-old.md"]
     },

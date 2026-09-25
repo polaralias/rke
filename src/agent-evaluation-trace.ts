@@ -12,7 +12,7 @@ const MAX_EVENTS = 32;
 
 function commandOperation(command: unknown): string | undefined {
   if (typeof command !== "string") return undefined;
-  const match = command.match(/\brke(?:\.cmd)?\s+(activate|resume|status|journey|gate|change|documentation|context|knowledge|task|close|closure|checkpoint|dissection|tracker)\b(?:\s+(enter|add|resolve|assess|explain|check|validate|preview|complete-small))?/i);
+  const match = command.match(/(?:\brke(?:\.cmd)?|\bnode(?:\.exe)?\s+(?:["']?[^\s"']*[\\/])?dist[\\/]src[\\/]cli\.js["']?)\s+(activate|resume|status|journey|gate|change|documentation|context|knowledge|task|close|closure|checkpoint|dissection|tracker)\b(?:\s+(enter|add|resolve|assess|explain|check|validate|preview|complete-small))?/i);
   if (match) return `rke:${match[1]!.toLowerCase()}${match[2] ? `:${match[2].toLowerCase()}` : ""}`;
   if (/\bnode(?:\.exe)?\s+(?:\.\/)?src[\\/]cli\.mjs\b/i.test(command)) return "node:source-cli";
   if (/\bnode(?:\.exe)?\s+(?:\.\/)?dist[\\/]cli\.mjs\b/i.test(command)) return "node:package-cli";

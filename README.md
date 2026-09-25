@@ -98,6 +98,8 @@ The `0.10.x` line is the pre-1.0 qualification series: it ships the sole TypeScr
 
 `rke-eval` loads its packaged corpus without a repository-relative data dependency. It invokes a configured model and consumes model usage, so deterministic tests remain the default inner loop.
 
+For an isolated agent run whose sandbox cannot execute a machine-global launcher, pass `--rke-package-root <installed-package-directory>`. The evaluator copies that installed package and its dependencies into the disposable fixture and directs the agent to its local Node CLI; the fixture keeps the tools out of product Git status.
+
 Run `npm run benchmark` to measure cold indexing, warm retrieval, memory, and total/mean/p95 latency across 50 repeated searches over a realistic mixed Python, TypeScript and C# corpus. Set `RKE_BENCHMARK_FILES` to select the corpus size; large runs are intentionally kept out of routine CI.
 
 `package.json` is the sole release version source; `src/version.ts` reads its runtime identity directly from that package metadata. Release Drafter prepares one serialized draft from that version. A matching `vX.Y.Z` tag runs type checking, deterministic tests, the no-Python audit and a clean package smoke test, then attests and publishes the npm tarball with provenance before promoting the GitHub release. Published tags are immutable.

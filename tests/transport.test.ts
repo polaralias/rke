@@ -28,6 +28,15 @@ test("agent evaluation trace records bounded command categories without argument
   assert.ok(!JSON.stringify(result).includes("secret-token"));
 });
 
+test("agent evaluation trace recognizes the staged RKE CLI without retaining its path",()=>{
+  const trace=new AgentEvaluationTrace();
+  trace.accept(JSON.stringify({type:"item.completed",item:{type:"command_execution",command:"node .rke-eval-tools/dist/src/cli.js activate --root private-path",exit_code:0}})+"\n");
+  const result=trace.snapshot();
+  assert.deepEqual(result.observedOperations,["rke:activate"]);
+  assert.deepEqual(result.operationExitCodes,{"rke:activate":[0]});
+  assert.ok(!JSON.stringify(result).includes("private-path"));
+});
+
 test("agent evaluation trace retains safe operation categories beyond its recent-event window",()=>{
   const trace=new AgentEvaluationTrace();
   trace.accept(JSON.stringify({type:"item.started",item:{type:"command_execution",command:"git push origin feat/sample --token secret-token"}})+"\n");
