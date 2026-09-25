@@ -18,21 +18,23 @@ The runtime is installed once per machine. Every operation selects its repositor
 Use one installed runtime and one EWF entry point:
 
 ```text
-activate → retrieve/trace → change → documentation assess → explain → apply → close
+activate → retrieve/trace → change → documentation assess → explain → disposition or apply → close
 ```
 
-The agent chooses the smallest relevant operations for the work. Retrieval and traces guide inspection; they do not replace source verification. Documentation assessment and causal explanation operate on the actual Git delta, and apply validates agent-authored canonical knowledge before close accepts the exact-delta receipts.
+The agent chooses the smallest relevant operations for the work. Retrieval and traces guide inspection; they do not replace source verification. Explanation and documentation receipts are tied to the Git delta; source changes require a code-level explanation detail. Documentation apply checks bundle conformance, affected coverage, reader rank, and freshness when canonical knowledge changes. A reviewed no-update disposition can close an unbound small change without inventing a knowledge bundle; it must cover every changed path and becomes stale with the delta. These deterministic checks do not by themselves prove agent-level legacy parity; review the [parity matrix](docs/legacy-skill-parity-matrix.md).
 
 ## Install
 
 ```powershell
-python -m pip install .
+npm install --global @polaralias/rke
 ```
 
 For development:
 
 ```powershell
-python -m pip install -e .
+npm install
+npm run build
+npm link
 ```
 
 Install the paired agent skill from the same release:
@@ -41,7 +43,7 @@ Install the paired agent skill from the same release:
 npx skills add polaralias/rke --global --skill engineering-workflow
 ```
 
-The runtime and skill are released together but remain separate installation surfaces: Python supplies stable executables; the skill installer places agent instructions where each supported host discovers them.
+The runtime and skill are released together but remain separate installation surfaces: the Node package supplies stable executables; the skill installer places agent instructions where each supported host discovers them.
 
 Installed commands:
 
@@ -61,9 +63,11 @@ rke documentation bootstrap --root C:\repos\service
 rke handoff write --topic credential-runtime --summary "Provider path is mapped." --next-action "Run the integration test." --root C:\repos\service
 rke handoff write --visibility shared --topic credential-runtime --summary "Provider path is mapped." --next-action "Run the integration test." --root C:\repos\service
 rke coordination validate --manifest local-docs/worktrees.json --root C:\repos\service
+rke coordination cleanup-check --lane runtime --branch feat/runtime --review-head <reviewed-commit> --remote origin --destination-branch main --root C:\repos\service
+rke tracker preview --packages design/work-packages.yml --tracker github --scope team/service --root C:\repos\service
 rke publication scan --root C:\repos\service
 rke documentation assess --base main --root C:\repos\service
-rke change explain --base main --summary "Moved credential hydration behind the provider boundary." --root C:\repos\service
+rke change explain --base main --summary "Moved credential hydration behind the provider boundary." --detail-file .engineering-workflow/change-detail.json --root C:\repos\service
 ```
 
 Register the optional machine-wide MCP adapter once:
@@ -84,37 +88,39 @@ The gate lives at `.githooks/pre-push`; installation configures `core.hooksPath=
 
 ## Retrieval and structural scope
 
-Repository retrieval uses BM25F and Git-backed content identity. Clean tracked files reuse Git object identity only after a batched, filter-aware content check; dirty, staged, untracked, uncertain and mismatched files are content-hashed by the indexer. Non-Git fallback traversal prunes dependency, vendor, archive and cache directories before descent. Known credential locations are omitted, secret-like values are redacted, and the response reports those boundaries without returning the values.
+Repository retrieval uses SQLite FTS5 and SHA-256 content identity. Each search checks Git status and HEAD and hashes dirty paths against the last indexed state; a stable modified working tree reuses the index, while another ordinary edit triggers refresh. `rke context check` performs full content verification, hashing clean tracked files too. Git can miss a same-size edit when timestamps are deliberately restored, so a search may reuse stale content in that edge case until a full check. Concurrent public operations coalesce one freshness pass, and composed structural operations query the already-refreshed SQLite state rather than recursively refreshing. Only changed files are parsed and replaced in a transaction. The Node process loads Tree-sitter grammars in-process and both retrieval and structural analysis consume the same parsed-file records. Known credential locations and secret-like source are omitted from persistence and results.
 
-Structural operations detect package and source scopes automatically, cache graph shards and widen only when the first likely scope is insufficient. Use repeatable `--scope <relative-path>` options to override selection or combine scopes. Whole-repository analysis fuses bounded shards instead of rejecting a repository at an arbitrary file count. Tree-sitter is preferred; unavailable or inconclusive parsing returns a bounded agent-review packet with explicit confidence and uncertainty.
+Structural operations query normalized SQLite files, symbols, imports, edges and chunks without reconstructing a whole-repository object graph. Use repeatable `--scope <relative-path>` options to constrain trace, map, impact and search; scopes are never inferred automatically. Tree-sitter evidence takes precedence. When it is unavailable, `rke structure review` returns bounded, secret-aware source slices and `review-apply` records digest-bound agent evidence consumed by file API, trace and impact. Regex search runs in an isolated worker with a per-file time limit.
 
 ## Evaluation and release
 
-The `0.9.x` line is the pre-1.0 dogfood series: its implementation and proposed public contract are feature-complete enough for real repository use, while compatibility findings may still produce pre-1.0 changes. RKE moves to `1.0.0` only after dogfood validates the stability contract; fixes discovered during that period ship as `0.9.x` releases.
+The `0.10.x` line is the pre-1.0 qualification series: it ships the sole TypeScript implementation for real repository use while compatibility findings may still produce pre-1.0 changes. There is no parallel Python runway or selectable dogfood engine. RKE moves to `1.0.0` after the documented stability contract passes release qualification in real repositories.
 
 `rke-eval` loads its packaged corpus without a repository-relative data dependency. It invokes a configured model and consumes model usage, so deterministic tests remain the default inner loop.
 
-Run `python scripts/benchmark_freshness.py` to measure cold indexing, warm retrieval and one changed file across 1k, 10k and 50k tracked-file fixtures. Override the matrix with `--sizes`; the full default benchmark is intentionally kept out of routine CI.
+For an isolated agent run whose sandbox cannot execute a machine-global launcher, pass `--rke-package-root <installed-package-directory>`. The evaluator copies that installed package and its dependencies into the disposable fixture and directs the agent to its local Node CLI; the fixture keeps the tools out of product Git status.
 
-`rke.__version__` is the only version source. Release Drafter prepares one serialized draft from that version. A matching `vX.Y.Z` tag runs the complete tests, separately clean-installs wheel and sdist, attests both artifacts, and submits them to PyPI through trusted publishing when the repository `pypi` environment is configured. Only a successful PyPI job promotes or creates the single public GitHub release, and that job receives explicit `GH_REPO` identity rather than depending on a checkout. Published tags are immutable.
+Run `npm run benchmark` to measure cold indexing, warm retrieval, memory, and total/mean/p95 latency across 50 repeated searches over a realistic mixed Python, TypeScript and C# corpus. Set `RKE_BENCHMARK_FILES` to select the corpus size; large runs are intentionally kept out of routine CI.
+
+`package.json` is the sole release version source; `src/version.ts` reads its runtime identity directly from that package metadata. Release Drafter prepares one serialized draft from that version. A matching `vX.Y.Z` tag runs type checking, deterministic tests, the no-Python audit and a clean package smoke test, then attests and publishes the npm tarball with provenance before promoting the GitHub release. Published tags are immutable.
 
 ## Preserved workflows
 
 Query-to-Knowledge and Repository Change Comprehension remain distinct named concepts:
 
 - **Query-to-Knowledge (QTK)** is a human clarification loop. It groups consequential questions, recommends answers with rationale, and keeps a hard `shared-understanding` gate open until the user and agent agree on an implementation target. It is not ordinary repository orientation.
-- **Repository Change Comprehension (RCC)** reconstructs the causal behaviour of the final Git delta and records a bounded explanation receipt. It is not a changed-file summary.
+- **Repository Change Comprehension (RCC)** reconstructs the causal behaviour of the final Git delta. `change explain` rejects summary-only source changes and requires a code-level detail file with before/after, why, changed symbols, and evidence-labelled verification. The agent must still inspect the code and communicate the full account; the receipt cannot prove its semantic correctness.
 
-The formerly separate repository-dissection, design/decomposition, session-alignment, local handoff/pickup, and worktree-coordination behaviours now live as deep journeys and shared RKE operations behind EWF. Tracker synchronization remains in OKF Tasks. Scenario and test planning are part of design acceptance rather than a second optional QA workflow.
+The formerly separate repository-dissection, design/decomposition, session-alignment, local handoff/pickup, and worktree-coordination behaviours are routed through EWF. Runtime adversarial probes now cover several previously open gaps, while agent-level outcome parity still needs evaluation. TPU supports both OKF Tasks as the durable-execution default and stable non-OKF work packages for tracker mapping; standalone QA-plan writing is outside EWF.
 
 ## Source layout
 
-- `src/rke/` — canonical runtime and shared operation registry.
+- `src/` — canonical TypeScript runtime and shared operation registry.
 - `skills/engineering-workflow/` — canonical EWF skill source, directly discoverable by standard skill installers.
 - `skills/engineering-workflow/references/` — skill-only operating contracts, journeys, and opt-in extensions loaded through progressive disclosure.
 - `docs/knowledge/` — canonical RKE project knowledge; it does not duplicate skill instructions.
 - `tests/` — transport parity, retrieval, structure, lifecycle, documentation and security tests.
-- `scripts/` — compatibility wrappers for the original source layout; installed consumers should use the console commands.
+- `scripts/` — TypeScript release, benchmark, mirror-parity and architecture-validation utilities.
 
 The copy of `engineering-workflow` in the Polaralias skills catalogue is a synchronized distribution mirror. Runtime implementation does not live in the skills repository.
 

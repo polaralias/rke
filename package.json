@@ -1,0 +1,69 @@
+{
+  "name": "@polaralias/rke",
+  "version": "0.10.0",
+  "description": "Repository Knowledge Engineering runtime with shared CLI and MCP operations.",
+  "type": "module",
+  "engines": {
+    "node": ">=24.15.0"
+  },
+  "bin": {
+    "rke": "dist/src/cli.js",
+    "rke-mcp": "dist/src/mcp.js",
+    "rke-eval": "dist/src/evaluate-agent.js",
+    "rke-session-start": "dist/src/hooks/session-start.js",
+    "rke-pre-compaction": "dist/src/hooks/pre-compaction.js",
+    "rke-pre-push": "dist/src/hooks/pre-push.js"
+  },
+  "files": [
+    "dist/src",
+    "src/evals/*.json",
+    "skills/engineering-workflow",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/src/operations.d.ts",
+      "import": "./dist/src/operations.js"
+    },
+    "./repository-engine": {
+      "types": "./dist/src/repository-engine.d.ts",
+      "import": "./dist/src/repository-engine.js"
+    },
+    "./types": {
+      "types": "./dist/src/types.d.ts",
+      "import": "./dist/src/types.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src scripts tests",
+    "test": "npm run build && node --test --test-concurrency=1 dist/tests/operations.test.js dist/tests/public-behavior.test.js dist/tests/parser.test.js dist/tests/engine.test.js dist/tests/transport.test.js dist/tests/security.test.js dist/tests/legacy-parity.test.js",
+    "test:legacy-parity": "npm run build && node --test --test-concurrency=1 dist/tests/legacy-parity.contract.js",
+    "benchmark": "npm run build && node dist/scripts/benchmark-freshness.js",
+    "smoke:distribution": "npm run build && node dist/scripts/smoke-distribution.js",
+    "smoke:packed": "npm run build && node dist/scripts/smoke-packed.js",
+    "validate:release": "npm run build && node dist/scripts/validate-release.js",
+    "skill:check": "npm run build && node dist/scripts/sync-skill.js --target ../skills/skills/engineering/engineering-workflow --check",
+    "skill:sync": "npm run build && node dist/scripts/sync-skill.js --target ../skills/skills/engineering/engineering-workflow",
+    "verify:no-python": "npm run build && node dist/scripts/no-python.js",
+    "prepack": "npm run build && npm run lint && npm test && npm run validate:release && npm run verify:no-python"
+  },
+  "dependencies": {
+    "@cursorless/tree-sitter-wasms": "^0.10.0",
+    "minimatch": "^10.0.3",
+    "web-tree-sitter": "^0.27.0",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.10.0",
+    "eslint": "^10.11.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.70.1"
+  },
+  "license": "LicenseRef-Proprietary"
+}

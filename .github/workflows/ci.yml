@@ -10,63 +10,38 @@ permissions:
 
 jobs:
   test:
-    name: Test (${{ matrix.os }}, Python ${{ matrix.python }})
+    name: Test (${{ matrix.os }}, Node ${{ matrix.node }})
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            python: "3.11"
-          - os: ubuntu-latest
-            python: "3.12"
-          - os: ubuntu-latest
-            python: "3.13"
-          - os: ubuntu-latest
-            python: "3.14"
-          - os: windows-latest
-            python: "3.11"
-          - os: windows-latest
-            python: "3.14"
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ["24.15.0", "25"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-node@v6
         with:
-          python-version: ${{ matrix.python }}
-          cache: pip
-      - run: python -m pip install --upgrade pip
-      - run: python -m pip install -e . pytest
-      - run: python -m pytest -q
-        env:
-          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
-
-  quality:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-          cache: pip
-      - run: python -m pip install -e . ruff pyright
-      - run: python -m ruff check .
-      - run: python -m pyright
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run lint
+      - run: npm test
+      - run: npm run validate:release
+      - run: npm run verify:no-python
+      - run: npm run smoke:packed
 
   distribution:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-node@v6
         with:
-          python-version: "3.12"
-          cache: pip
-      - run: python -m pip install --upgrade pip build
-      - run: python -m pip install -e . pytest
-      - run: python -m build
-      - run: python scripts/validate_release.py --dist dist
-      - run: python scripts/smoke_distribution.py dist/*.whl
-      - run: python scripts/smoke_distribution.py dist/*.tar.gz
+          node-version: "24.15.0"
+          cache: npm
+      - run: npm ci
+      - run: npm run smoke:packed
       - uses: actions/upload-artifact@v6
         with:
-          name: rke-distributions
-          path: dist/*
+          name: rke-npm-package
+          path: "*.tgz"

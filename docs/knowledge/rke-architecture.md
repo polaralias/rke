@@ -2,19 +2,23 @@
 type: Architecture Concept
 title: RKE architecture
 description: Defines the independently installed Repository Knowledge Engineering runtime, its shared CLI and MCP operation layer, repository boundaries, and relationship with EWF and OKF Tasks.
-timestamp: 2026-09-20T14:42:56+01:00
+timestamp: 2026-09-24T16:33:00+01:00
 authority: canonical
 verification: verified-working
-reviewed_at: 2026-09-20T14:42:56+01:00
+reviewed_at: 2026-09-24T16:33:00+01:00
 verified_against:
-  - src/rke/operations.py
-  - src/rke/cli.py
-  - src/rke/lifecycle.py
-  - src/rke/io.py
-  - src/rke/security.py
-  - src/rke/structure.py
-  - src/rke/repo_context_mcp.py
-  - src/rke/host_integration.py
+  - src/operations.ts
+  - src/cli.ts
+  - src/workflow.ts
+  - src/surfaces.ts
+  - src/io.ts
+  - src/security.ts
+  - src/parser.ts
+  - src/repository-engine.ts
+  - src/mcp.ts
+  - src/coordination-cleanup.ts
+  - src/evaluate-agent.ts
+  - src/agent-evaluation-trace.ts
   - .github/workflows/ci.yml
   - .github/workflows/release-drafter.yml
   - .github/workflows/publish-release.yml
@@ -39,7 +43,7 @@ RKE turns repository evidence into bounded, retrievable engineering context with
 
 ## Distribution
 
-The `polaralias-rke` package is the sole executable implementation. It exposes two adapters over one operation registry:
+The `@polaralias/rke` npm package is the sole executable implementation. It exposes two adapters over one operation registry:
 
 - `rke` maps shell arguments to registered handlers and is authoritative for hooks, CI and automation.
 - `rke-mcp` maps MCP tool calls to the same handlers and schemas. It adds no domain implementation.
@@ -50,9 +54,9 @@ The registry contains every public lifecycle, gate, journey, task, closure, host
 
 Yes: the CLI and MCP expose the same complete public operation registry, argument schemas, handlers and structured outcomes. The CLI adds shell parsing and exit codes; MCP adds tool discovery, repository selection and protocol error mapping. Neither transport owns separate domain behavior.
 
-Durable workflow state and knowledge manifests use repository-local locks, revision checks and atomic replacement. Each lock owner writes and synchronises a complete PID, creation-time and token record under a unique candidate name, then atomically publishes that record as the lock path; another process can therefore never observe a live creator's pre-metadata lock. A valid live owner is never evicted by age, a demonstrably dead owner is reclaimed immediately, and a malformed legacy or externally damaged record is reclaimed only after a short grace window. Token matching prevents an old holder from removing a replacement lock. Documentation application holds the manifest lock through verification and rollback so a failed transaction cannot erase a waiting manifest writer. Handoffs use collision-resistant identities and directory locking. Disposable retrieval and structure indexes use atomic last-writer-wins replacement and can always be rebuilt.
+Transport parity does not establish legacy-skill outcome parity. The [legacy skill parity matrix](../legacy-skill-parity-matrix.md) records the remaining behavioural contracts, and the [priority matrix](../legacy-skill-priority-matrix.md) orders their outstanding proof obligations. The deterministic adversarial probes pass, while agent and delegated-provider evaluation remains open; neither document is a parity sign-off.
 
-Atomic lock publication requires hard-link support from the repository filesystem. RKE never falls back to a weaker locking algorithm: an unsupported filesystem returns `lock_atomic_publish_unsupported` with remediation guidance. A hard process death may leave a complete candidate file, so later acquisition removes only candidates whose valid recorded owner is demonstrably dead; live and malformed candidates are retained because deleting them could weaken mutual exclusion.
+Workflow state and authored receipts use atomic replacement. Repository indexing uses SQLite WAL mode, foreign keys and an immediate transaction per changed or deleted file. A failed parse or transaction cannot leave half of a file's symbols, chunks or edges visible. The disposable database can always be rebuilt and is never canonical knowledge.
 
 The EWF skill is co-versioned in `skills/engineering-workflow`. Its operating contracts live only under the skill's `references/` directory: shared contracts are flat, phase-specific guidance is under `journeys/`, and opt-in capability guidance is under `extensions/`. The repository's `docs/knowledge/` directory is reserved for canonical RKE project knowledge and must not mirror those skill instructions.
 
@@ -63,9 +67,9 @@ At 1.0, that contract stabilises CLI operation names and principal arguments, MC
 
 ## Documentation bootstrap
 
-`rke documentation bootstrap` is the read-only deterministic entry point for “document this repository.” It classifies a repository as `no-rke`, `partial-rke`, or `mature-rke`; inventories existing canonical knowledge and instructions; identifies foundation gaps; and returns preserve, review, recommendation, evidence, reader-query, and `fresh`/`stale`/`unverified` binding sets. It hashes current eligible files covered by registered bindings and compares them directly with receipt hashes without writing the disposable context index. Receipt presence alone does not establish freshness, and stale or unverified canonical knowledge produces targeted repair rather than a mature no-op. It never authors prose or automatically supersedes existing documentation.
+`rke documentation bootstrap` is the read-only deterministic entry point for “document this repository.” It classifies a repository as `no-rke`, `partial-rke`, or `mature-rke`; inventories existing canonical knowledge and instructions; and reports preserve/review candidates and `fresh`/`stale`/`unverified` binding sets. It compares registered source hashes with receipts without writing the disposable context index. Receipt presence alone does not establish freshness. A verified existing foundation is preserved regardless of its filenames; a missing foundation receives one minimal candidate rather than a fixed document set.
 
-The model or EWF journey traces real runtime evidence, writes only the necessary human-readable content, then uses knowledge registration, documentation apply, and context verification. A mature repository may correctly return `no-op`; bootstrap does not create a fixed set of files on every run.
+The model or EWF journey traces real runtime evidence and writes the necessary human-readable content. Knowledge registration, documentation apply, and context verification provide machine receipts. Apply validates bundle conformance, affected-concept coverage, top-five reader retrieval, index generation, and source-binding freshness before writing a completion receipt. For a reviewed material delta with no affected canonical binding, `documentation disposition` records why no durable update is warranted and covers every changed path without creating a knowledge bundle; closure rechecks the exact-delta receipt and independently validates any existing knowledge. These checks do not establish semantic truth: source review and agent-level legacy parity still require separate evidence.
 
 The frontmatter `reviewed_at` records the human content-review point. The verification receipt and current source hashes in `.rke/repo-context.json` are the authoritative machine freshness record.
 
@@ -77,21 +81,27 @@ Each repository owns tracked RKE knowledge bindings under `.rke/` and separate E
 
 Continuation defaults to ignored, untracked `local-docs/handoff/` artefacts. When the user deliberately needs durable collaboration, the same handoff core can write a commit-capable shared artefact under `.rke/handoffs/`; shared handoffs remain coordination evidence rather than canonical knowledge.
 
+Worktree cleanup compares Git's reported worktree path with the expected sibling path through resolved filesystem identity. This accepts OS aliases for the same existing directory, including macOS `/var` and Windows short-name paths, while retaining the branch, clean-tree, exact reviewed tip and remote integration checks before local removal.
+
 ## Retrieval and structural analysis
 
-Retrieval uses a field-aware BM25F index with parser-backed chunking and bounded structural or typed-knowledge expansion. Clean tracked files may reuse Git object identity only after a batched Git content check confirms that the worktree blob still matches the index; staged, dirty, untracked or uncertain content is hashed by the indexer. This catches same-size edits even when their timestamp is restored and Git's platform stat cache would otherwise report them as clean. The verifier limits filesystem metadata checks to retrieval-eligible paths and avoids redundant resolves without weakening the content check. Outside Git, retrieval and dissection use one shared walker that prunes dependency, vendor, archive and cache trees before descent. Modification time and size are never sufficient proof of unchanged content. Credential stores and sensitive paths are omitted, detected secret-like content is redacted before persistence and response, and every omission or redaction remains visible as metadata.
+Retrieval and structural analysis share one persistent `RepositoryEngine` per repository. A hot Git query checks status and HEAD, then hashes dirty paths against the last indexed state. This detects another ordinary edit to an already dirty file while avoiding a whole-index rebuild for a stable modified working tree. `context check` performs full content verification and hashes clean tracked files. A forced verification arriving during an ordinary refresh waits for that pass and then verifies content; weaker work never satisfies the stronger request. Git can miss a same-size edit when timestamps are deliberately restored; search results may therefore be stale in that edge case until a full check. Excluded, sensitive, binary and oversized paths never enter the database. Source-returning search and review use the same repository-contained, one-MiB, secret-aware read boundary. Regex matching runs in a worker with a per-file timeout. Changed records are replaced transactionally. SQLite FTS5 ranks bounded chunks without constructing a repository-wide JavaScript postings graph.
 
-`scripts/benchmark_freshness.py` creates isolated 1k, 10k and 50k tracked-file repositories and reports cold indexing, warm retrieval and a same-size one-file change with restored timestamps. Its fixtures disable Git ctime trust and use minimal stat checks, so the changed-file trial consistently exercises RKE's content verifier rather than relying on Git to report the mutation first. The small contract case runs in the deterministic suite; the expensive default matrix is an explicit engineering benchmark rather than routine CI.
+Tree-sitter runs in the persistent Node process through version-pinned WASM grammars. The same `ParsedFile` contract supplies symbols, imports, calls and chunks to both search and structural operations, eliminating parser subprocesses and duplicate extraction paths. The database stores normalized files, symbols, imports, edges, chunks and FTS terms; queries retain only bounded result rows in memory.
 
-Structural analysis discovers package and source scopes, caches graph shards and widens progressively when the first likely scope cannot answer the query. Callers may pass explicit scopes, including multiple scopes, and may request whole-repository analysis without a brittle file-count rejection. Parser work is batched with individual fallback; unsupported or inconclusive files use bounded, source-digest-bound agent review. Public regex search runs in a timed isolated worker.
+Trace, map, impact and search accept explicit repository-relative scopes; no scope selection is automatic. When parser evidence is unavailable, file API returns a bounded agent-review packet. A validated review remains outside the parser cache, is bound to the exact source digest, and can supply confidence-labelled file, trace and impact evidence until the source changes. Extracted parser symbols take precedence.
+
+`npm run benchmark` creates an isolated, clean tracked mixed Python, TypeScript and C# repository and reports cold, hot-cache, full content-verification and changed-file freshness time, repeated-query total/mean/p95 latency, process memory, measured Git subprocesses and the zero parser-child-process invariant. `RKE_BENCHMARK_FILES` selects the scale. Deterministic tests prove a hot clean check hashes and parses zero tracked files, full verification hashes them without reparsing unchanged content, a one-file edit reparses only that file, concurrent dirty queries coalesce freshness without weakening a forced check, and scoped impact refreshes once before tracing current SQLite state.
 
 ## Installation and release
 
-RKE `0.9.x` is the pre-1.0 dogfood series. It represents a feature-complete candidate for the documented 1.x stability surface while preserving the ability to correct compatibility findings before that promise becomes binding. Dogfood fixes remain on `0.9.x`; `1.0.0` follows successful validation of the stability contract in real repositories.
+RKE `0.10.x` is the pre-1.0 qualification series and ships only the TypeScript runtime. Runtime cutover is implemented, but legacy-skill outcome parity is not yet complete; the open matrix is a merge qualification boundary. There is no Python runway or selectable dogfood engine; `1.0.0` follows successful release qualification of the stability contract in real repositories.
 
-`rke host install` places the pre-push gate at `.githooks/pre-push`, configures repository-local `core.hooksPath=.githooks`, and preserves independently owned hook paths unless `--force` is explicit. The packaged `rke-eval` corpus is loaded with `importlib.resources`, so installed and source invocations use the same cases.
+`rke host install` records repository-local integration derived from the installed commands and preserves independently owned configuration unless `--force` is explicit. The packaged `rke-eval` command is part of the same npm distribution.
 
-`rke.__version__` is the sole release version source. Hatch package metadata and MCP server identity derive from it. CI covers Linux Python 3.11–3.14, Windows at the oldest and current supported versions, deterministic tests, static analysis, distribution content and separate clean-install smoke tests for wheel and sdist. A matching `vX.Y.Z` tag builds and attests both artifacts, validates package/MCP/tag identity, publishes them to PyPI through the protected trusted-publishing environment, and only then promotes or creates the single public GitHub release. The checkout-free publication job receives `GH_REPO` explicitly, so the GitHub CLI never depends on local repository discovery after PyPI has succeeded.
+Isolated agent evaluation can stage an installed RKE package inside its disposable fixture with `--rke-package-root`. The agent then invokes the local Node CLI script, so a stale host shim or an external executable denied by the sandbox cannot masquerade as a workflow failure. The copied EWF skill and staged package are Git-ignored in the fixture; they remain available to the agent without contaminating product retrieval. Documentation authoring cases grade a registered concept's content, reading-order link, reader rank and freshness without requiring one fixed filename.
+
+`package.json` is the sole release version source and `src/version.ts` reads the MCP and CLI identity from it at runtime. CI covers Node 24.15 and 25 on Linux, Windows, and macOS, strict TypeScript checking, deterministic tests, release-contract validation, the no-Python architecture audit, and clean npm artefact smoke tests that exercise version identity, parser retrieval, MCP discovery, and the bundled agent-evaluation corpus. Catalogue validation and digest parity run in the adjacent skills repository during release qualification. A matching `vX.Y.Z` tag builds, smokes, attests and publishes the npm tarball with provenance before promoting the GitHub release.
 
 ## Methodology
 

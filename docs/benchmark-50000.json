@@ -1,0 +1,78 @@
+{
+  "result": "freshness-benchmark",
+  "files": 50000,
+  "cold": {
+    "checked": 50000,
+    "hashedFiles": 50000,
+    "changed": 50000,
+    "rowsChanged": 50000,
+    "removed": 0,
+    "parsed": 50000,
+    "reused": 0,
+    "reusedFiles": 0,
+    "failed": 0,
+    "omittedSensitive": 0,
+    "elapsedMs": 188396.42
+  },
+  "hot": {
+    "checked": 50000,
+    "hashedFiles": 0,
+    "changed": 0,
+    "rowsChanged": 0,
+    "removed": 0,
+    "parsed": 0,
+    "reused": 50000,
+    "reusedFiles": 50000,
+    "failed": 0,
+    "omittedSensitive": 0,
+    "elapsedMs": 7163.09
+  },
+  "verifiedWarm": {
+    "checked": 50000,
+    "hashedFiles": 50000,
+    "changed": 0,
+    "rowsChanged": 0,
+    "removed": 0,
+    "parsed": 0,
+    "reused": 50000,
+    "reusedFiles": 50000,
+    "failed": 0,
+    "omittedSensitive": 0,
+    "elapsedMs": 104522.25
+  },
+  "changed": {
+    "checked": 50000,
+    "hashedFiles": 1,
+    "changed": 1,
+    "rowsChanged": 1,
+    "removed": 0,
+    "parsed": 1,
+    "reused": 49999,
+    "reusedFiles": 49999,
+    "failed": 0,
+    "omittedSensitive": 0,
+    "elapsedMs": 7625.51
+  },
+  "repeatedQueries": {
+    "count": 50,
+    "elapsedMs": 396615.8,
+    "meanMs": 7932.32,
+    "p95Ms": 9369.04
+  },
+  "resources": {
+    "peakRss": 547729408,
+    "finalRss": 64094208,
+    "maxRss": 534892,
+    "databaseBytes": 52178944,
+    "gitProcessCount": 58,
+    "refreshCount": 3,
+    "parserChildProcessCount": 0,
+    "repeatedQueryRss": {
+      "first": 180121600,
+      "last": 69468160,
+      "minimum": 66547712,
+      "maximum": 180408320,
+      "strictlyMonotonic": false
+    }
+  }
+}

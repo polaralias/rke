@@ -4,14 +4,14 @@ RKE is the canonical executable implementation and methodology used by the `engi
 
 ## Project rules
 
-- Keep CLI and MCP as thin adapters over `src/rke/operations.py`; domain behaviour may not be implemented in only one transport.
+- Keep CLI and MCP as thin adapters over `src/operations.ts`; domain behaviour may not be implemented in only one transport.
 - Treat every repository path as an explicit data boundary. Dynamic MCP targets must be validated as Git repositories and may be constrained by configured allowed roots.
-- Treat `rke.__version__` in `src/rke/__init__.py` as the sole version source. Hatch project metadata and MCP server identity must derive from it.
+- Treat `package.json` as the release version source and keep `src/version.ts`, MCP identity, package smoke tests, and release tags equal to it.
 - Keep `skills/engineering-workflow` as the canonical skill package paired with this runtime.
 - Publish the skill into the Polaralias skills catalogue as a synchronized mirror; do not maintain an independent runtime copy there.
-- Verify a local catalogue checkout with `python scripts/sync_skill.py --target <skills-repo>/skills/engineering/engineering-workflow --check` before coordinated release.
+- Verify a local catalogue checkout with `npm run skill:check -- --target <skills-repo>/skills/engineering/engineering-workflow` before coordinated release.
 - Preserve Query-to-Knowledge and Repository Change Comprehension as named workflow concepts, and preserve OKF Tasks as an independent primitive.
-- Run the complete deterministic test suite and build a wheel before release.
+- Run the complete deterministic test suite, no-Python audit, and npm package build before release.
 
 <!-- repo-setup:shared-governance:start -->
 ## Shared Git Workflow
