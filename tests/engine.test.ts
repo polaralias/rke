@@ -3,10 +3,11 @@ import test from "node:test";
 import { mkdir, mkdtemp, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawnSync, type ChildProcess } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
 import { run } from "../src/io.js";
 import { RepositoryEngine } from "../src/repository-engine.js";
+import { ParserProcessClient } from "../src/parser-process-client.js";
 
 function commitAll(root:string):void{spawnSync("git",["config","user.email","rke-test@example.invalid"],{cwd:root});spawnSync("git",["config","user.name","RKE Test"],{cwd:root});spawnSync("git",["add","-A"],{cwd:root});spawnSync("git",["commit","-m","fixture"],{cwd:root});}
 
@@ -33,6 +34,20 @@ test("multi-language indexing isolates grammar processes and preserves source ev
     assert.equal((await engine.ensureFresh()).parsed,0);
     assert.equal(engine.processMetrics().parserChildProcessCount,4);
   }finally{engine.close();}
+});
+test("parser isolation recovers after a signalled child exits",async()=>{
+  const parser=new ParserProcessClient();
+  try{
+    assert.equal((await parser.parse("a.ts","export function first() { return true; }\n")).status,"parsed");
+    const child=(parser as unknown as {child?:ChildProcess}).child;
+    assert.ok(child);
+    await new Promise<void>(resolve=>{child.once("exit",()=>resolve());child.kill("SIGKILL");});
+    await parser.close();
+    const recovered=await parser.parse("b.ts","export function second() { return true; }\n");
+    assert.equal(recovered.status,"parsed");
+    assert.ok(recovered.symbols.some(symbol=>symbol.name==="second"));
+    assert.equal(parser.processCount,2);
+  }finally{await parser.close();}
 });
 test("search gives distinct source paths so repeated chunks do not crowd out another file",async()=>{
   const root=await mkdtemp(join(tmpdir(),"rke-distinct-search-"));

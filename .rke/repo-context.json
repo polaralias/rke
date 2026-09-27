@@ -24,8 +24,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-27T08:37:49.075Z",
-        "evidence": "Reviewed the claim review fallback correction and seven-case regression against the current implementation and canonical architecture.",
+        "verifiedAt": "2026-09-27T08:51:11.793Z",
+        "evidence": "Reviewed parser child exit recovery, the focused engine regression and unchanged architecture claims against the current source.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -285,7 +285,7 @@
           },
           {
             "path": "src/parser-process-client.ts",
-            "sha256": "3da13785642c5ad10fc926ffa0fad14a6cb6feaf4d8aab88b24ee94f57c319b8"
+            "sha256": "4e9ac016e4a0257e6a65cccf37ebcc380f2a440f59c8c112a856a6e5f305595a"
           },
           {
             "path": "src/parser-process.ts",
@@ -345,7 +345,7 @@
           },
           {
             "path": "tests/engine.test.ts",
-            "sha256": "5ed8ade4bbc746da6f3478d3174ffa10a6059e27a25b6ed0d339be16f3e17451"
+            "sha256": "4f792e0dce287c9ce8dedf9a035a3969a1a19520ea5a169d32e0ed24b246d6c5"
           },
           {
             "path": "tests/fixtures/documentation-bootstrap/partial-state/.rke/repo-context.json",
@@ -531,5 +531,5 @@
       }
     }
   ],
-  "revision": 42
+  "revision": 43
 }
