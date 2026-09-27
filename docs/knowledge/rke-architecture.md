@@ -2,10 +2,10 @@
 type: Architecture Concept
 title: RKE architecture
 description: Defines the independently installed Repository Knowledge Engineering runtime, its shared CLI and MCP operation layer, repository boundaries, and relationship with EWF and OKF Tasks.
-timestamp: 2026-09-27T17:28:51+01:00
+timestamp: 2026-09-27T17:49:27+01:00
 authority: canonical
 verification: verified-working
-reviewed_at: 2026-09-27T17:28:51+01:00
+reviewed_at: 2026-09-27T17:49:27+01:00
 verified_against:
   - src/operations.ts
   - src/cli.ts
@@ -97,7 +97,7 @@ Trace, map, impact and search accept explicit repository-relative scopes; no sco
 
 RKE `0.10.x` is the pre-1.0 qualification series and ships only the TypeScript runtime. Runtime cutover is implemented and the retained legacy-skill outcomes have local positive and adversarial evidence. Cross-platform CI and package and mirror validation have passed; final integration review still governs PR readiness. There is no Python runway or selectable dogfood engine; `1.0.0` follows successful release qualification of the stability contract in real repositories.
 
-`rke host install` records repository-local integration derived from the installed commands and preserves independently owned configuration unless `--force` is explicit. The packaged `rke-eval` command is part of the same npm distribution.
+`rke host install` records repository-local integration derived from the installed commands and preserves independently owned configuration unless `--force` is explicit. Codex receives a marker-owned `AGENTS.md` routing block; Claude receives an equivalent `CLAUDE.md` block alongside the project `rke` MCP entry. The installer checks ownership and marker validity before writing hooks or host configuration. The packaged `rke-eval` command is part of the same npm distribution.
 
 Isolated agent evaluation stages an installed RKE package with `--rke-package-root`. Restricted cases use a Git-ignored copy in the disposable fixture; full-access delegated-provider cases place it outside the fixture so authoritative OKF validation sees only the repository's governed concepts. The agent invokes the staged Node CLI rather than a stale host shim. Documentation authoring cases grade a registered concept's content, reading-order link, reader rank and freshness without requiring one fixed filename.
 

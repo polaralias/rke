@@ -24,8 +24,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-27T16:29:33.481Z",
-        "evidence": "Reviewed the shared validator range and array-cardinality fix, focused rejection, 73-test suite, lint, 30 legacy probes, unchanged CLI/MCP adapters and current selected claim source digest.",
+        "verifiedAt": "2026-09-27T17:05:13.487Z",
+        "evidence": "Reviewed Claude host routing: CLAUDE.md managed block, MCP preflight/idempotence, canonical architecture and host reference updated; 76 tests, 30 legacy parity probes, lint and release validation passed.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -73,7 +73,7 @@
           },
           {
             "path": "docs/knowledge/rke-architecture.md",
-            "sha256": "81fa3275885afa3855672fb166c15fb782437c19506f50ac3a001d703f57596c"
+            "sha256": "7751dcd6472eff7fc86f73ce4ef096b1a656238ef8deb810b33a87805b459311"
           },
           {
             "path": "docs/typescript-rewrite-plan.md",
@@ -93,7 +93,7 @@
           },
           {
             "path": "README.md",
-            "sha256": "5945c5d5a550ff9d75b27552ab166e6e4670272479fdb045e5a7a7f61181d987"
+            "sha256": "2d45f0029dbc89c14ea62207ede72a03b4cb84f440a667447a6c7f1aae00ce8d"
           },
           {
             "path": "scripts/benchmark-freshness.ts",
@@ -157,7 +157,7 @@
           },
           {
             "path": "skills/engineering-workflow/references/host-integration.md",
-            "sha256": "858fbe4cc72b22c5517d916857eae96205f5ca348eb0f1a74210df905e8973b1"
+            "sha256": "4e01b3147d44f62cecb815748e830fac37e9ac807e82d2a3aa349d660d7bf36d"
           },
           {
             "path": "skills/engineering-workflow/references/journeys/close.md",
@@ -209,7 +209,7 @@
           },
           {
             "path": "skills/engineering-workflow/SKILL.md",
-            "sha256": "e8f6c7ae49e41bf04367babae96128cb01d2b2b1f9942ea15f9e6b1933767131"
+            "sha256": "7cfee047d221fe0fbb960a3d10b8019d212b44b38eee1972f681ff9d159977de"
           },
           {
             "path": "skills/engineering-workflow/tests/prompts.md",
@@ -321,7 +321,7 @@
           },
           {
             "path": "src/surfaces.ts",
-            "sha256": "6567e6095001548b696a54c9a6da20323cf0ce78e822b17be25327a89ed8c850"
+            "sha256": "02cda391ececfd1e3e0574ec9f2d9e9cc09ee8b881a7d711d5a19ada2528a72d"
           },
           {
             "path": "src/tracker-preview.ts",
@@ -505,7 +505,7 @@
           },
           {
             "path": "tests/operations.test.ts",
-            "sha256": "02aeebc6ceee7e7cf16469f28edaac162b66009f335b6952c99c7016589b3a05"
+            "sha256": "6ba58e758d4c1ff5a4b437c1906da301b8ccb5b23b37331e4d1b3f628cfcdd8f"
           },
           {
             "path": "tests/parser.test.ts",
@@ -531,5 +531,5 @@
       }
     }
   ],
-  "revision": 46
+  "revision": 47
 }

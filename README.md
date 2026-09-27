@@ -84,7 +84,7 @@ Install repository routing and the pre-push closure gate with:
 rke host install --host codex --base main --root C:\repos\service
 ```
 
-The gate lives at `.githooks/pre-push`; installation configures `core.hooksPath=.githooks`. An independently configured hook path is preserved unless the caller deliberately supplies `--force`. Codex user-level MCP activation remains a separate explicit command returned by the installer.
+The gate lives at `.githooks/pre-push`; installation configures `core.hooksPath=.githooks`. An independently configured hook path is preserved unless the caller deliberately supplies `--force`. Codex installs marker-owned routing in `AGENTS.md` and returns a separate user-level MCP activation command. Claude installs marker-owned routing in `CLAUDE.md` and an `rke` MCP entry in project `.mcp.json`, preserving unrelated instructions and servers.
 
 ## Retrieval and structural scope
 

@@ -260,5 +260,52 @@ export async function coordination(root:string,manifest:string,plan=false):Promi
 }
 const ROUTING_START="<!-- polaralias-engineering-workflow:start -->",ROUTING_END="<!-- polaralias-engineering-workflow:end -->",HOOK_MARKER="# Polaralias engineering workflow";
 const ROUTING_BLOCK=`${ROUTING_START}\n## Engineering workflow routing\n\nFor every repository implementation, fix, refactor, test, documentation edit, feature design or closure request, invoke the installed \`engineering-workflow\` skill before the first task action. For material work, after reading its complete \`SKILL.md\`, activate before broad inspection or mutation: use \`rke activate --phase design --task-mode none --root <repository>\` for a plan-only feature request, \`--phase understand\` for inherited-repository orientation, \`--phase close\` for closure, and \`--phase deliver\` for implementation or repair. Let repository evidence adjust task mode, capabilities and gates afterward. A trivial local spelling, formatting, or comment correction may use EWF without runtime state under the skill's narrow criteria; report the edit without claiming a machine gate passed. Ordinary explanation-only questions and trivial read-only inspection remain outside automatic routing. Never claim a required activation or machine gate succeeded when it did not.\n${ROUTING_END}\n`;
-export function hostRecipe(root:string,host:string,base:string):OperationOutcome{const mcp=host==="codex"?{status:"manual-user-activation",installCommand:["codex","mcp","add","rke","--","rke-mcp"],reason:"Codex MCP activation is user-level and explicit."}:host==="claude"?{status:"project-config-supported",path:".mcp.json",entry:{command:"rke-mcp",args:[],env:{}}}:{status:"not-applicable"};return out({result:"host-recipe",host,mcp,hooks:{status:"explicit-git-gate",base,path:".githooks/pre-push",command:["rke-pre-push","--root",root,"--base",base],activationCommand:["git","config","core.hooksPath",".githooks"]},routing:{status:host==="codex"?"project-instructions-supported":"not-applicable",path:host==="codex"?"AGENTS.md":null,managedMarkers:host==="codex"?[ROUTING_START,ROUTING_END]:[]}});}
-export async function installHost(root:string,host:string,base:string,force=false):Promise<OperationOutcome>{if(git(root,"rev-parse","--show-toplevel").code!==0)return out({result:"host-install-failed",error:{code:"host_git_repository_required",message:"Host hook installation requires a Git repository."}},2);const configured=git(root,"config","--local","--get","core.hooksPath");const hooksPath=configured.code===0?configured.stdout.trim():null;if(hooksPath&&hooksPath!==".githooks"&&!force)return out({result:"host-install-failed",error:{code:"host_hooks_path_owned",message:`Refusing to replace independently configured core.hooksPath=${JSON.stringify(hooksPath)} without --force.`}},3);const hook=join(root,".githooks","pre-push");if(existsSync(hook)&&!(await readFile(hook,"utf8")).includes(HOOK_MARKER)&&!force)return out({result:"host-install-failed",error:{code:"host_hook_owned",message:"Refusing to replace an existing pre-push hook without --force."}},3);await atomicWrite(hook,`#!/bin/sh\n${HOOK_MARKER}\nexec rke-pre-push --root ${JSON.stringify(root.replaceAll("\\","/"))} --base ${JSON.stringify(base)}\n`);await chmod(hook,0o755).catch(()=>undefined);const setHooks=git(root,"config","--local","core.hooksPath",".githooks");if(setHooks.code)return out({result:"host-install-failed",error:{code:"host_git_config_failed",message:setHooks.stderr.trim()}},2);const installed:Record<string,unknown>={gitHook:".githooks/pre-push"};if(host==="claude"){const target=join(root,".mcp.json");const payload=await readJsonOr<Record<string,unknown>>(target,{});if(!payload.mcpServers)payload.mcpServers={};if(typeof payload.mcpServers!=="object"||Array.isArray(payload.mcpServers))return out({result:"host-install-failed",error:{code:"host_mcp_config_invalid",message:".mcp.json mcpServers must be an object."}},2);const servers=payload.mcpServers as Record<string,unknown>;if(servers.rke&&!force)return out({result:"host-install-failed",error:{code:"host_mcp_entry_owned",message:"Refusing to replace the existing rke MCP entry without --force."}},3);servers.rke={command:"rke-mcp",args:[],env:{}};await writeJson(target,payload);installed.mcpConfig=".mcp.json";}else if(host==="codex"){const target=join(root,"AGENTS.md");const existing=existsSync(target)?await readFile(target,"utf8"):"";const hasStart=existing.includes(ROUTING_START),hasEnd=existing.includes(ROUTING_END);if(hasStart!==hasEnd)return out({result:"host-install-failed",error:{code:"host_routing_markers_invalid",message:"AGENTS.md contains only one engineering-workflow routing marker."}},2);const content=hasStart?`${existing.slice(0,existing.indexOf(ROUTING_START)).trimEnd()}\n\n${ROUTING_BLOCK}${existing.slice(existing.indexOf(ROUTING_END)+ROUTING_END.length).trimStart()}`:`${existing.trimEnd()}${existing.trim()?"\n\n":""}${ROUTING_BLOCK}`;await atomicWrite(target,content.trimEnd()+"\n");installed.routingInstructions="AGENTS.md";}return out({result:"host-installed",host,installed,mcp:hostRecipe(root,host,base).payload.mcp,base});}
+export function hostRecipe(root:string,host:string,base:string):OperationOutcome{
+  const mcp=host==="codex"?{status:"manual-user-activation",installCommand:["codex","mcp","add","rke","--","rke-mcp"],reason:"Codex MCP activation is user-level and explicit."}:host==="claude"?{status:"project-config-supported",path:".mcp.json",entry:{command:"rke-mcp",args:[],env:{}}}:{status:"not-applicable"};
+  const routingPath=host==="codex"?"AGENTS.md":host==="claude"?"CLAUDE.md":null;
+  return out({result:"host-recipe",host,mcp,hooks:{status:"explicit-git-gate",base,path:".githooks/pre-push",command:["rke-pre-push","--root",root,"--base",base],activationCommand:["git","config","core.hooksPath",".githooks"]},routing:{status:routingPath?"project-instructions-supported":"not-applicable",path:routingPath,managedMarkers:routingPath?[ROUTING_START,ROUTING_END]:[]}});
+}
+function managedMcpEntry(value:unknown):boolean{
+  if(!value||typeof value!=="object"||Array.isArray(value))return false;
+  const entry=value as Record<string,unknown>;
+  return Object.keys(entry).every(key=>["command","args","env"].includes(key))&&entry.command==="rke-mcp"&&Array.isArray(entry.args)&&entry.args.length===0&&!!entry.env&&typeof entry.env==="object"&&!Array.isArray(entry.env)&&Object.keys(entry.env).length===0;
+}
+export async function installHost(root:string,host:string,base:string,force=false):Promise<OperationOutcome>{
+  if(git(root,"rev-parse","--show-toplevel").code!==0)return out({result:"host-install-failed",error:{code:"host_git_repository_required",message:"Host hook installation requires a Git repository."}},2);
+  const configured=git(root,"config","--local","--get","core.hooksPath");
+  const hooksPath=configured.code===0?configured.stdout.trim():null;
+  if(hooksPath&&hooksPath!==".githooks"&&!force)return out({result:"host-install-failed",error:{code:"host_hooks_path_owned",message:`Refusing to replace independently configured core.hooksPath=${JSON.stringify(hooksPath)} without --force.`}},3);
+  const hook=join(root,".githooks","pre-push");
+  if(existsSync(hook)&&!(await readFile(hook,"utf8")).includes(HOOK_MARKER)&&!force)return out({result:"host-install-failed",error:{code:"host_hook_owned",message:"Refusing to replace an existing pre-push hook without --force."}},3);
+
+  const routingName=host==="codex"?"AGENTS.md":host==="claude"?"CLAUDE.md":null;
+  let routingContent:string|undefined;
+  if(routingName){
+    const target=join(root,routingName);
+    const existing=existsSync(target)?await readFile(target,"utf8"):"";
+    const start=existing.indexOf(ROUTING_START),end=existing.indexOf(ROUTING_END);
+    if((start<0)!==(end<0)||start>=0&&(start>end||existing.indexOf(ROUTING_START,start+ROUTING_START.length)>=0||existing.indexOf(ROUTING_END,end+ROUTING_END.length)>=0))return out({result:"host-install-failed",error:{code:"host_routing_markers_invalid",message:`${routingName} contains malformed engineering-workflow routing markers.`}},2);
+    routingContent=start>=0?`${existing.slice(0,start).trimEnd()}\n\n${ROUTING_BLOCK}${existing.slice(end+ROUTING_END.length).trimStart()}`:`${existing.trimEnd()}${existing.trim()?"\n\n":""}${ROUTING_BLOCK}`;
+  }
+
+  let mcpPayload:Record<string,unknown>|undefined;
+  if(host==="claude"){
+    const target=join(root,".mcp.json");
+    try{mcpPayload=await readJsonOr<Record<string,unknown>>(target,{});}catch{return out({result:"host-install-failed",error:{code:"host_mcp_config_invalid",message:".mcp.json must contain valid JSON."}},2);}
+    if(!mcpPayload||typeof mcpPayload!=="object"||Array.isArray(mcpPayload))return out({result:"host-install-failed",error:{code:"host_mcp_config_invalid",message:".mcp.json must be an object."}},2);
+    const servers=mcpPayload.mcpServers??{};
+    if(!servers||typeof servers!=="object"||Array.isArray(servers))return out({result:"host-install-failed",error:{code:"host_mcp_config_invalid",message:".mcp.json mcpServers must be an object."}},2);
+    const existing=(servers as Record<string,unknown>).rke;
+    if(existing!==undefined&&!managedMcpEntry(existing)&&!force)return out({result:"host-install-failed",error:{code:"host_mcp_entry_owned",message:"Refusing to replace the existing rke MCP entry without --force."}},3);
+    mcpPayload.mcpServers={...servers as Record<string,unknown>,rke:{command:"rke-mcp",args:[],env:{}}};
+  }
+
+  await atomicWrite(hook,`#!/bin/sh\n${HOOK_MARKER}\nexec rke-pre-push --root ${JSON.stringify(root.replaceAll("\\","/"))} --base ${JSON.stringify(base)}\n`);
+  await chmod(hook,0o755).catch(()=>undefined);
+  const setHooks=git(root,"config","--local","core.hooksPath",".githooks");
+  if(setHooks.code)return out({result:"host-install-failed",error:{code:"host_git_config_failed",message:setHooks.stderr.trim()}},2);
+  const installed:Record<string,unknown>={gitHook:".githooks/pre-push"};
+  if(mcpPayload){await writeJson(join(root,".mcp.json"),mcpPayload);installed.mcpConfig=".mcp.json";}
+  if(routingName&&routingContent!==undefined){await atomicWrite(join(root,routingName),routingContent.trimEnd()+"\n");installed.routingInstructions=routingName;}
+  return out({result:"host-installed",host,installed,mcp:hostRecipe(root,host,base).payload.mcp,base});
+}

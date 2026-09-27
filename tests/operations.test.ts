@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 
 import { invokeOperation, OPERATIONS } from "../src/operations.js";
 import { CLI_ROUTES } from "../src/cli-routes.js";
@@ -17,6 +18,46 @@ test("runtime and npm package versions are identical",async()=>{const packageJso
 test("workflow lifecycle preserves gates and evidence",async()=>{const root=await mkdtemp(join(tmpdir(),"rke-workflow-"));spawnSync("git",["init"],{cwd:root});let result=await invokeOperation(root,"workflow_activate",{});assert.equal(result.exitCode,0);result=await invokeOperation(root,"workflow_gate_add",{gates:["implementation-validation"]});assert.deepEqual((result.payload.state as Record<string,unknown>).outstanding_gates,["implementation-validation"]);result=await invokeOperation(root,"workflow_close",{});assert.equal(result.exitCode,3);result=await invokeOperation(root,"workflow_gate_resolve",{gate:"implementation-validation",evidence:"tests pass"});assert.equal(result.exitCode,0);result=await invokeOperation(root,"workflow_close",{});assert.equal(result.payload.result,"closed");});
 test("a new cycle with durable task tracking retains its reconciliation gate",async()=>{const root=await mkdtemp(join(tmpdir(),"rke-task-cycle-"));spawnSync("git",["init"],{cwd:root});await invokeOperation(root,"workflow_activate",{phase:"deliver",taskMode:"none"});const closed=await invokeOperation(root,"workflow_close",{});assert.equal(closed.exitCode,0);const renewed=await invokeOperation(root,"workflow_activate",{phase:"deliver",taskMode:"lightweight"});assert.equal(renewed.exitCode,0);const state=renewed.payload.state as {task_tracking:{mode:string};active_capabilities:string[];outstanding_gates:string[]};assert.equal(state.task_tracking.mode,"lightweight");assert.ok(state.active_capabilities.includes("task-lifecycle"));assert.ok(state.outstanding_gates.includes("task-reconciliation"));});
 test("Codex host guidance selects EWF and the initial phase without activating trivial edits",async()=>{const root=await mkdtemp(join(tmpdir(),"rke-host-routing-"));spawnSync("git",["init"],{cwd:root});const installed=await invokeOperation(root,"repo_host_install",{host:"codex",base:"HEAD",force:false});assert.equal(installed.exitCode,0);const guidance=await readFile(join(root,"AGENTS.md"),"utf8");assert.match(guidance,/every repository implementation, fix, refactor, test, documentation edit, feature design or closure request/);assert.match(guidance,/trivial local spelling, formatting, or comment correction may use EWF without runtime state/);assert.match(guidance,/rke activate --phase design/);assert.match(guidance,/--phase understand/);assert.match(guidance,/--phase close/);assert.match(guidance,/--phase deliver/);});
+test("Claude host installs additive EWF routing and MCP configuration idempotently",async()=>{
+  const root=await mkdtemp(join(tmpdir(),"rke-claude-routing-"));
+  spawnSync("git",["init"],{cwd:root});
+  await writeFile(join(root,"CLAUDE.md"),"# Owner guidance\n\nKeep the established test command.\n");
+  await writeFile(join(root,".mcp.json"),JSON.stringify({mcpServers:{existing:{command:"existing-server"}}}));
+  const recipe=await invokeOperation(root,"repo_host_recipe",{host:"claude",base:"HEAD"});
+  assert.deepEqual(recipe.payload.routing,{status:"project-instructions-supported",path:"CLAUDE.md",managedMarkers:["<!-- polaralias-engineering-workflow:start -->","<!-- polaralias-engineering-workflow:end -->"]});
+  for(let attempt=0;attempt<2;attempt++)assert.equal((await invokeOperation(root,"repo_host_install",{host:"claude",base:"HEAD",force:false})).exitCode,0);
+  const guidance=await readFile(join(root,"CLAUDE.md"),"utf8");
+  assert.match(guidance,/Keep the established test command/);
+  assert.match(guidance,/invoke the installed `engineering-workflow` skill before the first task action/);
+  assert.match(guidance,/rke activate --phase design/);
+  assert.match(guidance,/Ordinary explanation-only questions and trivial read-only inspection remain outside automatic routing/);
+  assert.equal(guidance.split("<!-- polaralias-engineering-workflow:start -->").length,2);
+  const config=JSON.parse(await readFile(join(root,".mcp.json"),"utf8")) as {mcpServers:Record<string,{command:string}>};
+  assert.equal(config.mcpServers.existing?.command,"existing-server");
+  assert.equal(config.mcpServers.rke?.command,"rke-mcp");
+});
+test("Claude host refusal leaves hooks and MCP untouched when routing is malformed",async()=>{
+  const root=await mkdtemp(join(tmpdir(),"rke-claude-refusal-"));
+  spawnSync("git",["init"],{cwd:root});
+  await writeFile(join(root,"CLAUDE.md"),"Owner guidance\n<!-- polaralias-engineering-workflow:start -->\n");
+  const refused=await invokeOperation(root,"repo_host_install",{host:"claude",base:"HEAD",force:false});
+  assert.equal(refused.exitCode,2);
+  assert.equal((refused.payload.error as {code:string}).code,"host_routing_markers_invalid");
+  assert.equal(existsSync(join(root,".githooks","pre-push")),false);
+  assert.equal(existsSync(join(root,".mcp.json")),false);
+});
+test("Claude host preserves an independently owned MCP entry before writing hooks",async()=>{
+  const root=await mkdtemp(join(tmpdir(),"rke-claude-mcp-owned-"));
+  spawnSync("git",["init"],{cwd:root});
+  const owned=JSON.stringify({mcpServers:{rke:{command:"owner-server",args:[]}}});
+  await writeFile(join(root,".mcp.json"),owned);
+  const refused=await invokeOperation(root,"repo_host_install",{host:"claude",base:"HEAD",force:false});
+  assert.equal(refused.exitCode,3);
+  assert.equal((refused.payload.error as {code:string}).code,"host_mcp_entry_owned");
+  assert.equal(await readFile(join(root,".mcp.json"),"utf8"),owned);
+  assert.equal(existsSync(join(root,".githooks","pre-push")),false);
+  assert.equal(existsSync(join(root,"CLAUDE.md")),false);
+});
 test("design re-entry reopens acceptance after convergence reset",async()=>{const root=await mkdtemp(join(tmpdir(),"rke-convergence-"));spawnSync("git",["init"],{cwd:root});await invokeOperation(root,"workflow_activate",{});let result=await invokeOperation(root,"workflow_journey_enter",{journey:"design"});assert.ok(((result.payload.state as Record<string,unknown>).outstanding_gates as string[]).includes("acceptance-defined"));await invokeOperation(root,"workflow_gate_resolve",{gate:"acceptance-defined",evidence:"initial contract"});result=await invokeOperation(root,"workflow_journey_enter",{journey:"design"});assert.ok(((result.payload.state as Record<string,unknown>).outstanding_gates as string[]).includes("acceptance-defined"));});
 test("rejects unknown and extra operation arguments",async()=>{const root=await mkdtemp(join(tmpdir(),"rke-schema-"));await assert.rejects(()=>invokeOperation(root,"workflow_resume",{unexpected:true}),/unsupported properties/);await assert.rejects(()=>invokeOperation(root,"unknown",{}),/Unknown operation/);});
 test("enforces advertised array and integer bounds before invoking a handler",async()=>{
