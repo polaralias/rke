@@ -24,8 +24,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-27T16:12:17.345Z",
-        "evidence": "Reviewed release-status edits against current RKE and skills PR checks, unchanged CLI/MCP source selectors, legacy outcome matrix, and selected claim section; architecture behavior is unchanged.",
+        "verifiedAt": "2026-09-27T16:29:33.481Z",
+        "evidence": "Reviewed the shared validator range and array-cardinality fix, focused rejection, 73-test suite, lint, 30 legacy probes, unchanged CLI/MCP adapters and current selected claim source digest.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -41,7 +41,7 @@
           },
           {
             "path": ".rke/claim-bindings.json",
-            "sha256": "6f11712af7760c6a300db23b84be26a168f054d5d65de79fb7446b3579f07dd8"
+            "sha256": "cb99de173bb55f52ca96213957e00dc31d05f28bfd8be66d7b1786d2c68e3cc8"
           },
           {
             "path": "AGENTS.md",
@@ -73,7 +73,7 @@
           },
           {
             "path": "docs/knowledge/rke-architecture.md",
-            "sha256": "1f7bbe1a7fa03b80831508af2475e8b482a1e7f96785dff3e46903d0dc9833d7"
+            "sha256": "81fa3275885afa3855672fb166c15fb782437c19506f50ac3a001d703f57596c"
           },
           {
             "path": "docs/typescript-rewrite-plan.md",
@@ -281,7 +281,7 @@
           },
           {
             "path": "src/operations.ts",
-            "sha256": "1cd93f98c633097de1caab8973176eb5246be79a8883f54c6c93df7417a5c998"
+            "sha256": "393382059a9553bb5558bf7c5052f9b591dfba0a4be66ec3b3a663d786dbb799"
           },
           {
             "path": "src/parser-process-client.ts",
@@ -505,7 +505,7 @@
           },
           {
             "path": "tests/operations.test.ts",
-            "sha256": "fe352531648a9597752a84b9aeab9a01cc8d2eb2c92676151e9868a5e55c7537"
+            "sha256": "02aeebc6ceee7e7cf16469f28edaac162b66009f335b6952c99c7016589b3a05"
           },
           {
             "path": "tests/parser.test.ts",
@@ -531,5 +531,5 @@
       }
     }
   ],
-  "revision": 45
+  "revision": 46
 }

@@ -51,7 +51,7 @@ const definitions:Array<[string,JsonObject,boolean,boolean,Handler]> = [
   ["repo_coordination_cleanup",schema({lane:string,branch:string,reviewHead:string,remote:string,destinationBranch:string},["lane","branch","reviewHead","remote","destinationBranch"]),false,false,(r,a)=>cleanupCoordination(r,{lane:value(a,"lane"),branch:value(a,"branch"),reviewHead:value(a,"reviewHead"),remote:value(a,"remote"),destinationBranch:value(a,"destinationBranch")})],
   ["repo_tracker_preview",schema({packages:string,tracker:string,scope:string},["packages","tracker","scope"]),true,true,(r,a)=>trackerPreview(r,value(a,"packages"),value(a,"tracker"),value(a,"scope"))],
   ["repo_publication_scan",schema({}),true,true,(r)=>surfaces.publicationScan(r)],
-  ["repo_find_context",schema({query:string,limit:{type:"integer",minimum:1,default:8},scope:string},["query"]),true,true,async(r,a)=>ok({result:"context-found",query:value(a,"query"),matches:await engine(r,e=>e.search(value(a,"query"),value(a,"limit",8),a.scope?[String(a.scope)]:[]))})],
+  ["repo_find_context",schema({query:string,limit:{type:"integer",minimum:1,maximum:200,default:8},scope:string},["query"]),true,true,async(r,a)=>ok({result:"context-found",query:value(a,"query"),matches:await engine(r,e=>e.search(value(a,"query"),value(a,"limit",8),a.scope?[String(a.scope)]:[]))})],
   ["repo_context_check",schema({manifest:string}),true,true,async(r,a)=>{const freshness=await engine(r,e=>e.ensureFresh(true));const knowledge=await surfaces.contextCheck(r,a.manifest);return ok({result:"context-checked",freshness,knowledge:knowledge.payload},knowledge.exitCode);} ],
   ["repo_knowledge_impact",schema({changedPaths:strings,manifest:string},["changedPaths"]),true,true,(r,a)=>surfaces.knowledgeImpact(r,stringsValue(a,"changedPaths"),a.manifest)],
   ["repo_knowledge_verify",schema({knowledge:string,evidence:string,manifest:string},["knowledge","evidence"]),false,true,(r,a)=>surfaces.verifyKnowledge(r,value(a,"knowledge"),value(a,"evidence"),a.manifest)],
@@ -90,5 +90,31 @@ async function recordReview(root:string,args:Record<string,unknown>):Promise<Ope
 export const OPERATIONS:OperationDefinition[]=definitions.map(([name,inputSchema,readOnly,idempotent,handler])=>({name,title:name.replaceAll("_"," "),description:`RKE operation ${name}.`,inputSchema,readOnly,idempotent,handler}));
 export const OPERATION_BY_NAME=new Map(OPERATIONS.map(operation=>[operation.name,operation]));
 
-function validate(value:unknown,schemaValue:Record<string,unknown>,path="arguments"):void{if(schemaValue.type==="object"){if(!value||typeof value!=="object"||Array.isArray(value))throw new RkeError("invalid_operation_arguments",`${path} must be an object.`);const object=value as Record<string,unknown>;const properties=schemaValue.properties as Record<string,Record<string,unknown>>??{};for(const required of schemaValue.required as string[]??[])if(!(required in object))throw new RkeError("invalid_operation_arguments",`${path}.${required} is required.`);if(schemaValue.additionalProperties===false){const extras=Object.keys(object).filter(key=>!(key in properties));if(extras.length)throw new RkeError("invalid_operation_arguments",`${path} contains unsupported properties: ${extras.join(", ")}.`);}for(const [key,item] of Object.entries(object))if(properties[key])validate(item,properties[key]!,`${path}.${key}`);}else if(schemaValue.type==="string"&&(typeof value!=="string"||!value.trim()))throw new RkeError("invalid_operation_arguments",`${path} must be a non-empty string.`);else if(schemaValue.type==="integer"&&!Number.isInteger(value))throw new RkeError("invalid_operation_arguments",`${path} must be an integer.`);else if(schemaValue.type==="boolean"&&typeof value!=="boolean")throw new RkeError("invalid_operation_arguments",`${path} must be a boolean.`);else if(schemaValue.type==="array"){if(!Array.isArray(value))throw new RkeError("invalid_operation_arguments",`${path} must be an array.`);for(const [index,item] of value.entries())validate(item,schemaValue.items as Record<string,unknown>,`${path}[${index}]`);}if(Array.isArray(schemaValue.enum)&&!schemaValue.enum.includes(value))throw new RkeError("invalid_operation_arguments",`${path} must be one of: ${schemaValue.enum.join(", ")}.`);}
+function validate(value:unknown,schemaValue:Record<string,unknown>,path="arguments"):void{
+  if(schemaValue.type==="object"){
+    if(!value||typeof value!=="object"||Array.isArray(value))throw new RkeError("invalid_operation_arguments",`${path} must be an object.`);
+    const object=value as Record<string,unknown>;
+    const properties=schemaValue.properties as Record<string,Record<string,unknown>>??{};
+    for(const required of schemaValue.required as string[]??[])if(!Object.hasOwn(object,required))throw new RkeError("invalid_operation_arguments",`${path}.${required} is required.`);
+    if(schemaValue.additionalProperties===false){
+      const extras=Object.keys(object).filter(key=>!Object.hasOwn(properties,key));
+      if(extras.length)throw new RkeError("invalid_operation_arguments",`${path} contains unsupported properties: ${extras.join(", ")}.`);
+    }
+    for(const [key,item] of Object.entries(object))if(Object.hasOwn(properties,key))validate(item,properties[key]!,`${path}.${key}`);
+  }else if(schemaValue.type==="string"){
+    if(typeof value!=="string"||!value.trim())throw new RkeError("invalid_operation_arguments",`${path} must be a non-empty string.`);
+  }else if(schemaValue.type==="integer"){
+    if(!Number.isSafeInteger(value))throw new RkeError("invalid_operation_arguments",`${path} must be a safe integer.`);
+    if(typeof schemaValue.minimum==="number"&&(value as number)<schemaValue.minimum)throw new RkeError("invalid_operation_arguments",`${path} must be at least ${schemaValue.minimum}.`);
+    if(typeof schemaValue.maximum==="number"&&(value as number)>schemaValue.maximum)throw new RkeError("invalid_operation_arguments",`${path} must be at most ${schemaValue.maximum}.`);
+  }else if(schemaValue.type==="boolean"){
+    if(typeof value!=="boolean")throw new RkeError("invalid_operation_arguments",`${path} must be a boolean.`);
+  }else if(schemaValue.type==="array"){
+    if(!Array.isArray(value))throw new RkeError("invalid_operation_arguments",`${path} must be an array.`);
+    if(typeof schemaValue.minItems==="number"&&value.length<schemaValue.minItems)throw new RkeError("invalid_operation_arguments",`${path} must contain at least ${schemaValue.minItems} item(s).`);
+    if(typeof schemaValue.maxItems==="number"&&value.length>schemaValue.maxItems)throw new RkeError("invalid_operation_arguments",`${path} must contain at most ${schemaValue.maxItems} item(s).`);
+    for(const [index,item] of value.entries())validate(item,schemaValue.items as Record<string,unknown>,`${path}[${index}]`);
+  }
+  if(Array.isArray(schemaValue.enum)&&!schemaValue.enum.includes(value))throw new RkeError("invalid_operation_arguments",`${path} must be one of: ${schemaValue.enum.join(", ")}.`);
+}
 export async function invokeOperation(root:string,name:string,args:unknown):Promise<OperationOutcome>{const operation=OPERATION_BY_NAME.get(name);if(!operation)throw new RkeError("unknown_operation",`Unknown operation: ${name}`);validate(args,operation.inputSchema);return operation.handler(root,args as Record<string,unknown>);}

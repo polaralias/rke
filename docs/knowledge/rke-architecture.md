@@ -2,10 +2,10 @@
 type: Architecture Concept
 title: RKE architecture
 description: Defines the independently installed Repository Knowledge Engineering runtime, its shared CLI and MCP operation layer, repository boundaries, and relationship with EWF and OKF Tasks.
-timestamp: 2026-09-27T17:10:38+01:00
+timestamp: 2026-09-27T17:28:51+01:00
 authority: canonical
 verification: verified-working
-reviewed_at: 2026-09-27T17:10:38+01:00
+reviewed_at: 2026-09-27T17:28:51+01:00
 verified_against:
   - src/operations.ts
   - src/cli.ts
@@ -48,7 +48,7 @@ The `@polaralias/rke` npm package is the sole executable implementation. It expo
 - `rke` maps shell arguments to registered handlers and is authoritative for hooks, CI and automation.
 - `rke-mcp` maps MCP tool calls to the same handlers and schemas. It adds no domain implementation.
 
-The registry contains every public lifecycle, gate, journey, task, closure, host, retrieval, structure, knowledge, documentation, dissection, continuity, coordination and publication operation. CLI parsing and MCP JSON-RPC are transport adapters only. Shared schemas reject unsupported or invalid arguments before handlers run; shared outcomes retain structured non-zero results, and an MCP request failure cannot terminate the server.
+The registry contains every public lifecycle, gate, journey, task, closure, host, retrieval, structure, knowledge, documentation, dissection, continuity, coordination and publication operation. CLI parsing and MCP JSON-RPC are transport adapters only. Shared schemas reject unsupported or invalid arguments, including declared integer ranges and array cardinality, before handlers run; shared outcomes retain structured non-zero results, and an MCP request failure cannot terminate the server.
 
 ## CLI and MCP parity
 
