@@ -24,8 +24,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-27T08:51:11.793Z",
-        "evidence": "Reviewed parser child exit recovery, the focused engine regression and unchanged architecture claims against the current source.",
+        "verifiedAt": "2026-09-27T09:07:18.408Z",
+        "evidence": "Reviewed the final PR 3 implementation, parser recovery, selected claim binding, EWF routing and current CI across Linux, Windows and macOS; canonical architecture remains accurate.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -531,5 +531,5 @@
       }
     }
   ],
-  "revision": 43
+  "revision": 44
 }
