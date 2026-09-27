@@ -24,8 +24,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-27T09:07:18.408Z",
-        "evidence": "Reviewed the final PR 3 implementation, parser recovery, selected claim binding, EWF routing and current CI across Linux, Windows and macOS; canonical architecture remains accurate.",
+        "verifiedAt": "2026-09-27T16:12:17.345Z",
+        "evidence": "Reviewed release-status edits against current RKE and skills PR checks, unchanged CLI/MCP source selectors, legacy outcome matrix, and selected claim section; architecture behavior is unchanged.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -41,7 +41,7 @@
           },
           {
             "path": ".rke/claim-bindings.json",
-            "sha256": "de6c59e44a62e83a03b7a64570b5081e322879caf1c912c8693f87ba4f55728b"
+            "sha256": "6f11712af7760c6a300db23b84be26a168f054d5d65de79fb7446b3579f07dd8"
           },
           {
             "path": "AGENTS.md",
@@ -73,7 +73,7 @@
           },
           {
             "path": "docs/knowledge/rke-architecture.md",
-            "sha256": "98dc62929d71848c8882d457de039f2f3ee19b876378502ab110904c42bcaf96"
+            "sha256": "1f7bbe1a7fa03b80831508af2475e8b482a1e7f96785dff3e46903d0dc9833d7"
           },
           {
             "path": "docs/typescript-rewrite-plan.md",
@@ -93,7 +93,7 @@
           },
           {
             "path": "README.md",
-            "sha256": "e1f7fa8e1687d391dcc527ccc4d8c85e93ce948e9f25905191c5fd1d789b8697"
+            "sha256": "5945c5d5a550ff9d75b27552ab166e6e4670272479fdb045e5a7a7f61181d987"
           },
           {
             "path": "scripts/benchmark-freshness.ts",
@@ -531,5 +531,5 @@
       }
     }
   ],
-  "revision": 44
+  "revision": 45
 }

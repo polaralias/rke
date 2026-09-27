@@ -111,7 +111,7 @@ Query-to-Knowledge and Repository Change Comprehension remain distinct named con
 - **Query-to-Knowledge (QTK)** is a human clarification loop. It groups consequential questions, recommends answers with rationale, and keeps a hard `shared-understanding` gate open until the user and agent agree on an implementation target. It is not ordinary repository orientation.
 - **Repository Change Comprehension (RCC)** reconstructs the causal behaviour of the final Git delta. `change explain` rejects summary-only source changes and requires a code-level detail file with before/after, why, changed symbols, and evidence-labelled verification. The agent must still inspect the code and communicate the full account; the receipt cannot prove its semantic correctness.
 
-The formerly separate repository-dissection, design/decomposition, session-alignment, local handoff/pickup, and worktree-coordination behaviours are routed through EWF. Retained legacy outcomes have local positive and adversarial evidence; release validation and later delivery stages remain open. TPU supports both OKF Tasks as the durable-execution default and stable non-OKF work packages for tracker mapping; standalone QA-plan writing is outside EWF.
+The formerly separate repository-dissection, design/decomposition, session-alignment, local handoff/pickup, and worktree-coordination behaviours are routed through EWF. Retained legacy outcomes have local positive and adversarial evidence; the delivery-plan stages have been implemented and the coordinated PRs remain open for review. TPU supports both OKF Tasks as the durable-execution default and stable non-OKF work packages for tracker mapping; standalone QA-plan writing is outside EWF.
 
 ## Source layout
 

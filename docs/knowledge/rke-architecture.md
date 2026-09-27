@@ -2,10 +2,10 @@
 type: Architecture Concept
 title: RKE architecture
 description: Defines the independently installed Repository Knowledge Engineering runtime, its shared CLI and MCP operation layer, repository boundaries, and relationship with EWF and OKF Tasks.
-timestamp: 2026-09-24T16:33:00+01:00
+timestamp: 2026-09-27T17:10:38+01:00
 authority: canonical
 verification: verified-working
-reviewed_at: 2026-09-24T16:33:00+01:00
+reviewed_at: 2026-09-27T17:10:38+01:00
 verified_against:
   - src/operations.ts
   - src/cli.ts
@@ -54,7 +54,7 @@ The registry contains every public lifecycle, gate, journey, task, closure, host
 
 Yes: the CLI and MCP expose the same complete public operation registry, argument schemas, handlers and structured outcomes. The CLI adds shell parsing and exit codes; MCP adds tool discovery, repository selection and protocol error mapping. Neither transport owns separate domain behavior.
 
-Transport parity does not establish legacy-skill outcome parity. The [legacy skill parity matrix](../legacy-skill-parity-matrix.md) records the behavioural contracts and their positive and adversarial evidence; the [priority matrix](../legacy-skill-priority-matrix.md) records the qualification order. The retained outcome cases passed locally on 2026-09-27. Cross-platform CI, package validation, the EWF mirror, and the later delivery stages remain release gates.
+Transport parity does not establish legacy-skill outcome parity. The [legacy skill parity matrix](../legacy-skill-parity-matrix.md) records the behavioural contracts and their positive and adversarial evidence; the [priority matrix](../legacy-skill-priority-matrix.md) records the qualification order. The retained outcome cases passed locally on 2026-09-27. Cross-platform CI, package validation, EWF mirror checks, and the delivery-plan implementation have passed; coordinated PR review remains open.
 
 Workflow state and authored receipts use atomic replacement. Repository indexing uses SQLite WAL mode, foreign keys and an immediate transaction per changed or deleted file. A failed parse or transaction cannot leave half of a file's symbols, chunks or edges visible. The disposable database can always be rebuilt and is never canonical knowledge.
 
@@ -95,7 +95,7 @@ Trace, map, impact and search accept explicit repository-relative scopes; no sco
 
 ## Installation and release
 
-RKE `0.10.x` is the pre-1.0 qualification series and ships only the TypeScript runtime. Runtime cutover is implemented and the retained legacy-skill outcomes have local positive and adversarial evidence. Cross-platform CI, package and mirror validation, and final integration review still govern PR readiness. There is no Python runway or selectable dogfood engine; `1.0.0` follows successful release qualification of the stability contract in real repositories.
+RKE `0.10.x` is the pre-1.0 qualification series and ships only the TypeScript runtime. Runtime cutover is implemented and the retained legacy-skill outcomes have local positive and adversarial evidence. Cross-platform CI and package and mirror validation have passed; final integration review still governs PR readiness. There is no Python runway or selectable dogfood engine; `1.0.0` follows successful release qualification of the stability contract in real repositories.
 
 `rke host install` records repository-local integration derived from the installed commands and preserves independently owned configuration unless `--force` is explicit. The packaged `rke-eval` command is part of the same npm distribution.
 

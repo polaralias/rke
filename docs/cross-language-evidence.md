@@ -1,6 +1,6 @@
 # Cross-language repository evidence
 
-Status: Stage 2 measurements in progress, 2026-09-27. The command `npm run benchmark:repository -- --repo <path> --query <text> --expected <tracked-relative-path> [--scope <directory>]` copies tracked files into a disposable Git snapshot, indexes that copy, compares a ten-path RKE result with ordinary `rg` file discovery, edits one copied source file, and measures incremental refresh. It does not alter the source repository. Results below are individual Windows runs, not latency guarantees.
+Status: Stage 2 selected-repository measurements and paired agent cases completed, 2026-09-27. The command `npm run benchmark:repository -- --repo <path> --query <text> --expected <tracked-relative-path> [--scope <directory>]` copies tracked files into a disposable Git snapshot, indexes that copy, compares a ten-path RKE result with ordinary `rg` file discovery, edits one copied source file, and measures incremental refresh. It does not alter the source repository. Results below are individual Windows runs, not latency guarantees.
 
 | Source snapshot and question | RKE result | Ordinary `rg` result | Index and memory |
 | --- | --- | --- | --- |
@@ -26,4 +26,4 @@ The paired fixtures have no missed extension path or false confirmed call edge. 
 
 The current Tree-sitter extractor uses generic node traversal. `file-api` now reports extracted definitions, lexical imports and name-only calls explicitly; parser trace edges are labelled unresolved. Grammar availability does not establish cross-file call binding. Digest-bound agent review remains the fallback for unsupported or unextracted source. The [parser isolation decision](adr/0002-isolate-broad-tree-sitter-grammar-mixes.md) records the memory-cost finding and its tradeoff.
 
-The corrected Python plan-only route and the 64-test default suite passed locally on 2026-09-27. These measurements do not establish broad real-repository agent superiority. They establish the observed discovery routes, uncertainty boundary and cost tradeoff for Stage 2, and constrain Stage 4 simplification.
+The corrected Python plan-only route and the default suite passed locally on 2026-09-27; the later full CI matrix passed on Linux, Windows and macOS. These measurements do not establish broad real-repository agent superiority. They establish the observed discovery routes, uncertainty boundary and cost tradeoff for Stage 2, and informed Stage 4 simplification.

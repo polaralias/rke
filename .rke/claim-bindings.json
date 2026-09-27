@@ -5,8 +5,8 @@
       "id": "cli-mcp-parity",
       "document": "docs/knowledge/rke-architecture.md",
       "heading": "## CLI and MCP parity",
-      "sectionDigest": "3fe62be6a6288e6c62344ce1d97938ef10ae40ec5e8a1b6771e1ab030778e829",
-      "reviewDecision": "Reviewed the shared operation registry and both transport adapters against the transport parity tests. Current source identities support the section's CLI/MCP routing claim; execution and release qualification remain separate evidence.",
+      "sectionDigest": "78f7ca3f008b4900997d96b50d59dd727952e53862286df0011ffd1953f1e2ee",
+      "reviewDecision": "Reviewed the changed qualification sentence against current PR checks and the unchanged shared operation registry, CLI and MCP adapters. The section's transport parity claim is supported by the existing transport tests; the updated release status does not claim external review or behavioral truth from a digest.",
       "selectors": [
         {
           "role": "implementation",
