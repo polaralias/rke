@@ -12,8 +12,10 @@ const MAX_EVENTS = 32;
 
 function commandOperation(command: unknown): string | undefined {
   if (typeof command !== "string") return undefined;
-  const match = command.match(/(?:\brke(?:\.cmd)?|\bnode(?:\.exe)?\s+(?:["']?[^\s"']*[\\/])?dist[\\/]src[\\/]cli\.js["']?)\s+(activate|resume|status|journey|gate|change|documentation|context|knowledge|task|close|closure|checkpoint|dissection|tracker)\b(?:\s+(enter|add|resolve|assess|explain|check|validate|preview|complete-small))?/i);
+  const match = command.match(/(?:\brke(?:\.cmd)?|\bnode(?:\.exe)?\s+(?:["']?[^\s"']*[\\/])?dist[\\/]src[\\/]cli\.js["']?)\s+(activate|resume|status|journey|gate|change|documentation|context|knowledge|task|close|closure|checkpoint|dissection|tracker|publication|coordination|handoff|structure|host)\b(?:\s+(enter|add|resolve|assess|explain|check|verify|validate|apply|preview|complete-small|scan|cleanup-check|cleanup|write|inspect|plan|trace|file-api|map|impact|search|find|build-indexes|recipe|install))?/i);
   if (match) return `rke:${match[1]!.toLowerCase()}${match[2] ? `:${match[2].toLowerCase()}` : ""}`;
+  const okf = command.match(/\bokf-tasks(?:\.exe)?\s+(validate|stop-time|set-status|build-index|create|add-workstream)\b/i);
+  if (okf) return `okf:${okf[1]!.toLowerCase()}`;
   if (/\bnode(?:\.exe)?\s+(?:\.\/)?src[\\/]cli\.mjs\b/i.test(command)) return "node:source-cli";
   if (/\bnode(?:\.exe)?\s+(?:\.\/)?dist[\\/]cli\.mjs\b/i.test(command)) return "node:package-cli";
   if (/\b(?:npm|pnpm|yarn)\s+(?:run\s+)?test\b/i.test(command) || /\bnode\s+--test\b/i.test(command)) return "test";
@@ -32,6 +34,7 @@ export class AgentEvaluationTrace {
   private readonly observedOperations = new Set<string>();
   private readonly operationExitCodes = new Map<string, Set<number>>();
   private turnCompleted = false;
+  private usage: { inputTokens: number; cachedInputTokens: number; outputTokens: number; reasoningOutputTokens: number } | undefined;
 
   accept(chunk: string): void {
     this.pending += chunk;
@@ -56,7 +59,14 @@ export class AgentEvaluationTrace {
       value = parsed as Record<string, unknown>;
     } catch { return; }
     if (typeof value.type !== "string") return;
-    if (value.type === "turn.completed") this.turnCompleted = true;
+    if (value.type === "turn.completed") {
+      this.turnCompleted = true;
+      if (value.usage && typeof value.usage === "object" && !Array.isArray(value.usage)) {
+        const usage = value.usage as Record<string, unknown>;
+        const number = (key: string): number => typeof usage[key] === "number" && Number.isFinite(usage[key]) ? Number(usage[key]) : 0;
+        this.usage = { inputTokens: number("input_tokens"), cachedInputTokens: number("cached_input_tokens"), outputTokens: number("output_tokens"), reasoningOutputTokens: number("reasoning_output_tokens") };
+      }
+    }
     const item = value.item && typeof value.item === "object" && !Array.isArray(value.item)
       ? value.item as Record<string, unknown> : undefined;
     const operation = item?.type === "command_execution" ? commandOperation(item.command) : undefined;
@@ -82,7 +92,7 @@ export class AgentEvaluationTrace {
 
   completedTurn(): boolean { return this.turnCompleted; }
 
-  snapshot(): {eventCount: number; quietMs: number; turnCompleted: boolean; observedOperations: string[]; operationExitCodes: Record<string, number[]>; recent: EventSummary[]} {
-    return {eventCount: this.count, quietMs: Date.now() - this.lastEventAt, turnCompleted: this.turnCompleted, observedOperations: [...this.observedOperations].sort(), operationExitCodes: Object.fromEntries([...this.operationExitCodes].map(([operation, exits]) => [operation, [...exits].sort((left, right) => left - right)])), recent: [...this.recent]};
+  snapshot(): {eventCount: number; quietMs: number; turnCompleted: boolean; usage?: { inputTokens: number; cachedInputTokens: number; outputTokens: number; reasoningOutputTokens: number }; observedOperations: string[]; operationExitCodes: Record<string, number[]>; recent: EventSummary[]} {
+    return {eventCount: this.count, quietMs: Date.now() - this.lastEventAt, turnCompleted: this.turnCompleted, ...(this.usage ? { usage: this.usage } : {}), observedOperations: [...this.observedOperations].sort(), operationExitCodes: Object.fromEntries([...this.operationExitCodes].map(([operation, exits]) => [operation, [...exits].sort((left, right) => left - right)])), recent: [...this.recent]};
   }
 }

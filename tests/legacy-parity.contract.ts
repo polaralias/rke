@@ -272,6 +272,17 @@ test("RPF-01 reports a tracked machine-local path before declaring publish safet
   assert.ok((result.payload.findings as Record<string, unknown>[]).some(item => item.path === "README.md" && item.kind === "local-path"));
 });
 
+test("RPF-01 scans a declared packaged entry point without calling it a cache",async t=>{
+  const root=await fixture(t);
+  await mkdir(join(root,"dist"));
+  await writeFile(join(root,"dist","cli.mjs"),"console.log('ready');\n");
+  await writeFile(join(root,"package.json"),JSON.stringify({name:"fixture",type:"module",bin:{fixture:"dist/cli.mjs"}}));
+  git(root,"add","dist/cli.mjs","package.json");
+  const result=await invokeOperation(root,"repo_publication_scan",{});
+  assert.equal((result.payload.coverage as {textScanned:number}).textScanned,2);
+  assert.ok(!(result.payload.findings as Record<string,unknown>[]).some(item=>item.path==="dist/cli.mjs"&&item.kind==="generated-cache"));
+});
+
 test("RPF-01 accounts for PII and unreadable tracked coverage without returning values",async t=>{
   const root=await fixture(t);
   await writeFile(join(root,"README.md"),"# Public guide\n\nContact jane.smith@personal.example for support.\n");

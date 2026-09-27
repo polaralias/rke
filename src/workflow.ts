@@ -70,7 +70,7 @@ export async function start(root: string, phase: string, capabilities: string[],
     if (!(newCycle && current.status === "closed")) return outcome({ result: "resumed-existing", state_path: path, state: current });
     const now = utcNow();
     const next: WorkflowState = { schema_version: 1, revision: current.revision, status: "active", primary_phase: phase,
-      active_capabilities: unique(capabilities), outstanding_gates: unique(gates), task_tracking: { mode: taskMode, task_ref: null },
+      active_capabilities: unique(taskMode==="none"?capabilities:[...capabilities,"task-lifecycle"]), outstanding_gates: unique(taskMode==="none"?gates:[...gates,"task-reconciliation"]), task_tracking: { mode: taskMode, task_ref: null },
       continuity: { checkpoint: null, previous_cycle: { created_at: current.created_at, closed_at: current.closed_at, primary_phase: current.primary_phase } }, created_at: now, updated_at: now };
     await save(root, next); return outcome({ result: "new-cycle-started", state_path: path, state: next });
   }
@@ -112,7 +112,8 @@ async function receiptStatus(root:string,base:string,file:string):Promise<{statu
     const reviewed=receipt.changedPaths;
     if(receipt.version!==2||!Array.isArray(reviewed)||reviewed.length!==changed.length||reviewed.some((value,index)=>value!==changed[index])||typeof receipt.evidence!=="string"||receipt.evidence.trim().length<24)return{status:"invalid",issues:["documentation-disposition-invalid"]};
     const {documentationAssess}=await import("./surfaces.js"),assessment=await documentationAssess(root,base);
-    if(assessment.exitCode===2||((assessment.payload.affectedKnowledge as string[]|undefined)??[]).length)return{status:"invalid",issues:["documentation-disposition-affected-knowledge"]};
+    const claims=(assessment.payload.claimBindings as {status:string}[]|null)??[];
+    if(assessment.exitCode===2||((assessment.payload.affectedKnowledge as string[]|undefined)??[]).length||claims.some(claim=>claim.status!=="current"))return{status:"invalid",issues:["documentation-disposition-affected-knowledge"]};
     const {readJsonOr}=await import("./io.js");
     const manifest=await readJsonOr<{knowledge?:{path:string}[]}>(join(root,".rke/repo-context.json"),{knowledge:[]});
     if(changed.some(path=>path.startsWith("docs/knowledge/")||(manifest.knowledge??[]).some(item=>item.path===path)))return{status:"invalid",issues:["documentation-disposition-canonical-changed"]};
@@ -132,14 +133,19 @@ export async function closureAssessment(root:string,base="HEAD"):Promise<Operati
     if(existsSync(knowledgeBundle))knowledgeValidation=await surfaces.checkKnowledge(root,"docs/knowledge");
     if(existsSync(manifest)){const freshness=await surfaces.contextCheck(root);if(freshness.exitCode)knowledgeValidation=freshness;}
   }
-  const ready=!state.outstanding_gates.length&&!change.issues.length&&!documentation.issues.length&&!taskValidation?.exitCode&&!knowledgeValidation?.exitCode;
-  const lanes={change,knowledge:{...documentation,gates:knowledgeGates,validation:knowledgeValidation?.payload??null},validation:{status:validationGates.length?"pending":"clear",gates:validationGates},tasks:{status:taskGates.length||taskValidation?.exitCode?"pending":"clear",gates:taskGates,validation:taskValidation?.payload??null},other:state.outstanding_gates};
+  let claimValidation:OperationOutcome|undefined;
+  if(existsSync(join(root,".rke","claim-bindings.json"))){
+    try{const {loadClaimBindings,assessClaimBindings}=await import("./claim-bindings.js"),bindings=await loadClaimBindings(root),claims=await assessClaimBindings(root,bindings??[]);claimValidation=outcome({result:claims.every(claim=>claim.status==="current")?"claim-bindings-current":"claim-binding-review-required",claims},claims.every(claim=>claim.status==="current")?0:3);}
+    catch(error){claimValidation=outcome({result:"claim-bindings-invalid",error:String(error)},3);}
+  }
+  const ready=!state.outstanding_gates.length&&!change.issues.length&&!documentation.issues.length&&!taskValidation?.exitCode&&!knowledgeValidation?.exitCode&&!claimValidation?.exitCode;
+  const lanes={change,knowledge:{...documentation,gates:knowledgeGates,validation:knowledgeValidation?.payload??null,claims:claimValidation?.payload??null},validation:{status:validationGates.length?"pending":"clear",gates:validationGates},tasks:{status:taskGates.length||taskValidation?.exitCode?"pending":"clear",gates:taskGates,validation:taskValidation?.payload??null},other:state.outstanding_gates};
   return outcome({result:ready?"closure-ready":"closure-blocked",ready,base,state_path:statePath(root),lanes,outstandingGates:state.outstanding_gates,state},ready?0:3);
 }
 export async function close(root:string,base="HEAD"):Promise<OperationOutcome>{const state=await load(root);if(state.status==="closed")return outcome({result:"already-closed",state_path:statePath(root),outstanding_gates:state.outstanding_gates,state});const assessment=await closureAssessment(root,base);if(assessment.exitCode)return outcome({result:"closure-blocked",state_path:statePath(root),outstanding_gates:state.outstanding_gates,assessment:assessment.payload,state},3);state.status="closed";state.primary_phase="close";state.closed_at=utcNow();await save(root,state);return outcome({result:"closed",state_path:statePath(root),outstanding_gates:[],assessment:assessment.payload,state});}
 export async function completeSmallChange(root:string,base:string,summary:string,detailFile:string,reviewedPaths:string[],evidence:string):Promise<OperationOutcome>{
   const state=await load(root),stop=blocked(root,state);if(stop)return stop;
-  if(state.task_tracking.mode!=="none"||state.outstanding_gates.length||existsSync(join(root,"docs","knowledge"))||existsSync(join(root,".rke","repo-context.json")))
+  if(state.task_tracking.mode!=="none"||state.outstanding_gates.length||existsSync(join(root,"docs","knowledge"))||existsSync(join(root,".rke","repo-context.json"))||existsSync(join(root,".rke","claim-bindings.json")))
     return outcome({result:"small-change-ineligible",reason:"A task lane, open gate, or canonical knowledge surface requires ordinary reconciliation."},3);
   const surfaces=await import("./surfaces.js"),assessment=await surfaces.documentationAssess(root,base);
   if(assessment.exitCode===2)return assessment;
