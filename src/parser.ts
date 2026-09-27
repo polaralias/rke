@@ -17,6 +17,7 @@ const EXTENSIONS: Record<string, string> = {
   ".swift": "swift", ".ts": "typescript", ".tsx": "tsx",
   ".yaml": "yaml", ".yml": "yaml", ".zig": "zig",
 };
+export function grammarForPath(path: string): string | undefined { return EXTENSIONS[extname(path).toLowerCase()]; }
 const TEXT_EXTENSIONS = new Set([".md", ".mdx", ".txt", ".rst", ".toml"]);
 const DEFINITION_TYPES = new Set([
   "function_definition", "function_declaration", "function_item", "function_expression", "generator_function_declaration",
@@ -136,7 +137,7 @@ export class SourceParser {
 
   async parse(path: string, content: string): Promise<ParsedFile> {
     const extension = extname(path).toLowerCase();
-    const languageName = EXTENSIONS[extension];
+    const languageName = grammarForPath(path);
     if (!languageName) return { path, contentHash: sha256(content), language: TEXT_EXTENSIONS.has(extension) ? "text" : "unknown",
       parserId: "text", grammarVersion: "none", extractorVersion: EXTRACTOR_VERSION, symbols: [], imports: [], edges: [], chunks: chunks(content, []), diagnostics: [],
       status: TEXT_EXTENSIONS.has(extension) ? "parsed" : "unsupported" };

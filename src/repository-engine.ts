@@ -5,7 +5,8 @@ import { basename, dirname, join, resolve } from "node:path";
 
 import { git, sha256 } from "./io.js";
 import { repositoryPath, safeRelative } from "./paths.js";
-import { EXTRACTOR_VERSION, SourceParser } from "./parser.js";
+import { EXTRACTOR_VERSION, SourceParser, grammarForPath } from "./parser.js";
+import { ParserProcessClient } from "./parser-process-client.js";
 import { containsSecret, isExcludedPath } from "./security.js";
 import { readSourceEvidence, reviewPacket } from "./source-evidence.js";
 import { BoundedRegexSearch } from "./regex-search.js";
@@ -38,6 +39,8 @@ export interface FreshnessResult {
 export class RepositoryEngine {
   private refreshInFlight:{promise:Promise<FreshnessResult>;verified:boolean}|undefined;
   private gitProcessCount=0;
+  private parserChildProcessCount=0;
+  private parserChildPeakRss=0;
   private refreshCount=0;
   private lastGitHead:string|undefined;
   private lastDirtyIdentities=new Map<string,string>();
@@ -175,11 +178,15 @@ export class RepositoryEngine {
     const started = performance.now();
     this.refreshCount++;
     const discovery=await this.discover(),candidates=discovery.candidates;
+    const grammars=new Set(candidates.map(candidate=>grammarForPath(candidate.path)).filter((language):language is string=>Boolean(language)));
+    const isolateGrammars=grammars.size>3;
+    if(isolateGrammars)candidates.sort((left,right)=>(grammarForPath(left.path)??"").localeCompare(grammarForPath(right.path)??"")||left.path.localeCompare(right.path));
+    const isolatedParser=isolateGrammars?new ParserProcessClient():undefined;
     const existingRows = this.db.prepare("SELECT id,path,size,mtime_ms,ctime_ms,content_hash,git_oid,extractor_version FROM files").all() as FileRow[];
     const existing = new Map(existingRows.map((row) => [row.path, row]));
     const seen = new Set<string>();
     let changed = 0, hashedFiles = 0, parsed = 0, reused = 0, failed = 0, omittedSensitive = 0;
-    for (const candidate of candidates) {
+    try { for (const candidate of candidates) {
       const previous = existing.get(candidate.path);
       if(!verifyContent&&discovery.gitBacked&&candidate.gitOid&&!discovery.dirty.has(candidate.path)&&previous?.extractor_version===EXTRACTOR_VERSION&&previous.git_oid===candidate.gitOid){seen.add(candidate.path);reused++;continue;}
       let absolute:string;
@@ -198,10 +205,10 @@ export class RepositoryEngine {
         this.db.prepare("UPDATE files SET size=?,mtime_ms=?,ctime_ms=?,git_oid=? WHERE id=?").run(candidate.size,candidate.mtimeMs,candidate.ctimeMs,candidate.gitOid??null,previous.id);
         reused++; continue;
       }
-      const result = await this.parser.parse(candidate.path, text);
+      const result = isolatedParser&&grammarForPath(candidate.path)?await isolatedParser.parse(candidate.path,text):await this.parser.parse(candidate.path, text);
       this.replaceFile(candidate, result); changed++; parsed++;
       if (result.status === "failed") failed++;
-    }
+    } } finally { if(isolatedParser){await isolatedParser.close();this.parserChildProcessCount+=isolatedParser.processCount;this.parserChildPeakRss=Math.max(this.parserChildPeakRss,isolatedParser.peakRss);} }
     let removed = 0;
     const remove = this.db.prepare("DELETE FROM files WHERE id=?");
     const removeFts = this.db.prepare("DELETE FROM chunks_fts WHERE rowid IN (SELECT id FROM chunks WHERE file_id=?)");
@@ -248,6 +255,7 @@ export class RepositoryEngine {
 
   async search(query: string, limit = 20, scopes: string[] = []): Promise<Record<string, unknown>[]> {
     await this.ensureFresh();
+    if (limit <= 0) return [];
     const terms = queryTerms(query);
     if (!terms.length) return [];
     const selectedScopes=normalizedScopes(scopes);
@@ -255,8 +263,9 @@ export class RepositoryEngine {
     const rows = this.db.prepare(`SELECT c.path,c.symbol,c.heading,c.start_line AS startLine,c.end_line AS endLine,
       snippet(chunks_fts,4,'','', ' … ',24) AS excerpt,bm25(chunks_fts,2.5,3.0,2.0,1.5,1.0) AS rank
       FROM chunks_fts JOIN chunks c ON c.id=chunks_fts.rowid WHERE chunks_fts MATCH ?${scopeSql} ORDER BY rank LIMIT ?`)
-      .all(terms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" OR "), ...selectedScopes.flatMap(scope=>[scope,`${scope}/`,`${scope}/`]), limit);
-    return rows as Record<string, unknown>[];
+      .all(terms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" OR "), ...selectedScopes.flatMap(scope=>[scope,`${scope}/`,`${scope}/`]), Math.min(Math.max(limit*8,limit),200)) as Record<string,unknown>[];
+    const seen = new Set<string>();
+    return rows.filter(row=>{const path=String(row.path);if(seen.has(path))return false;seen.add(path);return true;}).slice(0,limit);
   }
 
   async fileApi(path: string): Promise<Record<string, unknown>> {
@@ -266,7 +275,7 @@ export class RepositoryEngine {
     const symbols=file?this.db.prepare(`SELECT s.id,s.name,s.qualname,s.kind,s.signature,s.start_line AS startLine,s.end_line AS endLine,
         s.start_column AS startColumn,s.end_column AS endColumn,s.origin,s.confidence FROM symbols s JOIN files f ON f.id=s.file_id WHERE f.path=? ORDER BY s.start_line`).all(relative):[];
     const imports=file?this.db.prepare("SELECT local_name AS local,imported_name AS imported,source,kind FROM imports i JOIN files f ON f.id=i.file_id WHERE f.path=?").all(relative):[];
-    if(file&&symbols.length)return{path:relative,found:true,file,symbols,imports,analysisMode:"parser"};
+    if(file&&symbols.length)return{path:relative,found:true,file,symbols,imports,analysisMode:"parser",extractionDepth:{syntax:"parser-backed",definitions:"extracted",imports:"lexical",calls:"name-only",crossFileResolution:"unresolved",runtime:"not-executed"}};
     const review=await loadReview(this.root,relative);
     if(review)return{path:relative,found:true,file:file??null,analysisMode:"agent-reviewed",digest:review.digest,symbols:review.review.symbols.map(symbol=>({...symbol,origin:"agent-review"})),imports:imports.length?imports:review.review.imports,calls:review.review.calls,diagnostics:review.review.diagnostics};
     let packet:Record<string,unknown>|undefined;
@@ -292,8 +301,8 @@ export class RepositoryEngine {
     for (let level = 0; level < Math.max(1, depth); level++) {
       const next = new Set<string>();
       for (const current of frontier) {
-        if (direction !== "callers") for (const row of this.db.prepare("SELECT e.source_symbol AS source,e.target_symbol AS target,e.kind,f.path FROM edges e JOIN files f ON f.id=e.file_id WHERE e.source_symbol=? OR e.source_symbol LIKE ?").all(current, `%.${current}`) as {source:string;target:string;kind:string;path:string}[]) { if(!inScope(row.path,scopes))continue;edges.push(row); if (!nodes.has(row.target)) next.add(row.target); nodes.add(row.target); }
-        if (direction !== "callees") for (const row of this.db.prepare("SELECT e.source_symbol AS source,e.target_symbol AS target,e.kind,f.path FROM edges e JOIN files f ON f.id=e.file_id WHERE e.target_symbol=? OR e.target_symbol LIKE ?").all(current, `%.${current}`) as {source:string;target:string;kind:string;path:string}[]) { if(!inScope(row.path,scopes))continue;edges.push(row); if (!nodes.has(row.source)) next.add(row.source); nodes.add(row.source); }
+        if (direction !== "callers") for (const row of this.db.prepare("SELECT e.source_symbol AS source,e.target_symbol AS target,e.kind,f.path FROM edges e JOIN files f ON f.id=e.file_id WHERE e.source_symbol=? OR e.source_symbol LIKE ?").all(current, `%.${current}`) as {source:string;target:string;kind:string;path:string}[]) { if(!inScope(row.path,scopes))continue;edges.push({...row,origin:"parser",confidence:"unresolved"}); if (!nodes.has(row.target)) next.add(row.target); nodes.add(row.target); }
+        if (direction !== "callees") for (const row of this.db.prepare("SELECT e.source_symbol AS source,e.target_symbol AS target,e.kind,f.path FROM edges e JOIN files f ON f.id=e.file_id WHERE e.target_symbol=? OR e.target_symbol LIKE ?").all(current, `%.${current}`) as {source:string;target:string;kind:string;path:string}[]) { if(!inScope(row.path,scopes))continue;edges.push({...row,origin:"parser",confidence:"unresolved"}); if (!nodes.has(row.source)) next.add(row.source); nodes.add(row.source); }
         for(const row of reviewEdges){if(!inScope(row.path,scopes))continue;if(direction!=="callers"&&(row.source===current||row.source.endsWith(`.${current}`))){edges.push(row);if(!nodes.has(row.target))next.add(row.target);nodes.add(row.target);}if(direction!=="callees"&&(row.target===current||row.target.endsWith(`.${current}`))){edges.push(row);if(!nodes.has(row.source))next.add(row.source);nodes.add(row.source);}}
       }
       frontier = next;
@@ -341,5 +350,5 @@ export class RepositoryEngine {
   }
 
   async fileIdentities(paths?:readonly string[]):Promise<Record<string,unknown>>{await this.ensureFresh();const selected=paths?.map(safeRelative)??[];const rows=selected.length?this.db.prepare(`SELECT path,size,mtime_ms AS mtimeMs,content_hash AS contentHash,language,status FROM files WHERE path IN (${selected.map(()=>"?").join(",")}) ORDER BY path`).all(...selected):this.db.prepare("SELECT path,size,mtime_ms AS mtimeMs,content_hash AS contentHash,language,status FROM files ORDER BY path").all();return{repository:this.root,files:rows};}
-  processMetrics():{gitProcessCount:number;refreshCount:number;parserChildProcessCount:number}{return{gitProcessCount:this.gitProcessCount,refreshCount:this.refreshCount,parserChildProcessCount:0};}
+  processMetrics():{gitProcessCount:number;refreshCount:number;parserChildProcessCount:number;parserChildPeakRss:number}{return{gitProcessCount:this.gitProcessCount,refreshCount:this.refreshCount,parserChildProcessCount:this.parserChildProcessCount,parserChildPeakRss:this.parserChildPeakRss};}
 }
