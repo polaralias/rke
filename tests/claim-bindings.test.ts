@@ -83,6 +83,13 @@ test("unsupported source needs a digest-bound agent review",async()=>{
   assert.equal(stale?.status,"unresolved");
 });
 
+test("an explicitly requested agent review cannot fall back to grammar availability",async()=>{
+  const setup=fixture();const root=await setup.root,binding=await setup.binding;
+  const [assessment]=await assessClaimBindings(root,[{...binding,selectors:[{...binding.selectors[0]!,review:"agent-reviewed"}]}]);
+  assert.equal(assessment?.status,"unresolved");
+  assert.equal(assessment.selectors[0]?.extraction,"unresolved");
+});
+
 test("tracked claim binding review is included in existing documentation assessment",async()=>{
   const setup=fixture();const root=await setup.root,binding=await setup.binding;
   await mkdir(join(root,".rke"));

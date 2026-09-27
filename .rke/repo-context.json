@@ -24,8 +24,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-27T08:16:37.426Z",
-        "evidence": "Reviewed the EWF entry, parser isolation, claim binding and transport implementation against the current source, cross-language cases, focused tests and release checks.",
+        "verifiedAt": "2026-09-27T08:37:49.075Z",
+        "evidence": "Reviewed the claim review fallback correction and seven-case regression against the current implementation and canonical architecture.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -225,7 +225,7 @@
           },
           {
             "path": "src/claim-bindings.ts",
-            "sha256": "1c1146629a9bf37312eb2b37518886c3946496e03a19a0a8281461af840d9bf6"
+            "sha256": "49bfebe2bb18a9f420a67a4b410c2f045d1633d1fccf40903bfa7baa31e94fc8"
           },
           {
             "path": "src/cli-routes.ts",
@@ -341,7 +341,7 @@
           },
           {
             "path": "tests/claim-bindings.test.ts",
-            "sha256": "fed09461f8bc75592575d090bd7c5004b494ad5e8db3780c4a462aa25aca2953"
+            "sha256": "26dfc3d51bde65c8d1b5a70dddc38741fb0b245fe423ad6a4e2a4ebbab253512"
           },
           {
             "path": "tests/engine.test.ts",
@@ -531,5 +531,5 @@
       }
     }
   ],
-  "revision": 41
+  "revision": 42
 }

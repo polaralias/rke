@@ -106,7 +106,7 @@ export async function assessClaimBindings(root:string,bindings:ClaimBinding[]):P
       }
       const grammar=grammarForPath(reviewedPath);
       const review=selector.review==="agent-reviewed"?await loadReview(root,reviewedPath):undefined;
-      const extraction=review?.digest===selector.digest?"agent-reviewed":grammar?"grammar-available":"unresolved";
+      const extraction=selector.review==="agent-reviewed"?(review?.digest===selector.digest?"agent-reviewed":"unresolved"):grammar?"grammar-available":"unresolved";
       let status:ClaimStatus=resolution==="ambiguous"||resolution==="missing"?"unresolved":resolution==="moved-candidate"||sourceUnchanged===false?"review-needed":"current";
       if(extraction==="unresolved"){if(status==="current")resolution="unsupported";status="unresolved";}
       selectors.push({role:selector.role,reviewedPath,resolution,candidates,sourceUnchanged,extraction,status});
