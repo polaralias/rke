@@ -260,12 +260,17 @@ export class RepositoryEngine {
     if (!terms.length) return [];
     const selectedScopes=normalizedScopes(scopes);
     const scopeSql = selectedScopes.length ? ` AND (${selectedScopes.map(() => "(c.path=? OR substr(c.path,1,length(?))=?)").join(" OR ")})` : "";
-    const rows = this.db.prepare(`SELECT c.path,c.symbol,c.heading,c.start_line AS startLine,c.end_line AS endLine,
-      snippet(chunks_fts,4,'','', ' … ',24) AS excerpt,bm25(chunks_fts,2.5,3.0,2.0,1.5,1.0) AS rank
-      FROM chunks_fts JOIN chunks c ON c.id=chunks_fts.rowid WHERE chunks_fts MATCH ?${scopeSql} ORDER BY rank LIMIT ?`)
-      .all(terms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" OR "), ...selectedScopes.flatMap(scope=>[scope,`${scope}/`,`${scope}/`]), Math.min(Math.max(limit*8,limit),200)) as Record<string,unknown>[];
-    const seen = new Set<string>();
-    return rows.filter(row=>{const path=String(row.path);if(seen.has(path))return false;seen.add(path);return true;}).slice(0,limit);
+    const rows = this.db.prepare(`WITH matches AS MATERIALIZED (
+      SELECT c.path,c.symbol,c.heading,c.start_line AS startLine,c.end_line AS endLine,
+        snippet(chunks_fts,4,'','', ' … ',24) AS excerpt,bm25(chunks_fts,2.5,3.0,2.0,1.5,1.0) AS rank
+      FROM chunks_fts JOIN chunks c ON c.id=chunks_fts.rowid WHERE chunks_fts MATCH ?${scopeSql}
+    ), best_per_file AS (
+      SELECT *,row_number() OVER (PARTITION BY path ORDER BY rank,startLine) AS fileRow FROM matches
+    )
+    SELECT path,symbol,heading,startLine,endLine,excerpt,rank FROM best_per_file
+    WHERE fileRow=1 ORDER BY rank,path LIMIT ?`)
+      .all(terms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" OR "), ...selectedScopes.flatMap(scope=>[scope,`${scope}/`,`${scope}/`]), limit) as Record<string,unknown>[];
+    return rows;
   }
 
   async fileApi(path: string): Promise<Record<string, unknown>> {

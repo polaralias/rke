@@ -24,8 +24,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-27T17:05:13.487Z",
-        "evidence": "Reviewed Claude host routing: CLAUDE.md managed block, MCP preflight/idempotence, canonical architecture and host reference updated; 76 tests, 30 legacy parity probes, lint and release validation passed.",
+        "verifiedAt": "2026-09-28T07:17:58.029Z",
+        "evidence": "Reviewed SQLite FTS search per-file ranking against the repository engine and >200-chunk two-file regression; 76 tests, 30 parity probes, lint and release validation passed.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -73,7 +73,7 @@
           },
           {
             "path": "docs/knowledge/rke-architecture.md",
-            "sha256": "7751dcd6472eff7fc86f73ce4ef096b1a656238ef8deb810b33a87805b459311"
+            "sha256": "75a623694b36f72c8dda6ee2cd123f5d2d7363764517912a773145d2ae380f53"
           },
           {
             "path": "docs/typescript-rewrite-plan.md",
@@ -309,7 +309,7 @@
           },
           {
             "path": "src/repository-engine.ts",
-            "sha256": "5c93903ff182fa6e11b24ad34e28c5118b32c51dc7d8fe0d18fea2f26c68df63"
+            "sha256": "67e26c380614f9db78329bedec578bd17ef1e2ff7264a112c8df2b499af1cb15"
           },
           {
             "path": "src/security.ts",
@@ -345,7 +345,7 @@
           },
           {
             "path": "tests/engine.test.ts",
-            "sha256": "4f792e0dce287c9ce8dedf9a035a3969a1a19520ea5a169d32e0ed24b246d6c5"
+            "sha256": "2df85dd4b7d8d8f9950d8ea1df07abcc3b2a1325498245620b41df8ec0df34cc"
           },
           {
             "path": "tests/fixtures/documentation-bootstrap/partial-state/.rke/repo-context.json",
@@ -531,5 +531,5 @@
       }
     }
   ],
-  "revision": 47
+  "revision": 48
 }

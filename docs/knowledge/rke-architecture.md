@@ -2,10 +2,10 @@
 type: Architecture Concept
 title: RKE architecture
 description: Defines the independently installed Repository Knowledge Engineering runtime, its shared CLI and MCP operation layer, repository boundaries, and relationship with EWF and OKF Tasks.
-timestamp: 2026-09-27T17:49:27+01:00
+timestamp: 2026-09-28T08:12:54+01:00
 authority: canonical
 verification: verified-working
-reviewed_at: 2026-09-27T17:49:27+01:00
+reviewed_at: 2026-09-28T08:12:54+01:00
 verified_against:
   - src/operations.ts
   - src/cli.ts
@@ -85,9 +85,9 @@ Worktree cleanup compares Git's reported worktree path with the expected sibling
 
 ## Retrieval and structural analysis
 
-Retrieval and structural analysis share one persistent `RepositoryEngine` per repository. A hot Git query checks status and HEAD, then hashes dirty paths against the last indexed state. This detects another ordinary edit to an already dirty file while avoiding a whole-index rebuild for a stable modified working tree. `context check` performs full content verification and hashes clean tracked files. A forced verification arriving during an ordinary refresh waits for that pass and then verifies content; weaker work never satisfies the stronger request. Git can miss a same-size edit when timestamps are deliberately restored; search results may therefore be stale in that edge case until a full check. Excluded, sensitive, binary and oversized paths never enter the database. Source-returning search and review use the same repository-contained, one-MiB, secret-aware read boundary. Regex matching runs in a worker with a per-file timeout. Changed records are replaced transactionally. SQLite FTS5 ranks bounded chunks without constructing a repository-wide JavaScript postings graph.
+Retrieval and structural analysis share one persistent `RepositoryEngine` per repository. A hot Git query checks status and HEAD, then hashes dirty paths against the last indexed state. This detects another ordinary edit to an already dirty file while avoiding a whole-index rebuild for a stable modified working tree. `context check` performs full content verification and hashes clean tracked files. A forced verification arriving during an ordinary refresh waits for that pass and then verifies content; weaker work never satisfies the stronger request. Git can miss a same-size edit when timestamps are deliberately restored; search results may therefore be stale in that edge case until a full check. Excluded, sensitive, binary and oversized paths never enter the database. Source-returning search and review use the same repository-contained, one-MiB, secret-aware read boundary. Regex matching runs in a worker with a per-file timeout. Changed records are replaced transactionally. SQLite FTS5 ranks matching chunks, selects each file's best chunk, then applies the result limit so repeated matches in one file cannot hide another indexed file. It does not construct a repository-wide JavaScript postings graph.
 
-Tree-sitter uses version-pinned WASM grammars. Repositories with at most three detected grammars parse in the persistent Node process; broader mixes parse one language group at a time in short-lived child processes because loading many grammars together caused multi-gigabyte resident memory in a real repository snapshot. All paths return the same `ParsedFile` contract to search and structural operations. The database stores normalized files, symbols, imports, edges, chunks and FTS terms; queries retain only bounded result rows in memory. The generic extractor reports definitions, lexical imports and name-only calls, with cross-file relationships unresolved unless separately reviewed.
+Tree-sitter uses version-pinned WASM grammars. Repositories with at most three detected grammars parse in the persistent Node process; broader mixes parse one language group at a time in short-lived child processes because loading many grammars together caused multi-gigabyte resident memory in a real repository snapshot. All paths return the same `ParsedFile` contract to search and structural operations. The database stores normalized files, symbols, imports, edges, chunks and FTS terms; the JavaScript layer retains only bounded result rows. The generic extractor reports definitions, lexical imports and name-only calls, with cross-file relationships unresolved unless separately reviewed.
 
 Trace, map, impact and search accept explicit repository-relative scopes; no scope selection is automatic. When parser evidence is unavailable, file API returns a bounded agent-review packet. A validated review remains outside the parser cache, is bound to the exact source digest, and can supply confidence-labelled file, trace and impact evidence until the source changes. Extracted parser symbols take precedence.
 

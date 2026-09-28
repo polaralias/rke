@@ -49,17 +49,24 @@ test("parser isolation recovers after a signalled child exits",async()=>{
     assert.equal(parser.processCount,2);
   }finally{await parser.close();}
 });
-test("search gives distinct source paths so repeated chunks do not crowd out another file",async()=>{
+test("search ranks distinct files before limiting repeated matching chunks",async()=>{
   const root=await mkdtemp(join(tmpdir(),"rke-distinct-search-"));
   spawnSync("git",["init"],{cwd:root});
-  await writeFile(join(root,"many.ts"),Array.from({length:8},(_,index)=>`export function retry${index}() { return retryCall(); }`).join("\n"));
-  await writeFile(join(root,"target.ts"),"export function retryCall() { return true; }\n");
+  await writeFile(join(root,"needle-many.ts"),Array.from({length:260},(_,index)=>`export function needle${index}() { return needle(); }`).join("\n"));
+  await writeFile(join(root,"other.ts"),"export const other = needle;\n");
   commitAll(root);
   const engine=await RepositoryEngine.open(root);
   try{
-    const paths=(await engine.search("retry",10)).map(row=>String(row.path));
+    await engine.ensureFresh();
+    const database=new DatabaseSync(join(root,".engineering-workflow","cache","rke.sqlite"));
+    const count=(database.prepare("SELECT count(*) AS value FROM chunks_fts WHERE chunks_fts MATCH 'needle'").get() as {value:number}).value;
+    database.close();
+    assert.ok(count>200,`fixture must exceed the old candidate cap; got ${count}`);
+    assert.deepEqual((await engine.search("needle",8,["other.ts"])).map(row=>row.path),["other.ts"]);
+    const paths=(await engine.search("needle",8)).map(row=>String(row.path));
     assert.equal(paths.length,new Set(paths).size);
-    assert.ok(paths.includes("target.ts"));
+    assert.ok(paths.includes("needle-many.ts"));
+    assert.ok(paths.includes("other.ts"));
   }finally{engine.close();}
 });
 test("changed files update independently",async()=>{const root=await mkdtemp(join(tmpdir(),"rke-change-"));spawnSync("git",["init"],{cwd:root});await writeFile(join(root,"a.ts"),"export function before() {}\n");await writeFile(join(root,"b.ts"),"export function stable() {}\n");commitAll(root);const engine=await RepositoryEngine.open(root);await engine.ensureFresh();await writeFile(join(root,"a.ts"),"export function after() {}\n");const refreshed=await engine.ensureFresh();assert.equal(refreshed.parsed,1);assert.equal(refreshed.reused,1);assert.match(JSON.stringify(await engine.fileApi("a.ts")),/after/);engine.close();});
