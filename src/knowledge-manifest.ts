@@ -1,10 +1,10 @@
 import { existsSync } from "node:fs";
 import { readFile, unlink } from "node:fs/promises";
-import { join, posix } from "node:path";
+import { posix } from "node:path";
 
 import { RkeError } from "./errors.js";
 import { withFileLock, writeJson } from "./io.js";
-import { safeRelative } from "./paths.js";
+import { repositoryPath, safeRelative } from "./paths.js";
 
 export interface SourceIdentity { path: string; sha256: string }
 export interface VerificationReceipt extends Record<string, unknown> { verifiedAt?: string; evidence?: string; sourceIdentities?: SourceIdentity[]; sourceHashes?: Record<string,string> }
@@ -56,27 +56,30 @@ function validate(raw: unknown): Manifest {
   return raw as Manifest;
 }
 
-export async function loadManifest(root: string, value?: unknown): Promise<{path:string;data:Manifest;legacy:boolean}> {
-  const relative = safeRelative(String(value ?? CANONICAL));
-  const target = join(root, relative), legacy = join(root, LEGACY);
-  const defaultPath = relative === CANONICAL;
-  if (defaultPath && existsSync(target) && existsSync(legacy)) throw new RkeError("knowledge_manifest_ambiguous", `Both ${CANONICAL} and ${LEGACY} exist; reconcile them before continuing.`);
-  const useLegacy = defaultPath && !existsSync(target) && existsSync(legacy);
-  const source = useLegacy ? legacy : target;
-  if (!existsSync(source)) return {path:relative,data:{schemaVersion:1,revision:0,knowledge:[]},legacy:false};
+export function manifestPresence(root:string,value?:unknown):{path:string;target:string;legacyTarget:string;canonicalPresent:boolean;legacyPresent:boolean;effectivePresent:boolean;ambiguous:boolean}{
+  const relative=safeRelative(String(value??CANONICAL)),target=repositoryPath(root,relative),legacyTarget=repositoryPath(root,LEGACY);
+  const canonicalPresent=existsSync(target),legacyPresent=relative===CANONICAL&&existsSync(legacyTarget);
+  return {path:relative,target,legacyTarget,canonicalPresent,legacyPresent,effectivePresent:canonicalPresent||legacyPresent,ambiguous:canonicalPresent&&legacyPresent};
+}
+export async function loadManifest(root: string, value?: unknown): Promise<{path:string;data:Manifest;legacy:boolean;present:boolean}> {
+  const presence=manifestPresence(root,value);
+  if(presence.ambiguous)throw new RkeError("knowledge_manifest_ambiguous", `Both ${CANONICAL} and ${LEGACY} exist; reconcile them before continuing.`);
+  const useLegacy=!presence.canonicalPresent&&presence.legacyPresent;
+  const source=useLegacy?presence.legacyTarget:presence.target;
+  if(!presence.effectivePresent)return {path:presence.path,data:{schemaVersion:1,revision:0,knowledge:[]},legacy:false,present:false};
   let raw: unknown;
-  try { raw = JSON.parse(await readFile(source,"utf8")); } catch { return invalid(`Knowledge binding manifest is invalid JSON: ${useLegacy ? LEGACY : relative}`); }
-  return {path:relative,data:validate(raw),legacy:useLegacy};
+  try { raw = JSON.parse(await readFile(source,"utf8")); } catch { return invalid(`Knowledge binding manifest is invalid JSON: ${useLegacy ? LEGACY : presence.path}`); }
+  return {path:presence.path,data:validate(raw),legacy:useLegacy,present:true};
 }
 
 export async function mutateManifest<T>(root:string,value:unknown,mutation:(data:Manifest)=>Promise<T>|T):Promise<{path:string;value:T;data:Manifest}> {
-  const relative = safeRelative(String(value ?? CANONICAL)), target = join(root,relative);
+  const presence=manifestPresence(root,value),relative=presence.path,target=presence.target;
   return withFileLock(target,async()=>{
     const loaded = await loadManifest(root,relative);
     const data = loaded.data, result = await mutation(data);
     data.revision = (data.revision ?? 0) + 1;
     await writeJson(target,data);
-    if (loaded.legacy) await unlink(join(root,LEGACY));
+    if (loaded.legacy) await unlink(repositoryPath(root,LEGACY));
     return {path:relative,value:result,data};
   });
 }

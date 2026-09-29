@@ -46,7 +46,7 @@ function outcome(payload: Record<string, unknown>, exitCode = 0): OperationOutco
 function record(value:unknown):value is Record<string,unknown>{return value!==null&&typeof value==="object"&&!Array.isArray(value);}
 function timestamp(value:unknown):boolean{return typeof value==="string"&&/(?:Z|[+-]\d\d:\d\d)$/.test(value)&&!Number.isNaN(Date.parse(value));}
 function relativePath(value:string):boolean{try{return safeRelative(value)===value.replaceAll("\\","/");}catch{return false;}}
-function stringList(value:unknown,name:string,errors:string[]):void{if(!Array.isArray(value)||value.some(item=>typeof item!=="string"||!item.trim()))errors.push(`${name} must be an array of non-empty strings`);}
+function stringList(value:unknown,name:string,errors:string[]):void{if(!Array.isArray(value)||value.some(item=>typeof item!=="string"||!item.trim()))errors.push(`${name} must be an array of non-empty strings`);else if(new Set(value).size!==value.length)errors.push(`${name} must not contain duplicates`);}
 function validate(state: WorkflowState): string[] {
   const errors: string[] = [];
   if(!record(state))return["workflow state must be an object"];
@@ -62,7 +62,7 @@ function validate(state: WorkflowState): string[] {
   for(const field of ["created_at","updated_at"])if(!timestamp(state[field]))errors.push(`${field} must be an ISO-8601 timestamp`);
   if(state.status==="closed"&&!timestamp(state.closed_at))errors.push("closed_at must be an ISO-8601 timestamp for closed state");
   if(state.gate_receipts!==undefined){if(!Array.isArray(state.gate_receipts))errors.push("gate_receipts must be an array");else state.gate_receipts.forEach((receipt,index)=>{if(!record(receipt)){errors.push(`gate_receipts[${index}] must be an object`);return;}for(const field of ["gate","evidence"])if(typeof receipt[field]!=="string"||!String(receipt[field]).trim())errors.push(`gate_receipts[${index}].${field} must be a non-empty string`);if(!timestamp(receipt.resolved_at))errors.push(`gate_receipts[${index}].resolved_at must be an ISO-8601 timestamp`);});}
-  if(state.phase_history!==undefined){if(!Array.isArray(state.phase_history))errors.push("phase_history must be an array");else state.phase_history.forEach((item,index)=>{if(!record(item)||typeof item.from!=="string"||typeof item.to!=="string"||!timestamp(item.entered_at))errors.push(`phase_history[${index}] must be a valid transition`);});}
+  if(state.phase_history!==undefined){if(!Array.isArray(state.phase_history))errors.push("phase_history must be an array");else state.phase_history.forEach((item,index)=>{if(!record(item)||!PHASES.has(String(item.from))||!PHASES.has(String(item.to))||!timestamp(item.entered_at))errors.push(`phase_history[${index}] must be a valid transition`);});}
   return errors;
 }
 
@@ -142,12 +142,13 @@ export async function closureAssessment(root:string,base="HEAD"):Promise<Operati
   const bundle=state.task_tracking.bundle??"tasks",taskPath=join(root,bundle),hasTasks=existsSync(taskPath)&&readdirSync(taskPath,{recursive:true}).some(item=>{const name=String(item);if(!name.endsWith(".md"))return false;try{return /^---\r?\n[\s\S]{0,4096}?\btype:\s*(Task|Workstream)\b/m.test(readFileSync(join(taskPath,name),"utf8").slice(0,4096));}catch{return false;}});
   let taskValidation:OperationOutcome|undefined;
   if(hasTasks)taskValidation=validateOkfBundle(root,bundle,"okf-tasks");
-  const knowledgeBundle=join(root,"docs","knowledge"),manifest=join(root,".rke","repo-context.json");
+  const knowledgeBundle=join(root,"docs","knowledge"),{manifestPresence}=await import("./knowledge-manifest.js"),manifest=manifestPresence(root);
   let knowledgeValidation:OperationOutcome|undefined;
-  if(existsSync(knowledgeBundle)||existsSync(manifest)){
+  if(existsSync(knowledgeBundle)||manifest.effectivePresent||manifest.ambiguous){
     const surfaces=await import("./surfaces.js");
     if(existsSync(knowledgeBundle))knowledgeValidation=await surfaces.checkKnowledge(root,"docs/knowledge");
-    if(existsSync(manifest)){const freshness=await surfaces.contextCheck(root);if(freshness.exitCode)knowledgeValidation=freshness;}
+    if(manifest.ambiguous)knowledgeValidation=outcome({result:"knowledge-manifest-ambiguous"},3);
+    else if(manifest.effectivePresent){const freshness=await surfaces.contextCheck(root);if(freshness.exitCode)knowledgeValidation=freshness;}
   }
   let claimValidation:OperationOutcome|undefined;
   if(existsSync(join(root,".rke","claim-bindings.json"))){
@@ -161,7 +162,8 @@ export async function closureAssessment(root:string,base="HEAD"):Promise<Operati
 export async function close(root:string,base="HEAD"):Promise<OperationOutcome>{const state=await load(root),errors=validate(state);if(errors.length)return outcome({result:"invalid-state",state_path:statePath(root),verification:{valid:false,errors},state},2);if(state.status==="closed")return outcome({result:"already-closed",state_path:statePath(root),outstanding_gates:state.outstanding_gates,state});const assessment=await closureAssessment(root,base);if(assessment.exitCode)return outcome({result:"closure-blocked",state_path:statePath(root),outstanding_gates:state.outstanding_gates,assessment:assessment.payload,state},3);state.status="closed";state.primary_phase="close";state.closed_at=utcNow();await save(root,state);return outcome({result:"closed",state_path:statePath(root),outstanding_gates:[],assessment:assessment.payload,state});}
 export async function completeSmallChange(root:string,base:string,summary:string,detailFile:string,reviewedPaths:string[],evidence:string):Promise<OperationOutcome>{
   const state=await load(root),stop=blocked(root,state);if(stop)return stop;
-  if(state.task_tracking.mode!=="none"||state.outstanding_gates.length||existsSync(join(root,"docs","knowledge"))||existsSync(join(root,".rke","repo-context.json"))||existsSync(join(root,".rke","claim-bindings.json")))
+  const {manifestPresence}=await import("./knowledge-manifest.js"),manifest=manifestPresence(root);
+  if(state.task_tracking.mode!=="none"||state.outstanding_gates.length||existsSync(join(root,"docs","knowledge"))||manifest.effectivePresent||manifest.ambiguous||existsSync(join(root,".rke","claim-bindings.json")))
     return outcome({result:"small-change-ineligible",reason:"A task lane, open gate, or canonical knowledge surface requires ordinary reconciliation."},3);
   const surfaces=await import("./surfaces.js"),assessment=await surfaces.documentationAssess(root,base);
   if(assessment.exitCode===2)return assessment;

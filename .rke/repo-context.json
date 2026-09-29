@@ -24,8 +24,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-29T14:53:15.581Z",
-        "evidence": "Reviewed normalized manifest paths, receipt validation, durable graph and nested indexes, indexed relationship retrieval, bounded trace, workflow state handling, and passing regression and release checks.",
+        "verifiedAt": "2026-09-29T16:18:27.476Z",
+        "evidence": "Reviewed manifest symlink containment, legacy lifecycle, index rollback, retrieval, namespace tracing, workflow validation and claim binding against changed source and passing deterministic, parity and release checks.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -41,7 +41,7 @@
           },
           {
             "path": ".rke/claim-bindings.json",
-            "sha256": "dea2337647e71855475596f2040d00b23b51cfd0b92ec6b34bc914b7570ea3e2"
+            "sha256": "b31c1df5a258979f3bd4274d46ae6043cba1a30ff219ab64fc5bf00a68d9ddb5"
           },
           {
             "path": "AGENTS.md",
@@ -73,7 +73,7 @@
           },
           {
             "path": "docs/knowledge/rke-architecture.md",
-            "sha256": "cb245344c338af541cfd85853a9bee4c52471276588ee6b879e89f13498a722a"
+            "sha256": "34ee343633363cf4b689892d70d2af7ef443fab6da6b1e45271bf7dd45903c6b"
           },
           {
             "path": "docs/typescript-rewrite-plan.md",
@@ -141,7 +141,7 @@
           },
           {
             "path": "skills/engineering-workflow/references/documentation-lifecycle.md",
-            "sha256": "99cb669b3736e3e4dd283b608a784d4fed848f4997cdf3df66a7bd0263798b26"
+            "sha256": "6e2c5487fb85a61bbd508c605ad35263257daa89739016e3ba334b0838c2c765"
           },
           {
             "path": "skills/engineering-workflow/references/extensions/parallel-delivery.md",
@@ -173,7 +173,7 @@
           },
           {
             "path": "skills/engineering-workflow/references/knowledge-contract.md",
-            "sha256": "3a2d47b3bdfd2660689cc7baebea6564b170064725c3f7e2c7a2a565f952041c"
+            "sha256": "2e6fbb977b307d63bf4883f8dd775d9515cc660e85370139768e420e6176c611"
           },
           {
             "path": "skills/engineering-workflow/references/migration.md",
@@ -197,7 +197,7 @@
           },
           {
             "path": "skills/engineering-workflow/references/structural-context.md",
-            "sha256": "e1c823c5ae15eaaf42b863fc84b56ac881f539a29f8f154111f0fc8a8059fa30"
+            "sha256": "b36e80f394b168353a6386bf8226ffc33f73d5c21cf1c46ea783dc4e2baa5776"
           },
           {
             "path": "skills/engineering-workflow/references/tracker-publication.md",
@@ -205,11 +205,11 @@
           },
           {
             "path": "skills/engineering-workflow/references/workflow-contract.md",
-            "sha256": "1374582d6064873fd828ce7360ebbcb717650004e314dd091641a7750ece348b"
+            "sha256": "660fbd9c2a4c4cf300efb6869008733a9d1f37375ee96a2f0deed3fc775f5ee2"
           },
           {
             "path": "skills/engineering-workflow/SKILL.md",
-            "sha256": "1f13c583626a7ad92b29cf191ec0e5a155d9fb543c127edb300bc9a4fd4ac6e6"
+            "sha256": "75de0e4075dd1be61a2bda42d575813ead4ab24b7d554687ae97a68c77aebc54"
           },
           {
             "path": "skills/engineering-workflow/tests/prompts.md",
@@ -277,7 +277,7 @@
           },
           {
             "path": "src/knowledge-manifest.ts",
-            "sha256": "d023ce0d3467b1d003bf94acb0246202055dbf904e264f756e6c7129a7a6795e"
+            "sha256": "7a1fd7bcba07a33a12a215e7f4872dd9b1f662d9a2750646af227566bc72278a"
           },
           {
             "path": "src/mcp.ts",
@@ -313,7 +313,7 @@
           },
           {
             "path": "src/repository-engine.ts",
-            "sha256": "95aeb816645516051eee4966fe6f2661d69dd18fbd9fd10b1a579d606262d63f"
+            "sha256": "8aebff02580445dc9eb7c57f3e054fb6df0946922b3e918cff8b3853a6ec0c75"
           },
           {
             "path": "src/security.ts",
@@ -325,7 +325,7 @@
           },
           {
             "path": "src/surfaces.ts",
-            "sha256": "69d24172d9f3d64d6ba036bf9b90b53285ff2fc1bc2180dd5fec6f18e74cc70b"
+            "sha256": "49929a7a45b360ccd33ac13f95b7b98d21b83bad797cf62c466d3679e2e9735e"
           },
           {
             "path": "src/tracker-preview.ts",
@@ -341,7 +341,7 @@
           },
           {
             "path": "src/workflow.ts",
-            "sha256": "1bafd9c93b02416566b6c781db3571c4ae2e78c37029dd243345258c6634a18f"
+            "sha256": "8ab8594aed31fa3792d32a7300f9bda48ddae744cf9f17a79eee7c71022657ad"
           },
           {
             "path": "tests/claim-bindings.test.ts",
@@ -521,7 +521,7 @@
           },
           {
             "path": "tests/review-regressions.test.ts",
-            "sha256": "9c032843d973aab019178403a94d15a7ddf75756d69798a1432c5af57a40e8f0"
+            "sha256": "7fed6d4c0f9c6949456566c17bc047f1316cd765fdb86d659daedee58ee4beec"
           },
           {
             "path": "tests/security.test.ts",
@@ -539,5 +539,5 @@
       }
     }
   ],
-  "revision": 54
+  "revision": 55
 }

@@ -277,8 +277,7 @@ export class RepositoryEngine {
     )
     SELECT path,symbol,heading,startLine,endLine,excerpt,rank FROM best_per_file
     WHERE fileRow=1 ORDER BY rank,path LIMIT ?`)
-      .all(terms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" OR "), ...selectedScopes.flatMap(scope=>[scope,`${scope}/`,`${scope}/`]), limit) as Record<string,unknown>[];
-    if(rows.length>=limit)return rows;
+      .all(terms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" OR "), ...selectedScopes.flatMap(scope=>[scope,`${scope}/`,`${scope}/`]), Math.min(200,Math.max(20,limit*3))) as Record<string,unknown>[];
     const direct=new Set(rows.map(row=>String(row.path))),expanded:Record<string,unknown>[]=[];
     for(const row of rows.slice(0,20)){
       const source=String(row.path);
@@ -289,10 +288,11 @@ export class RepositoryEngine {
         const chunk=this.db.prepare("SELECT start_line AS startLine,end_line AS endLine,substr(body,1,240) AS excerpt FROM chunks WHERE path=? ORDER BY start_line LIMIT 1").get(path) as {startLine:number;endLine:number;excerpt:string}|undefined;
         if(!chunk)continue;
         expanded.push({path,symbol:null,heading:null,...chunk,rank:Math.max(1,Math.abs(Number(row.rank))*5),reasons:["knowledge-relationship",`linked-from:${source}`]});
-        if(rows.length+expanded.length>=limit)return [...rows,...expanded];
+        if(expanded.length>=Math.min(20,limit))break;
       }
     }
-    return [...rows,...expanded];
+    const relationshipSlots=expanded.length?Math.min(expanded.length,Math.max(1,Math.floor(limit/4))):0;
+    return [...rows.slice(0,limit-relationshipSlots),...expanded.slice(0,relationshipSlots)];
   }
 
   async fileApi(path: string): Promise<Record<string, unknown>> {
@@ -362,8 +362,8 @@ export class RepositoryEngine {
     const rows=this.db.prepare(query).all(...keys,...scopeArgs,limit) as {source:string;target:string;kind:string;path:string;language:string;fileId:number}[];
     if(direction==="callers"&&rows.length<limit){
       const aliasScope=scopes.length?` AND (${scopes.map(()=>"(f.path=? OR substr(f.path,1,length(?))=?)").join(" OR ")})`:"";
-      const aliases=this.db.prepare(`SELECT i.file_id AS fileId,i.local_name AS local FROM imports i JOIN files f ON f.id=i.file_id WHERE i.imported_name=? AND i.kind='static-import'${aliasScope} LIMIT 100`).all(simple,...scopeArgs) as {fileId:number;local:string}[];
-      for(const alias of aliases){if(rows.length>=limit)break;rows.push(...this.db.prepare(`SELECT e.file_id AS fileId,e.source_symbol AS source,e.target_symbol AS target,e.kind,f.path,f.language FROM edges e JOIN files f ON f.id=e.file_id WHERE e.file_id=? AND (e.target_symbol=? OR e.target_symbol LIKE ?)${scopeSql} ORDER BY e.id LIMIT ?`).all(alias.fileId,alias.local,`${alias.local}.%`,...scopeArgs,limit-rows.length) as typeof rows);}
+      const aliases=this.db.prepare(`SELECT i.file_id AS fileId,i.local_name AS local,i.imported_name AS imported FROM imports i JOIN files f ON f.id=i.file_id WHERE i.imported_name IN (?,'*') AND i.kind='static-import'${aliasScope} LIMIT 100`).all(simple,...scopeArgs) as {fileId:number;local:string;imported:string}[];
+      for(const alias of aliases){if(rows.length>=limit)break;const target=alias.imported==="*"?`${alias.local}.${simple}`:alias.local;rows.push(...this.db.prepare(`SELECT e.file_id AS fileId,e.source_symbol AS source,e.target_symbol AS target,e.kind,f.path,f.language FROM edges e JOIN files f ON f.id=e.file_id WHERE e.file_id=? AND (e.target_symbol=? OR e.target_symbol LIKE ?)${scopeSql} ORDER BY e.id LIMIT ?`).all(alias.fileId,target,alias.imported==="*"?target:`${target}.%`,...scopeArgs,limit-rows.length) as typeof rows);}
     }
     return rows.map(row=>this.resolveParserEdge(row));
   }
