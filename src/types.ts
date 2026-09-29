@@ -72,6 +72,8 @@ export interface ParsedFile {
   imports: ParsedImport[];
   edges: ParsedEdge[];
   chunks: ParsedChunk[];
+  knowledgeType?: string;
+  knowledgeLinks?: string[];
   diagnostics: string[];
   status: "parsed" | "partial" | "unsupported" | "failed";
 }

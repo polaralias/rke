@@ -5,13 +5,13 @@
       "id": "cli-mcp-parity",
       "document": "docs/knowledge/rke-architecture.md",
       "heading": "## CLI and MCP parity",
-      "sectionDigest": "78f7ca3f008b4900997d96b50d59dd727952e53862286df0011ffd1953f1e2ee",
-      "reviewDecision": "Reviewed the shared operation validator after enforcing declared integer and array bounds. The unchanged CLI and MCP adapters invoke this same handler registry; focused bounds, transport, full-suite and legacy probes passed locally. The digest remains a freshness record, not proof of behavioral truth or external review.",
+      "sectionDigest": "960edccd4979cb039d31952563d17b530e932e92079d93747aa99a6ee091c193",
+      "reviewDecision": "Reviewed the revised workflow-state paragraph and current shared operation registry against the unchanged CLI and MCP adapters. Workflow validation and transport regressions pass locally; the hashes record reviewed identities rather than proving runtime truth or external review.",
       "selectors": [
         {
           "role": "implementation",
           "path": "src/operations.ts",
-          "digest": "393382059a9553bb5558bf7c5052f9b591dfba0a4be66ec3b3a663d786dbb799"
+          "digest": "62be94291555ccb43eff141275dd198b46c4d89831cf3deb7968de1232696be3"
         },
         {
           "role": "interface",

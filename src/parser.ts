@@ -1,8 +1,9 @@
 import { access } from "node:fs/promises";
-import { dirname, extname, resolve } from "node:path";
+import { dirname, extname, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { Language, Parser, type Node as SyntaxNode } from "web-tree-sitter";
+import YAML from "yaml";
 
 import { sha256 } from "./io.js";
 import type { ParsedChunk, ParsedFile, ParsedImport, ParsedSymbol } from "./types.js";
@@ -137,6 +138,21 @@ function chunks(content: string, symbols: ParsedSymbol[]): ParsedChunk[] {
   return [...symbolChunks, ...result];
 }
 
+function knowledgeMetadata(path:string,content:string):{knowledgeType?:string;knowledgeLinks?:string[]}{
+  if(extname(path).toLowerCase()!==".md"||/(?:^|\/)(?:generated|vendor|runbooks|scratch|temp|temporary)(?:\/|$)/i.test(path)||/(?:^|\/)(?:index|log)\.md$/i.test(path))return{};
+  const lines=content.split(/\r?\n/),end=lines.findIndex((line,index)=>index>0&&line.trim()==="---");if(lines[0]?.trim()!=="---"||end<0)return{};
+  let metadata:unknown;try{metadata=YAML.parse(lines.slice(1,end).join("\n"));}catch{return{};}
+  const type=(metadata as {type?:unknown}|null)?.type;if(typeof type!=="string"||!type.trim()||type.trim().toLowerCase()==="log"||/(?:runbook|handoff|session|temporary|scratch)/i.test(type))return{};
+  const links=new Set<string>();
+  for(const match of content.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)){
+    const raw=match[1]!.trim().split(/\s+/,1)[0]!.replace(/^<|>$/g,"").split(/[?#]/,1)[0]!;
+    if(!raw||/^[a-z]+:/i.test(raw)||raw.startsWith("//"))continue;
+    let target:string;try{target=posix.normalize(posix.join(posix.dirname(path),decodeURIComponent(raw)));}catch{continue;}
+    if(target!==path&&!target.startsWith("../")&&!target.startsWith("/"))links.add(target);
+  }
+  return{knowledgeType:type.trim(),knowledgeLinks:[...links].sort()};
+}
+
 export class SourceParser {
   private readonly parser = new Parser();
   private readonly languages = new Map<string, Language>();
@@ -167,7 +183,7 @@ export class SourceParser {
     const languageName = grammarForPath(path);
     if (!languageName) return { path, contentHash: sha256(content), language: TEXT_EXTENSIONS.has(extension) ? "text" : "unknown",
       parserId: "text", grammarVersion: "none", extractorVersion: EXTRACTOR_VERSION, symbols: [], imports: [], edges: [], chunks: chunks(content, []), diagnostics: [],
-      status: TEXT_EXTENSIONS.has(extension) ? "parsed" : "unsupported" };
+      status: TEXT_EXTENSIONS.has(extension) ? "parsed" : "unsupported",...knowledgeMetadata(path,content) };
     try {
       const language = await this.language(languageName);
       this.parser.setLanguage(language);

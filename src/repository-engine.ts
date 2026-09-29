@@ -15,7 +15,7 @@ import type { ParsedFile } from "./types.js";
 
 const MAX_FILE_BYTES = 1_048_576;
 const CACHE_PATH = ".engineering-workflow/cache/rke.sqlite";
-const SCHEMA_VERSION = "4";
+const SCHEMA_VERSION = "5";
 interface TraceEdge {source:string;target:string;kind:string;path:string;targetPath?:string;origin:string;confidence:string}
 function normalizedScopes(scopes:readonly string[]):string[]{return scopes.map(scope=>safeRelative(scope).replace(/\/+$/, ""));}
 function inScope(path:string,scopes:readonly string[]):boolean{return !scopes.length||scopes.some(scope=>path===scope||path.startsWith(`${scope}/`));}
@@ -70,7 +70,7 @@ export class RepositoryEngine {
   private migrate(): void {
     this.db.exec("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
     const previous = this.db.prepare("SELECT value FROM meta WHERE key='schema_version'").get() as { value: string } | undefined;
-    if (previous && previous.value !== SCHEMA_VERSION) this.db.exec("DROP TABLE IF EXISTS chunks_fts; DROP TABLE IF EXISTS chunks; DROP TABLE IF EXISTS edges; DROP TABLE IF EXISTS imports; DROP TABLE IF EXISTS symbols; DROP TABLE IF EXISTS files;");
+    if (previous && previous.value !== SCHEMA_VERSION) this.db.exec("DROP TABLE IF EXISTS knowledge_links; DROP TABLE IF EXISTS knowledge_concepts; DROP TABLE IF EXISTS chunks_fts; DROP TABLE IF EXISTS chunks; DROP TABLE IF EXISTS edges; DROP TABLE IF EXISTS imports; DROP TABLE IF EXISTS symbols; DROP TABLE IF EXISTS files;");
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS files (
         id INTEGER PRIMARY KEY, path TEXT NOT NULL UNIQUE, size INTEGER NOT NULL, mtime_ms REAL NOT NULL, ctime_ms REAL NOT NULL,
@@ -85,10 +85,13 @@ export class RepositoryEngine {
       );
       CREATE INDEX IF NOT EXISTS symbols_name ON symbols(name);
       CREATE INDEX IF NOT EXISTS symbols_qualname ON symbols(qualname);
+      CREATE INDEX IF NOT EXISTS symbols_file_name ON symbols(file_id,name);
       CREATE TABLE IF NOT EXISTS imports (
         id INTEGER PRIMARY KEY, file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
         local_name TEXT NOT NULL, imported_name TEXT NOT NULL, source TEXT NOT NULL, kind TEXT NOT NULL
       );
+      CREATE INDEX IF NOT EXISTS imports_file_local ON imports(file_id,local_name);
+      CREATE INDEX IF NOT EXISTS imports_imported ON imports(imported_name);
       CREATE TABLE IF NOT EXISTS edges (
         id INTEGER PRIMARY KEY, file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
         source_symbol TEXT NOT NULL, target_symbol TEXT NOT NULL, kind TEXT NOT NULL
@@ -101,6 +104,9 @@ export class RepositoryEngine {
         start_column INTEGER NOT NULL, end_column INTEGER NOT NULL, body TEXT NOT NULL
       );
       CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(path, filename, symbol, heading, body, tokenize='unicode61 tokenchars ''_$''');
+      CREATE TABLE IF NOT EXISTS knowledge_concepts (file_id INTEGER PRIMARY KEY REFERENCES files(id) ON DELETE CASCADE,path TEXT NOT NULL UNIQUE,type TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS knowledge_links (file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,target_path TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS knowledge_links_target ON knowledge_links(target_path);
     `);
     this.db.prepare("INSERT OR REPLACE INTO meta(key,value) VALUES('schema_version',?)").run(SCHEMA_VERSION);
     this.db.prepare("INSERT OR REPLACE INTO meta(key,value) VALUES('repository_identity',?)").run(sha256(this.root));
@@ -234,6 +240,7 @@ export class RepositoryEngine {
         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(fingerprint.path,fingerprint.size,fingerprint.mtimeMs,fingerprint.ctimeMs,fingerprint.hash??parsed.contentHash,fingerprint.gitOid??null,parsed.language,
           parsed.parserId, parsed.grammarVersion, parsed.extractorVersion, parsed.status, JSON.stringify(parsed.diagnostics), new Date().toISOString());
       const fileId = Number(file.lastInsertRowid);
+      if(parsed.knowledgeType){this.db.prepare("INSERT INTO knowledge_concepts(file_id,path,type) VALUES(?,?,?)").run(fileId,fingerprint.path,parsed.knowledgeType);const linkStatement=this.db.prepare("INSERT INTO knowledge_links(file_id,target_path) VALUES(?,?)");for(const target of parsed.knowledgeLinks??[])linkStatement.run(fileId,target);}
       const symbolStatement = this.db.prepare(`INSERT INTO symbols(file_id,name,qualname,kind,signature,start_line,end_line,start_column,end_column,origin,confidence)
         VALUES(?,?,?,?,?,?,?,?,?,?,?)`);
       const edgeStatement = this.db.prepare("INSERT INTO edges(file_id,source_symbol,target_symbol,kind) VALUES(?,?,?,?)");
@@ -271,7 +278,21 @@ export class RepositoryEngine {
     SELECT path,symbol,heading,startLine,endLine,excerpt,rank FROM best_per_file
     WHERE fileRow=1 ORDER BY rank,path LIMIT ?`)
       .all(terms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" OR "), ...selectedScopes.flatMap(scope=>[scope,`${scope}/`,`${scope}/`]), limit) as Record<string,unknown>[];
-    return rows;
+    if(rows.length>=limit)return rows;
+    const direct=new Set(rows.map(row=>String(row.path))),expanded:Record<string,unknown>[]=[];
+    for(const row of rows.slice(0,20)){
+      const source=String(row.path);
+      const neighbours=this.db.prepare(`SELECT target.path FROM knowledge_concepts source JOIN knowledge_links link ON link.file_id=source.file_id JOIN knowledge_concepts target ON target.path=link.target_path WHERE source.path=?
+        UNION SELECT source.path FROM knowledge_concepts target JOIN knowledge_links link ON link.target_path=target.path JOIN knowledge_concepts source ON source.file_id=link.file_id WHERE target.path=? LIMIT 100`).all(source,source) as {path:string}[];
+      for(const {path} of neighbours){
+        if(direct.has(path)||expanded.some(item=>item.path===path)||!inScope(path,selectedScopes))continue;
+        const chunk=this.db.prepare("SELECT start_line AS startLine,end_line AS endLine,substr(body,1,240) AS excerpt FROM chunks WHERE path=? ORDER BY start_line LIMIT 1").get(path) as {startLine:number;endLine:number;excerpt:string}|undefined;
+        if(!chunk)continue;
+        expanded.push({path,symbol:null,heading:null,...chunk,rank:Math.max(1,Math.abs(Number(row.rank))*5),reasons:["knowledge-relationship",`linked-from:${source}`]});
+        if(rows.length+expanded.length>=limit)return [...rows,...expanded];
+      }
+    }
+    return [...rows,...expanded];
   }
 
   async fileApi(path: string): Promise<Record<string, unknown>> {
@@ -307,46 +328,55 @@ export class RepositoryEngine {
     return edges;
   }
 
-  private parserEdges():TraceEdge[]{
-    const symbols=this.db.prepare("SELECT s.name,s.qualname,f.path,f.language FROM symbols s JOIN files f ON f.id=s.file_id").all() as {name:string;qualname:string;path:string;language:string}[];
-    const imports=this.db.prepare("SELECT i.local_name AS local,i.imported_name AS imported,i.source,i.kind,f.path FROM imports i JOIN files f ON f.id=i.file_id WHERE i.kind='static-import'").all() as {local:string;imported:string;source:string;kind:string;path:string}[];
-    const byName=new Map<string,typeof symbols>();
-    for(const symbol of symbols)byName.set(symbol.name,[...(byName.get(symbol.name)??[]),symbol]);
-    const byPath=new Map<string,typeof imports>();
-    for(const item of imports)byPath.set(item.path,[...(byPath.get(item.path)??[]),item]);
-    const rows=this.db.prepare("SELECT e.source_symbol AS source,e.target_symbol AS target,e.kind,f.path,f.language FROM edges e JOIN files f ON f.id=e.file_id").all() as {source:string;target:string;kind:string;path:string;language:string}[];
-    return rows.map(row=>{
+  private resolveParserEdge(row:{source:string;target:string;kind:string;path:string;language:string;fileId:number}):TraceEdge{
       const parts=row.target.split(".");
-      const binding=byPath.get(row.path)?.find(item=>item.local===parts[0]);
-      let matches:typeof symbols=[];
-      if(binding&&binding.source.startsWith(".")){
-        const leadingDots=binding.source.match(/^\.+/)?.[0].length??0;
-        const source=binding.source.startsWith("./")||binding.source.startsWith("../")?binding.source:
-          `${"../".repeat(Math.max(0,leadingDots-1))}${binding.source.slice(leadingDots).replaceAll(".","/")}`;
+      const binding=this.db.prepare("SELECT local_name AS local,imported_name AS imported,source FROM imports WHERE file_id=? AND local_name=? AND kind='static-import' LIMIT 2").all(row.fileId,parts[0]!) as {local:string;imported:string;source:string}[];
+      let matches:{name:string;qualname:string;path:string;language:string}[]=[];
+      if(binding.length===1&&binding[0]!.source.startsWith(".")){
+        const bound=binding[0]!,leadingDots=bound.source.match(/^\.+/)?.[0].length??0;
+        const source=bound.source.startsWith("./")||bound.source.startsWith("../")?bound.source:
+          `${"../".repeat(Math.max(0,leadingDots-1))}${bound.source.slice(leadingDots).replaceAll(".","/")}`;
         const resolved=posix.normalize(posix.join(posix.dirname(row.path),source));
         const stem=resolved.replace(/\.(?:tsx?|jsx?|py)$/i,"");
         const candidates=new Set([resolved,`${stem}.ts`,`${stem}.tsx`,`${stem}.js`,`${stem}.jsx`,`${stem}.py`,`${stem}/index.ts`,`${stem}/index.js`,`${stem}/__init__.py`]);
-        const wanted=binding.imported==="*"?parts.at(-1):binding.imported;
-        if(wanted&&wanted!=="default")matches=(byName.get(wanted)??[]).filter(item=>candidates.has(item.path));
+        const wanted=bound.imported==="*"?parts.at(-1):bound.imported;
+        if(wanted&&wanted!=="default")matches=this.db.prepare(`SELECT s.name,s.qualname,f.path,f.language FROM symbols s JOIN files f ON f.id=s.file_id WHERE s.name=? AND f.path IN (${[...candidates].map(()=>"?").join(",")}) LIMIT 2`).all(wanted,...candidates) as typeof matches;
       }
-      if(!binding&&!row.target.includes(".")){
-        matches=(byName.get(row.target)??[]).filter(item=>item.path===row.path);
-        if(!matches.length&&row.language==="go")matches=(byName.get(row.target)??[]).filter(item=>item.language==="go"&&posix.dirname(item.path)===posix.dirname(row.path));
+      if(!binding.length&&!row.target.includes(".")){
+        matches=this.db.prepare("SELECT s.name,s.qualname,f.path,f.language FROM symbols s JOIN files f ON f.id=s.file_id WHERE s.name=? AND f.path=? LIMIT 2").all(row.target,row.path) as typeof matches;
+        if(!matches.length&&row.language==="go"){const directory=posix.dirname(row.path);matches=this.db.prepare(`SELECT s.name,s.qualname,f.path,f.language FROM symbols s JOIN files f ON f.id=s.file_id WHERE s.name=? AND f.language='go' AND ${directory==="."?"f.path NOT LIKE '%/%'":"f.path LIKE ?"} LIMIT 2`).all(...(directory==="."?[row.target]:[row.target,`${directory}/%`])) as typeof matches;}
       }
       const edge={source:row.source,target:row.target,kind:row.kind,path:row.path};
       if(matches.length!==1)return{...edge,origin:"parser",confidence:"unresolved"};
       return{...edge,target:matches[0]!.qualname,targetPath:matches[0]!.path,origin:"parser",confidence:"high"};
-    });
+  }
+  private parserEdgesFor(current:string,direction:"callers"|"callees",limit:number,scopes:string[]):TraceEdge[]{
+    if(limit<=0)return[];
+    const simple=current.split(".").at(-1)??current;
+    const symbols=this.db.prepare("SELECT qualname FROM symbols WHERE name=? OR qualname=? LIMIT 100").all(simple,current) as {qualname:string}[];
+    const keys=[...new Set([current,simple,...symbols.map(item=>item.qualname)])];
+    const clauses=keys.map(()=>"?").join(",");
+    const scopeSql=scopes.length?` AND (${scopes.map(()=>"(f.path=? OR substr(f.path,1,length(?))=?)").join(" OR ")})`:"";
+    const scopeArgs=scopes.flatMap(scope=>[scope,`${scope}/`,`${scope}/`]);
+    const query=`SELECT e.file_id AS fileId,e.source_symbol AS source,e.target_symbol AS target,e.kind,f.path,f.language FROM edges e JOIN files f ON f.id=e.file_id WHERE ${direction==="callees"?`e.source_symbol IN (${clauses})`:`e.target_symbol IN (${clauses})`}${scopeSql} ORDER BY e.id LIMIT ?`;
+    const rows=this.db.prepare(query).all(...keys,...scopeArgs,limit) as {source:string;target:string;kind:string;path:string;language:string;fileId:number}[];
+    if(direction==="callers"&&rows.length<limit){
+      const aliasScope=scopes.length?` AND (${scopes.map(()=>"(f.path=? OR substr(f.path,1,length(?))=?)").join(" OR ")})`:"";
+      const aliases=this.db.prepare(`SELECT i.file_id AS fileId,i.local_name AS local FROM imports i JOIN files f ON f.id=i.file_id WHERE i.imported_name=? AND i.kind='static-import'${aliasScope} LIMIT 100`).all(simple,...scopeArgs) as {fileId:number;local:string}[];
+      for(const alias of aliases){if(rows.length>=limit)break;rows.push(...this.db.prepare(`SELECT e.file_id AS fileId,e.source_symbol AS source,e.target_symbol AS target,e.kind,f.path,f.language FROM edges e JOIN files f ON f.id=e.file_id WHERE e.file_id=? AND (e.target_symbol=? OR e.target_symbol LIKE ?)${scopeSql} ORDER BY e.id LIMIT ?`).all(alias.fileId,alias.local,`${alias.local}.%`,...scopeArgs,limit-rows.length) as typeof rows);}
+    }
+    return rows.map(row=>this.resolveParserEdge(row));
   }
 
-  private traceCurrentIndex(symbol:string,direction:"callers"|"callees"|"both",depth:number,scopes:string[]=[],reviewEdges:{source:string;target:string;kind:string;path:string;origin:string;confidence:string}[]=[],parserEdges=this.parserEdges()):Record<string,unknown>{
+  private traceCurrentIndex(symbol:string,direction:"callers"|"callees"|"both",depth:number,scopes:string[]=[],reviewEdges:{source:string;target:string;kind:string;path:string;origin:string;confidence:string}[]=[]):Record<string,unknown>{
     const seed=symbol.split("::").at(-1)??symbol;
     const nodes = new Set([seed]); const edges: TraceEdge[] = []; let frontier = new Set([seed]);
-    for (let level = 0; level < Math.max(1, depth); level++) {
+    for (let level = 0; level < Math.min(5,Math.max(1, depth))&&edges.length<500; level++) {
       const next = new Set<string>();
       for (const current of frontier) {
-        if (direction !== "callers") for (const row of parserEdges) { if(row.source!==current&&!row.source.endsWith(`.${current}`))continue;if(!inScope(row.path,scopes))continue;edges.push(row); if (!nodes.has(row.target)) next.add(row.target); nodes.add(row.target); }
-        if (direction !== "callees") for (const row of parserEdges) { if(row.target!==current&&!row.target.endsWith(`.${current}`))continue;if(!inScope(row.path,scopes))continue;edges.push(row); if (!nodes.has(row.source)) next.add(row.source); nodes.add(row.source); }
+        if(edges.length>=500)break;
+        if (direction !== "callers") for (const row of this.parserEdgesFor(current,"callees",500-edges.length,scopes)) { if(row.source!==current&&!row.source.endsWith(`.${current}`))continue;edges.push(row); if (!nodes.has(row.target)) next.add(row.target); nodes.add(row.target); }
+        if (direction !== "callees") for (const row of this.parserEdgesFor(current,"callers",500-edges.length,scopes)) { if(row.target!==current&&!row.target.endsWith(`.${current}`))continue;edges.push(row); if (!nodes.has(row.source)) next.add(row.source); nodes.add(row.source); }
         for(const row of reviewEdges){if(!inScope(row.path,scopes))continue;if(direction!=="callers"&&(row.source===current||row.source.endsWith(`.${current}`))){edges.push(row);if(!nodes.has(row.target))next.add(row.target);nodes.add(row.target);}if(direction!=="callees"&&(row.target===current||row.target.endsWith(`.${current}`))){edges.push(row);if(!nodes.has(row.source))next.add(row.source);nodes.add(row.source);}}
       }
       frontier = next;
@@ -366,11 +396,11 @@ export class RepositoryEngine {
   async changeImpact(paths: string[], depth = 2, scopes:string[]=[]): Promise<Record<string, unknown>> {
     await this.ensureFresh();
     const normalized=normalizedScopes(scopes),changed=paths.map(safeRelative),selected=changed.filter(path=>inScope(path,normalized));
-    const symbols = selected.length?this.db.prepare(`SELECT s.qualname FROM symbols s JOIN files f ON f.id=s.file_id WHERE f.path IN (${selected.map(() => "?").join(",")})`).all(...selected) as {qualname:string}[]:[];
+    const symbols = selected.length?this.db.prepare(`SELECT s.qualname FROM symbols s JOIN files f ON f.id=s.file_id WHERE f.path IN (${selected.map(() => "?").join(",")}) LIMIT 100`).all(...selected) as {qualname:string}[]:[];
     const names=symbols.map(row=>row.qualname),reviews=await loadReviews(this.root);
     for(const receipt of reviews)if(selected.includes(receipt.path))names.push(...receipt.review.symbols.map(symbol=>symbol.qualname).filter(name=>!names.includes(name)));
-    const reviewEdges=await this.reviewEdges(),parserEdges=this.parserEdges();
-    const traces = names.slice(0,100).map(qualname=>this.traceCurrentIndex(qualname,"callers",depth,normalized,reviewEdges,parserEdges));
+    const reviewEdges=await this.reviewEdges();
+    const traces = names.slice(0,100).map(qualname=>this.traceCurrentIndex(qualname,"callers",depth,normalized,reviewEdges));
     return { changedPaths: changed, scopes:normalized, symbols:names, traces };
   }
 
