@@ -5,8 +5,8 @@
       "id": "cli-mcp-parity",
       "document": "docs/knowledge/rke-architecture.md",
       "heading": "## CLI and MCP parity",
-      "sectionDigest": "0e21d71866d313a5e36d26557fe55401cb4a0c3e4aca57e8825cd5ed6406faeb",
-      "reviewDecision": "Reviewed the updated CLI and MCP parity section and unchanged shared operation registry, CLI and MCP adapters. The new workflow and repository contracts are supported by the full deterministic tests, parity probes and release checks; hashes identify reviewed bytes rather than proving runtime truth.",
+      "sectionDigest": "5604a403c79bc0e8d9afc6fb0265c9179bef0c9ac2bc25d43b8218a0a3b46d40",
+      "reviewDecision": "Reviewed the updated CLI and MCP parity section against the unchanged shared operation registry, CLI and MCP adapters. The separate instruction-preservation audit classifies retained editorial guidance and delegated mechanics; hashes identify reviewed bytes rather than proving runtime truth.",
       "selectors": [
         {
           "role": "implementation",

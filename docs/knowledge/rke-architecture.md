@@ -63,6 +63,8 @@ Manifest reads and writes resolve symlink parents against the repository boundar
 
 The EWF skill is co-versioned in `skills/engineering-workflow`. Its operating contracts live only under the skill's `references/` directory: shared contracts are flat, phase-specific guidance is under `journeys/`, and opt-in capability guidance is under `extensions/`. The repository's `docs/knowledge/` directory is reserved for canonical RKE project knowledge and must not mirror those skill instructions.
 
+The legacy outcome matrix and the EWF instruction-preservation audit answer different questions. The audit classifies each archived engineering skill's editorial judgement, command-owned mechanics, and intentionally omitted or independently owned rules. Restored continuity depth, knowledge and decision methodology, task-lifecycle judgement, and publication review live in conditional EWF references; archived scripts and legacy schemas are not a second live implementation.
+
 The Polaralias skills repository carries a synchronized catalogue mirror for agent discovery. A mirror may not contain a divergent runtime copy.
 
 The intended RKE 1.x stability surface and pre-1.0 qualification are consolidated in [`docs/compatibility.md`](../compatibility.md).
