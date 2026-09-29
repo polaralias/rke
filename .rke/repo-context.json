@@ -24,8 +24,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-29T09:25:53.779Z",
-        "evidence": "Reviewed changed security, parser, engine, operations, CI and skill sources against the architecture concept; 84 deterministic tests, 30 legacy parity probes, release validation, no-Python audit and packed smoke passed.",
+        "verifiedAt": "2026-09-29T09:29:18.656Z",
+        "evidence": "Reviewed EWF version bump with the unchanged runtime and updated structural references; catalogue metadata now declares the synchronized 4.13.0 package.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -209,7 +209,7 @@
           },
           {
             "path": "skills/engineering-workflow/SKILL.md",
-            "sha256": "7cfee047d221fe0fbb960a3d10b8019d212b44b38eee1972f681ff9d159977de"
+            "sha256": "476620bf91db2960776f9d1e57d8b03699d310e034a07b51c2bc2dfbafa2ebb2"
           },
           {
             "path": "skills/engineering-workflow/tests/prompts.md",
@@ -531,5 +531,5 @@
       }
     }
   ],
-  "revision": 49
+  "revision": 50
 }
