@@ -51,7 +51,7 @@
     "skill:check": "npm run build && node dist/scripts/sync-skill.js --target ../skills/skills/engineering/engineering-workflow --check",
     "skill:sync": "npm run build && node dist/scripts/sync-skill.js --target ../skills/skills/engineering/engineering-workflow",
     "verify:no-python": "npm run build && node dist/scripts/no-python.js",
-    "prepack": "npm run build && npm run lint && npm test && npm run validate:release && npm run verify:no-python"
+    "prepack": "npm run build && npm run lint && npm test && npm run test:legacy-parity && npm run validate:release && npm run verify:no-python"
   },
   "dependencies": {
     "@cursorless/tree-sitter-wasms": "^0.10.0",

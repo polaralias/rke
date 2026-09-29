@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir, rename, stat } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join, posix, resolve } from "node:path";
 
 import { git, sha256 } from "./io.js";
 import { repositoryPath, safeRelative } from "./paths.js";
@@ -16,6 +16,7 @@ import type { ParsedFile } from "./types.js";
 const MAX_FILE_BYTES = 1_048_576;
 const CACHE_PATH = ".engineering-workflow/cache/rke.sqlite";
 const SCHEMA_VERSION = "4";
+interface TraceEdge {source:string;target:string;kind:string;path:string;targetPath?:string;origin:string;confidence:string}
 function normalizedScopes(scopes:readonly string[]):string[]{return scopes.map(scope=>safeRelative(scope).replace(/\/+$/, ""));}
 function inScope(path:string,scopes:readonly string[]):boolean{return !scopes.length||scopes.some(scope=>path===scope||path.startsWith(`${scope}/`));}
 
@@ -280,8 +281,14 @@ export class RepositoryEngine {
     const symbols=file?this.db.prepare(`SELECT s.id,s.name,s.qualname,s.kind,s.signature,s.start_line AS startLine,s.end_line AS endLine,
         s.start_column AS startColumn,s.end_column AS endColumn,s.origin,s.confidence FROM symbols s JOIN files f ON f.id=s.file_id WHERE f.path=? ORDER BY s.start_line`).all(relative):[];
     const imports=file?this.db.prepare("SELECT local_name AS local,imported_name AS imported,source,kind FROM imports i JOIN files f ON f.id=i.file_id WHERE f.path=?").all(relative):[];
-    if(file&&symbols.length)return{path:relative,found:true,file,symbols,imports,analysisMode:"parser",extractionDepth:{syntax:"parser-backed",definitions:"extracted",imports:"lexical",calls:"name-only",crossFileResolution:"unresolved",runtime:"not-executed"}};
     const review=await loadReview(this.root,relative);
+    if(file&&symbols.length){
+      const parserNames=new Set((symbols as {qualname:string}[]).map(symbol=>symbol.qualname));
+      const reviewedSymbols=review?.review.symbols.filter(symbol=>!parserNames.has(symbol.qualname)).map(symbol=>({...symbol,origin:"agent-review"}))??[];
+      return{path:relative,found:true,file,symbols:[...symbols,...reviewedSymbols],imports:[...imports,...(review?.review.imports??[])],
+        calls:review?.review.calls??[],analysisMode:review?"parser+agent-reviewed":"parser",reviewDigest:review?.digest,
+        diagnostics:review?.review.diagnostics??[],extractionDepth:{syntax:"parser-backed",definitions:"extracted",imports:"lexical",calls:"name-only",crossFileResolution:"unambiguous-static-only",runtime:"not-executed"}};
+    }
     if(review)return{path:relative,found:true,file:file??null,analysisMode:"agent-reviewed",digest:review.digest,symbols:review.review.symbols.map(symbol=>({...symbol,origin:"agent-review"})),imports:imports.length?imports:review.review.imports,calls:review.review.calls,diagnostics:review.review.diagnostics};
     let packet:Record<string,unknown>|undefined;
     try{packet=reviewPacket(await readSourceEvidence(this.root,relative));}catch{/* Unsafe or absent source is not returned. */}
@@ -296,18 +303,50 @@ export class RepositoryEngine {
 
   private async reviewEdges():Promise<{source:string;target:string;kind:string;path:string;origin:string;confidence:string}[]>{
     const reviews=await loadReviews(this.root),edges:{source:string;target:string;kind:string;path:string;origin:string;confidence:string}[]=[];
-    for(const receipt of reviews){const count=this.db.prepare("SELECT COUNT(s.id) AS symbols FROM files f LEFT JOIN symbols s ON s.file_id=f.id WHERE f.path=?").get(receipt.path) as {symbols:number}|undefined;if(count?.symbols)continue;for(const call of receipt.review.calls)edges.push({...call,path:receipt.path,origin:"agent-review"});}
+    for(const receipt of reviews)for(const call of receipt.review.calls)edges.push({...call,path:receipt.path,origin:"agent-review"});
     return edges;
   }
 
-  private traceCurrentIndex(symbol:string,direction:"callers"|"callees"|"both",depth:number,scopes:string[]=[],reviewEdges:{source:string;target:string;kind:string;path:string;origin:string;confidence:string}[]=[]):Record<string,unknown>{
+  private parserEdges():TraceEdge[]{
+    const symbols=this.db.prepare("SELECT s.name,s.qualname,f.path,f.language FROM symbols s JOIN files f ON f.id=s.file_id").all() as {name:string;qualname:string;path:string;language:string}[];
+    const imports=this.db.prepare("SELECT i.local_name AS local,i.imported_name AS imported,i.source,i.kind,f.path FROM imports i JOIN files f ON f.id=i.file_id WHERE i.kind='static-import'").all() as {local:string;imported:string;source:string;kind:string;path:string}[];
+    const byName=new Map<string,typeof symbols>();
+    for(const symbol of symbols)byName.set(symbol.name,[...(byName.get(symbol.name)??[]),symbol]);
+    const byPath=new Map<string,typeof imports>();
+    for(const item of imports)byPath.set(item.path,[...(byPath.get(item.path)??[]),item]);
+    const rows=this.db.prepare("SELECT e.source_symbol AS source,e.target_symbol AS target,e.kind,f.path,f.language FROM edges e JOIN files f ON f.id=e.file_id").all() as {source:string;target:string;kind:string;path:string;language:string}[];
+    return rows.map(row=>{
+      const parts=row.target.split(".");
+      const binding=byPath.get(row.path)?.find(item=>item.local===parts[0]);
+      let matches:typeof symbols=[];
+      if(binding&&binding.source.startsWith(".")){
+        const leadingDots=binding.source.match(/^\.+/)?.[0].length??0;
+        const source=binding.source.startsWith("./")||binding.source.startsWith("../")?binding.source:
+          `${"../".repeat(Math.max(0,leadingDots-1))}${binding.source.slice(leadingDots).replaceAll(".","/")}`;
+        const resolved=posix.normalize(posix.join(posix.dirname(row.path),source));
+        const stem=resolved.replace(/\.(?:tsx?|jsx?|py)$/i,"");
+        const candidates=new Set([resolved,`${stem}.ts`,`${stem}.tsx`,`${stem}.js`,`${stem}.jsx`,`${stem}.py`,`${stem}/index.ts`,`${stem}/index.js`,`${stem}/__init__.py`]);
+        const wanted=binding.imported==="*"?parts.at(-1):binding.imported;
+        if(wanted&&wanted!=="default")matches=(byName.get(wanted)??[]).filter(item=>candidates.has(item.path));
+      }
+      if(!binding&&!row.target.includes(".")){
+        matches=(byName.get(row.target)??[]).filter(item=>item.path===row.path);
+        if(!matches.length&&row.language==="go")matches=(byName.get(row.target)??[]).filter(item=>item.language==="go"&&posix.dirname(item.path)===posix.dirname(row.path));
+      }
+      const edge={source:row.source,target:row.target,kind:row.kind,path:row.path};
+      if(matches.length!==1)return{...edge,origin:"parser",confidence:"unresolved"};
+      return{...edge,target:matches[0]!.qualname,targetPath:matches[0]!.path,origin:"parser",confidence:"high"};
+    });
+  }
+
+  private traceCurrentIndex(symbol:string,direction:"callers"|"callees"|"both",depth:number,scopes:string[]=[],reviewEdges:{source:string;target:string;kind:string;path:string;origin:string;confidence:string}[]=[],parserEdges=this.parserEdges()):Record<string,unknown>{
     const seed=symbol.split("::").at(-1)??symbol;
-    const nodes = new Set([seed]); const edges: Record<string, unknown>[] = []; let frontier = new Set([seed]);
+    const nodes = new Set([seed]); const edges: TraceEdge[] = []; let frontier = new Set([seed]);
     for (let level = 0; level < Math.max(1, depth); level++) {
       const next = new Set<string>();
       for (const current of frontier) {
-        if (direction !== "callers") for (const row of this.db.prepare("SELECT e.source_symbol AS source,e.target_symbol AS target,e.kind,f.path FROM edges e JOIN files f ON f.id=e.file_id WHERE e.source_symbol=? OR e.source_symbol LIKE ?").all(current, `%.${current}`) as {source:string;target:string;kind:string;path:string}[]) { if(!inScope(row.path,scopes))continue;edges.push({...row,origin:"parser",confidence:"unresolved"}); if (!nodes.has(row.target)) next.add(row.target); nodes.add(row.target); }
-        if (direction !== "callees") for (const row of this.db.prepare("SELECT e.source_symbol AS source,e.target_symbol AS target,e.kind,f.path FROM edges e JOIN files f ON f.id=e.file_id WHERE e.target_symbol=? OR e.target_symbol LIKE ?").all(current, `%.${current}`) as {source:string;target:string;kind:string;path:string}[]) { if(!inScope(row.path,scopes))continue;edges.push({...row,origin:"parser",confidence:"unresolved"}); if (!nodes.has(row.source)) next.add(row.source); nodes.add(row.source); }
+        if (direction !== "callers") for (const row of parserEdges) { if(row.source!==current&&!row.source.endsWith(`.${current}`))continue;if(!inScope(row.path,scopes))continue;edges.push(row); if (!nodes.has(row.target)) next.add(row.target); nodes.add(row.target); }
+        if (direction !== "callees") for (const row of parserEdges) { if(row.target!==current&&!row.target.endsWith(`.${current}`))continue;if(!inScope(row.path,scopes))continue;edges.push(row); if (!nodes.has(row.source)) next.add(row.source); nodes.add(row.source); }
         for(const row of reviewEdges){if(!inScope(row.path,scopes))continue;if(direction!=="callers"&&(row.source===current||row.source.endsWith(`.${current}`))){edges.push(row);if(!nodes.has(row.target))next.add(row.target);nodes.add(row.target);}if(direction!=="callees"&&(row.target===current||row.target.endsWith(`.${current}`))){edges.push(row);if(!nodes.has(row.source))next.add(row.source);nodes.add(row.source);}}
       }
       frontier = next;
@@ -329,9 +368,9 @@ export class RepositoryEngine {
     const normalized=normalizedScopes(scopes),changed=paths.map(safeRelative),selected=changed.filter(path=>inScope(path,normalized));
     const symbols = selected.length?this.db.prepare(`SELECT s.qualname FROM symbols s JOIN files f ON f.id=s.file_id WHERE f.path IN (${selected.map(() => "?").join(",")})`).all(...selected) as {qualname:string}[]:[];
     const names=symbols.map(row=>row.qualname),reviews=await loadReviews(this.root);
-    for(const receipt of reviews){if(!selected.includes(receipt.path))continue;const count=this.db.prepare("SELECT COUNT(s.id) AS symbols FROM files f LEFT JOIN symbols s ON s.file_id=f.id WHERE f.path=?").get(receipt.path) as {symbols:number}|undefined;if(!count?.symbols)names.push(...receipt.review.symbols.map(symbol=>symbol.qualname));}
-    const reviewEdges=await this.reviewEdges();
-    const traces = names.slice(0,100).map(qualname=>this.traceCurrentIndex(qualname,"callers",depth,normalized,reviewEdges));
+    for(const receipt of reviews)if(selected.includes(receipt.path))names.push(...receipt.review.symbols.map(symbol=>symbol.qualname).filter(name=>!names.includes(name)));
+    const reviewEdges=await this.reviewEdges(),parserEdges=this.parserEdges();
+    const traces = names.slice(0,100).map(qualname=>this.traceCurrentIndex(qualname,"callers",depth,normalized,reviewEdges,parserEdges));
     return { changedPaths: changed, scopes:normalized, symbols:names, traces };
   }
 

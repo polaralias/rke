@@ -27,6 +27,7 @@ jobs:
       - run: npm run check
       - run: npm run lint
       - run: npm test
+      - run: npm run test:legacy-parity
       - run: npm run validate:release
       - run: npm run verify:no-python
       - run: npm run smoke:packed

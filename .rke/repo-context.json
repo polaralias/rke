@@ -24,12 +24,12 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-28T07:17:58.029Z",
-        "evidence": "Reviewed SQLite FTS search per-file ranking against the repository engine and >200-chunk two-file regression; 76 tests, 30 parity probes, lint and release validation passed.",
+        "verifiedAt": "2026-09-29T09:25:53.779Z",
+        "evidence": "Reviewed changed security, parser, engine, operations, CI and skill sources against the architecture concept; 84 deterministic tests, 30 legacy parity probes, release validation, no-Python audit and packed smoke passed.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
-            "sha256": "032f6bbd228c02561f0ce43f4b95ded4e5c06744064d4786d46b7ac659d49117"
+            "sha256": "8a0a756e108c28be8bada4381c59818fbc7f7749e8132b9df8b8e590eb875cd7"
           },
           {
             "path": ".github/workflows/publish-release.yml",
@@ -73,7 +73,7 @@
           },
           {
             "path": "docs/knowledge/rke-architecture.md",
-            "sha256": "75a623694b36f72c8dda6ee2cd123f5d2d7363764517912a773145d2ae380f53"
+            "sha256": "25bc4faeae80c3483b1bd9755479b3c6d3c6f27015b4b888be2d41e3310d9220"
           },
           {
             "path": "docs/typescript-rewrite-plan.md",
@@ -89,11 +89,11 @@
           },
           {
             "path": "package.json",
-            "sha256": "be78785bb4c1fe1ce2d1bdbe6a805d3aa9348977b14076ba1fec92b52c97ca83"
+            "sha256": "1ddc6c2e889ad3cdfd44d886335bda0e21ce550dcb49254d262a53e960708ce3"
           },
           {
             "path": "README.md",
-            "sha256": "2d45f0029dbc89c14ea62207ede72a03b4cb84f440a667447a6c7f1aae00ce8d"
+            "sha256": "4af4b399bdf361bb0683b362d52bb0621219b0eec498eed9d9270c892ec1348b"
           },
           {
             "path": "scripts/benchmark-freshness.ts",
@@ -185,7 +185,7 @@
           },
           {
             "path": "skills/engineering-workflow/references/quality-coverage.md",
-            "sha256": "468cdbe4ade1e577c6bb888c0ec3daf88368b5fc754ae0dc58e276acb2b43251"
+            "sha256": "c1e03879867f5389388e630d848f4deb76e33bb5d57e3ed2717197dd735b5c7d"
           },
           {
             "path": "skills/engineering-workflow/references/repo-context-contract.md",
@@ -197,7 +197,7 @@
           },
           {
             "path": "skills/engineering-workflow/references/structural-context.md",
-            "sha256": "a6414d2a236e704200c0bb575fab1146be9ce09bfd30acac3e8728ecd14ad354"
+            "sha256": "614352f35130301cfddfd689345fd155ba84a2d56b31e5fed0bd023afec07c84"
           },
           {
             "path": "skills/engineering-workflow/references/tracker-publication.md",
@@ -281,7 +281,7 @@
           },
           {
             "path": "src/operations.ts",
-            "sha256": "393382059a9553bb5558bf7c5052f9b591dfba0a4be66ec3b3a663d786dbb799"
+            "sha256": "62be94291555ccb43eff141275dd198b46c4d89831cf3deb7968de1232696be3"
           },
           {
             "path": "src/parser-process-client.ts",
@@ -293,7 +293,7 @@
           },
           {
             "path": "src/parser.ts",
-            "sha256": "c5a3713586b533e1893c25e5adb049cbf2c958cef599983c0fc85ecd8fe668be"
+            "sha256": "bc27eb095f80c7922f8717b523f07d38293cdbb3213a478519c301adcf287d50"
           },
           {
             "path": "src/paths.ts",
@@ -309,11 +309,11 @@
           },
           {
             "path": "src/repository-engine.ts",
-            "sha256": "67e26c380614f9db78329bedec578bd17ef1e2ff7264a112c8df2b499af1cb15"
+            "sha256": "4e80851b501bf31f628bbf51027f1d053fdbfda7a88b2255ebe7d21b48cbe057"
           },
           {
             "path": "src/security.ts",
-            "sha256": "c61ca7a49d6f5bc150041cfb5d41007f436c26ed1d3cf006cd114bf25c516ef6"
+            "sha256": "cf743c14187299c63530ed877abfe8c78ecb74e1180a84a4ffbb0ac1bb3e75e9"
           },
           {
             "path": "src/source-evidence.ts",
@@ -345,7 +345,7 @@
           },
           {
             "path": "tests/engine.test.ts",
-            "sha256": "2df85dd4b7d8d8f9950d8ea1df07abcc3b2a1325498245620b41df8ec0df34cc"
+            "sha256": "5552a674b60489662c8ddd3edd19555d75b1e5f96eab647388e0ba141949c7be"
           },
           {
             "path": "tests/fixtures/documentation-bootstrap/partial-state/.rke/repo-context.json",
@@ -505,19 +505,19 @@
           },
           {
             "path": "tests/operations.test.ts",
-            "sha256": "6ba58e758d4c1ff5a4b437c1906da301b8ccb5b23b37331e4d1b3f628cfcdd8f"
+            "sha256": "3e028287f01e85e02690a32bde2f401d16c50855248dcd079e61c310a88405e9"
           },
           {
             "path": "tests/parser.test.ts",
-            "sha256": "da0cd2ad39e81ed2c05952fd85bd54c51a8e414d005c749de8b73b0d80d78187"
+            "sha256": "bae2161542be40a5da9f472f48aabb36c8811e619728c2295c24ff87bee91018"
           },
           {
             "path": "tests/public-behavior.test.ts",
-            "sha256": "75d997240ad7e63ae9a4a7ede9fdf16586338e228f9cbef5412a05c9965e98b2"
+            "sha256": "e030789ba14cd5352bea56ad638a15b000cd5531b1bcc8acf539befa9a905a82"
           },
           {
             "path": "tests/security.test.ts",
-            "sha256": "d7efb95d56e2a86bc19c148449d707e9076f754ed3d61b58e303c6b8387c915f"
+            "sha256": "2735f7190f270954e8af4d296cf23ac06e59e7f7ca6774311526b33cd0be0660"
           },
           {
             "path": "tests/transport.test.ts",
@@ -531,5 +531,5 @@
       }
     }
   ],
-  "revision": 48
+  "revision": 49
 }

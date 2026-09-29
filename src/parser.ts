@@ -7,7 +7,7 @@ import { Language, Parser, type Node as SyntaxNode } from "web-tree-sitter";
 import { sha256 } from "./io.js";
 import type { ParsedChunk, ParsedFile, ParsedImport, ParsedSymbol } from "./types.js";
 
-export const EXTRACTOR_VERSION = "ts-0.10.0-wts27.3";
+export const EXTRACTOR_VERSION = "ts-0.10.0-wts27.4";
 const EXTENSIONS: Record<string, string> = {
   ".bash": "bash", ".c": "c", ".cc": "cpp", ".cpp": "cpp", ".cs": "c_sharp",
   ".css": "css", ".dart": "dart", ".ex": "elixir", ".exs": "elixir", ".go": "go",
@@ -30,7 +30,7 @@ function isDefinition(type: string): boolean {
   return DEFINITION_TYPES.has(type) || /^(?:function|method|class|interface|trait|struct|enum|namespace|module|constructor)_(?:definition|declaration|item)$/.test(type);
 }
 const CALLS = new Set(["call", "call_expression", "invocation_expression", "method_invocation"]);
-const IMPORTS = /(?:import|include|using|require|use)_?(?:declaration|statement|directive|expression)?$/;
+const IMPORTS = /(?:import|include|using|require|use)(?:_from)?_?(?:declaration|statement|directive|expression)?$/;
 
 function wasmPath(language: string): string {
   const here = dirname(fileURLToPath(import.meta.url));
@@ -65,7 +65,7 @@ function kindOf(type: string): string {
   return "symbol";
 }
 
-function walk(root: SyntaxNode): { symbols: ParsedSymbol[]; imports: ParsedImport[] } {
+function walk(root: SyntaxNode, language: string): { symbols: ParsedSymbol[]; imports: ParsedImport[] } {
   const symbols: ParsedSymbol[] = [];
   const imports: ParsedImport[] = [];
   const visit = (node: SyntaxNode, parents: string[]): void => {
@@ -74,6 +74,7 @@ function walk(root: SyntaxNode): { symbols: ParsedSymbol[]; imports: ParsedImpor
       const name = nodeName(node);
       const calls: string[] = [];
       const collectCalls = (child: SyntaxNode): void => {
+        if (child !== node && isDefinition(child.type)) return;
         if (CALLS.has(child.type)) { const value = callName(child); if (value) calls.push(value); }
         for (const nested of child.namedChildren) if (nested) collectCalls(nested);
       };
@@ -88,6 +89,7 @@ function walk(root: SyntaxNode): { symbols: ParsedSymbol[]; imports: ParsedImpor
     if (IMPORTS.test(node.type)) {
       const source = (node.childForFieldName("source") ?? node.childForFieldName("path"))?.text.replace(/["']/g, "") ?? node.text;
       imports.push({ local: "", imported: "", source: source.trim().slice(0, 500), kind: node.type });
+      imports.push(...staticImports(node.text, language));
     }
     for (const child of node.namedChildren) if (child) visit(child, nextParents);
   };
@@ -95,8 +97,33 @@ function walk(root: SyntaxNode): { symbols: ParsedSymbol[]; imports: ParsedImpor
   return { symbols, imports };
 }
 
+function staticImports(content: string, language: string): ParsedImport[] {
+  const found: ParsedImport[] = [];
+  if (["typescript", "tsx", "javascript"].includes(language)) {
+    const declaration = /\bimport\s+(?!\()(?:([\w$]+)\s*,?\s*)?(?:\{([^}]+)\}|\*\s+as\s+([\w$]+))?\s*from\s*["']([^"']+)["']/g;
+    for (const match of content.matchAll(declaration)) {
+      const source = match[4]!;
+      if (match[1]) found.push({local:match[1],imported:"default",source,kind:"static-import"});
+      if (match[3]) found.push({local:match[3],imported:"*",source,kind:"static-import"});
+      for (const item of match[2]?.split(",")??[]) {
+        const names = /\s*([\w$]+)(?:\s+as\s+([\w$]+))?\s*/.exec(item);
+        if (names) found.push({local:names[2]??names[1]!,imported:names[1]!,source,kind:"static-import"});
+      }
+    }
+  }
+  if (language === "python") {
+    for (const match of content.matchAll(/^\s*from\s+([.\w]+)\s+import\s+([^#\n]+)/gm)) {
+      for (const item of match[2]!.split(",")) {
+        const names = /\s*([\w]+)(?:\s+as\s+([\w]+))?\s*/.exec(item);
+        if (names) found.push({local:names[2]??names[1]!,imported:names[1]!,source:match[1]!,kind:"static-import"});
+      }
+    }
+  }
+  return found;
+}
+
 function chunks(content: string, symbols: ParsedSymbol[]): ParsedChunk[] {
-  if (symbols.length) return symbols.map((symbol) => ({ symbol: symbol.qualname, heading: null,
+  const symbolChunks = symbols.map((symbol) => ({ symbol: symbol.qualname, heading: null,
     startLine: symbol.startLine, endLine: symbol.endLine, startColumn: symbol.startColumn, endColumn: symbol.endColumn,
     body: content.split(/\r?\n/).slice(symbol.startLine - 1, symbol.endLine).join("\n") }));
   const lines = content.split(/\r?\n/);
@@ -107,7 +134,7 @@ function chunks(content: string, symbols: ParsedSymbol[]): ParsedChunk[] {
     if (body.trim()) result.push({ symbol: null, heading: lines.slice(start, end).find((line) => /^#{1,6}\s/.test(line))?.replace(/^#+\s*/, "") ?? null,
       startLine: start + 1, endLine: end, startColumn: 0, endColumn: lines[end - 1]?.length ?? 0, body });
   }
-  return result;
+  return [...symbolChunks, ...result];
 }
 
 export class SourceParser {
@@ -147,7 +174,7 @@ export class SourceParser {
       this.parser.reset();
       const tree = this.parser.parse(content);
       if (!tree) throw new Error("Tree-sitter returned no syntax tree");
-      const extracted = walk(tree.rootNode);
+      const extracted = walk(tree.rootNode, languageName);
       const edges=extracted.symbols.flatMap(symbol=>symbol.calls.map(target=>({source:symbol.qualname,target,kind:"call",confidence:"unresolved"})));
       const result: ParsedFile = { path, contentHash: sha256(content), language: languageName, parserId: "web-tree-sitter",
         grammarVersion: String(language.abiVersion), extractorVersion: EXTRACTOR_VERSION, ...extracted,

@@ -87,7 +87,60 @@ function benchmark(kind:"context"|"structure"):Handler{return async(root,args)=>
 async function prepareReview(root:string,args:Record<string,unknown>):Promise<OperationOutcome>{const source=await readSourceEvidence(root,value(args,"path"));return ok({result:"code-review-prepared",...reviewPacket(source)});}
 async function recordReview(root:string,args:Record<string,unknown>):Promise<OperationOutcome>{const receipt=await saveReview(root,value(args,"path"),value(args,"review"));return ok({result:"code-review-recorded",receipt});}
 
-export const OPERATIONS:OperationDefinition[]=definitions.map(([name,inputSchema,readOnly,idempotent,handler])=>({name,title:name.replaceAll("_"," "),description:`RKE operation ${name}.`,inputSchema,readOnly,idempotent,handler}));
+const DESCRIPTIONS:Record<string,string>={
+  workflow_activate:"Start or validate the repository workflow before material engineering work. Returns phase, task mode, gates and the activation Git baseline.",
+  workflow_start:"Initialize workflow state or open an explicit new cycle. Returns durable local control state; existing truth surfaces still require verification.",
+  workflow_checkpoint:"Save a compact verified continuation summary and next action before pause or compaction. Does not copy full task or source records.",
+  workflow_resume:"Read and validate saved workflow state after interruption. Recheck Git, task and knowledge truth before acting.",
+  workflow_close:"Attempt to close the active workflow after evidence gates and exact-delta documentation checks. Returns blockers when obligations remain.",
+  workflow_gate_add:"Register concrete unresolved obligations in the active workflow. Gates require evidence from their owning truth surface.",
+  workflow_gate_resolve:"Record concise owning-surface evidence for one outstanding gate. A receipt does not replace tests, task records or source review.",
+  workflow_journey_enter:"Enter the understand, design or close journey and receive its required reference. Preserves existing gates.",
+  workflow_task_configure:"Set none, lightweight or full task tracking and a repository-local task reference. Durable modes delegate truth to OKF Tasks.",
+  workflow_task_check:"Run the authoritative OKF Tasks strict validator for the configured bundle. None mode is a deterministic no-op.",
+  workflow_capability_enable:"Enable a justified optional workflow capability and its evidence gates. Availability alone grants no external authority.",
+  workflow_closure_assess:"Inspect independent closure lanes against an explicit Git base. Reports current blockers without closing state.",
+  workflow_complete_small_change:"Complete an eligible small correction with exact-delta evidence and reviewed paths. Refuses ineligible or unresolved changes.",
+  workflow_legacy_route:"Map a documented legacy skill name to its current journey or capability. Mapping does not execute the destination.",
+  repo_host_recipe:"Preview repository-specific host integration steps and hook commands. Read-only; output is not installation authority.",
+  repo_host_install:"Install marker-owned host routing and optional Git hook configuration. Refuses independently owned entries unless forced.",
+  repo_context_benchmark:"Measure ranked retrieval against a repository-local query corpus. Recall scores measure navigation, not correctness.",
+  repo_dissection_assess:"Assess repository entry points and candidate knowledge for understanding work. Returns bounded navigation evidence.",
+  repo_handoff_write:"Write a bounded local or shared continuation handoff from verified facts. Refuses secret-like content; does not transfer authority.",
+  repo_handoff_inspect:"Inspect a saved handoff for validity and drift. Treat its content as a continuation hint, not current repository truth.",
+  repo_coordination_validate:"Validate worktree coordination ownership and dependency topology. Reports unsafe or unresolved manifest entries.",
+  repo_coordination_plan:"Preview exact-base coordination commands and lane order from a valid manifest. Does not allocate worktrees.",
+  repo_coordination_cleanup_check:"Check whether a named coordination lane and branch can be cleaned up safely. Read-only and tip-sensitive.",
+  repo_coordination_cleanup:"Clean up an explicitly selected coordination lane after rechecking its branch and review head. Requires separate authorization.",
+  repo_tracker_preview:"Render accepted task packages into a tracker-neutral preview. Preserves hierarchy and acceptance without publishing.",
+  repo_publication_scan:"Scan package and repository surfaces for release hygiene findings. A clean scan is only one readiness input.",
+  repo_find_context:"Find ranked source and knowledge passages for a repository question. Returns bounded indexed snippets; ranking does not establish correctness or knowledge freshness.",
+  repo_context_check:"Verify the source index against repository content and report separate canonical knowledge freshness. Use before relying on cached retrieval.",
+  repo_file_api:"Inspect extracted definitions and imports for one file. Returns parser evidence and any digest-bound agent review with provenance; dynamic behavior remains unverified.",
+  repo_prepare_code_review:"Prepare bounded, numbered source slices and a digest for reviewing unresolved structural relationships. Sensitive and oversized sources are refused.",
+  repo_record_code_review:"Store a schema-validated agent review against the current source digest. Review relationships remain inference and expire when source changes.",
+  repo_trace_symbol:"Trace extracted callers or callees to bounded depth. Returns provenance and confidence per edge; unresolved names are candidates only.",
+  repo_change_impact:"Find structural callers affected by changed source paths. Returns bounded candidate traces, not proof of runtime use.",
+  repo_structure_map:"Summarize indexed files, languages, symbol counts and edge counts within optional scopes. Extraction completeness varies by grammar.",
+  repo_find_all:"Search eligible source with a bounded regular expression worker. Sensitive paths and contents are excluded.",
+  repo_knowledge_impact:"Classify changed paths as bound knowledge, review candidates or unmapped. Lexical candidates do not establish staleness.",
+  repo_knowledge_verify:"Record freshness of one reviewed knowledge concept against its exact bound source set. Requires actual source review first.",
+  repo_knowledge_bundle_check:"Validate typed knowledge concepts and relationship graph integrity. Schema success does not prove factual truth.",
+  repo_knowledge_build_indexes:"Build generated navigation indexes from validated concepts. Refuses manual index replacement unless forced.",
+  repo_knowledge_register:"Bind an existing concept to explicit source patterns. Registration leaves freshness unknown until review and verification.",
+  repo_documentation_bootstrap:"Assess whether inherited repository knowledge needs a starting bundle. Read-only; does not author canonical prose.",
+  repo_documentation_assess:"Classify the material Git delta against an explicit base as no-op, update or decision-required. Reports bound and unmatched changes.",
+  repo_documentation_disposition:"Record a reviewed no-update decision for an exact material delta. Refuses insufficient evidence.",
+  repo_documentation_apply:"Validate authored canonical changes, rebuild navigation, test reader queries and record exact-delta receipts. Does not generate prose.",
+  repo_change_explain:"Record a bounded causal explanation for an explicit Git delta. Receipt is neither test proof nor publication authority.",
+  repo_structure_benchmark:"Run a repository-local structural corpus against file API, trace and impact. Reports expected-string evidence only.",
+};
+function description(name:string):string{
+  const result=DESCRIPTIONS[name];
+  if(!result)throw new Error(`Missing MCP discovery description for ${name}`);
+  return result;
+}
+export const OPERATIONS:OperationDefinition[]=definitions.map(([name,inputSchema,readOnly,idempotent,handler])=>({name,title:name.replaceAll("_"," "),description:description(name),inputSchema,readOnly,idempotent,handler}));
 export const OPERATION_BY_NAME=new Map(OPERATIONS.map(operation=>[operation.name,operation]));
 
 function validate(value:unknown,schemaValue:Record<string,unknown>,path="arguments"):void{
