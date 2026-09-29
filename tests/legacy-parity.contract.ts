@@ -202,7 +202,7 @@ test("WTC-02 performs only explicitly invoked, exact-tip local cleanup",async t=
   const reviewHead=spawnSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).stdout.trim();
   const args={lane,branch:"feat/cleanup",reviewHead,remote:"origin",destinationBranch:"main"};
   const refused=await invokeOperation(root,"repo_coordination_cleanup",{...args,reviewHead:"0".repeat(40)});
-  assert.equal(refused.exitCode,3);assert.equal(await readFile(join(target,"README.md"),"utf8"),"# Cleanup fixture\n");
+  assert.equal(refused.exitCode,3);assert.equal((await readFile(join(target,"README.md"),"utf8")).replaceAll("\r\n","\n"),"# Cleanup fixture\n");
   const cleaned=await invokeOperation(root,"repo_coordination_cleanup",args);
   assert.equal(cleaned.exitCode,0,JSON.stringify(cleaned.payload));assert.equal(cleaned.payload.remoteBranchDeleted,false);
   assert.equal(await readFile(join(target,"README.md"),"utf8").then(()=>true,()=>false),false);

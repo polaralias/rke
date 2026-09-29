@@ -24,8 +24,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-29T09:29:18.656Z",
-        "evidence": "Reviewed EWF version bump with the unchanged runtime and updated structural references; catalogue metadata now declares the synchronized 4.13.0 package.",
+        "verifiedAt": "2026-09-29T09:36:54.272Z",
+        "evidence": "Reviewed the Windows checkout line-ending assertion in the WTC cleanup contract; all 30 legacy parity probes pass locally.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -497,7 +497,7 @@
           },
           {
             "path": "tests/legacy-parity.contract.ts",
-            "sha256": "ac94335476e1fded0b228801d64c7fb22173a0c35386da62325b899825356b96"
+            "sha256": "7953193fe750b737496d2de6729840bd14745456967020ea643229fd9c5aa75f"
           },
           {
             "path": "tests/legacy-parity.test.ts",
@@ -531,5 +531,5 @@
       }
     }
   ],
-  "revision": 50
+  "revision": 51
 }
