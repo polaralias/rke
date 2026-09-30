@@ -103,7 +103,7 @@ For an isolated agent run whose sandbox cannot execute a machine-global launcher
 
 Run `npm run benchmark` to measure cold indexing, warm retrieval, memory, and total/mean/p95 latency across 50 repeated searches over a realistic mixed Python, TypeScript and C# corpus. Set `RKE_BENCHMARK_FILES` to select the corpus size; large runs are intentionally kept out of routine CI.
 
-`package.json` is the sole release version source; `src/version.ts` reads its runtime identity directly from that package metadata. Release Drafter prepares one serialized draft from that version. A matching `vX.Y.Z` tag runs type checking, deterministic tests, the no-Python audit and a clean package smoke test, then attests and publishes the npm tarball with provenance before promoting the GitHub release. Published tags are immutable.
+`package.json` is the sole release version source; `src/version.ts` reads its runtime identity directly from that package metadata. Release Drafter prepares one serialized draft from that version. A matching `vX.Y.Z` tag runs type checking, deterministic tests, the no-Python audit and a clean package smoke test, then attests and publishes the npm tarball with provenance before promoting the GitHub release. A retry accepts an already published version only when its SHA-512 integrity matches the tested tarball; registry errors or different bytes block promotion. Published tags are immutable.
 
 ## Preserved workflows
 

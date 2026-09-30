@@ -41,7 +41,7 @@
     "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src scripts tests",
-    "test": "npm run build && node --test --test-concurrency=1 dist/tests/operations.test.js dist/tests/public-behavior.test.js dist/tests/parser.test.js dist/tests/engine.test.js dist/tests/transport.test.js dist/tests/security.test.js dist/tests/legacy-parity.test.js dist/tests/claim-bindings.test.js dist/tests/review-regressions.test.js",
+    "test": "npm run build && node --test --test-concurrency=1 dist/tests/operations.test.js dist/tests/public-behavior.test.js dist/tests/parser.test.js dist/tests/engine.test.js dist/tests/transport.test.js dist/tests/security.test.js dist/tests/legacy-parity.test.js dist/tests/claim-bindings.test.js dist/tests/review-regressions.test.js dist/tests/release-publication.test.js",
     "test:legacy-parity": "npm run build && node --test --test-concurrency=1 dist/tests/legacy-parity.contract.js",
     "benchmark": "npm run build && node dist/scripts/benchmark-freshness.js",
     "benchmark:repository": "npm run build && node dist/scripts/benchmark-real-repository.js",

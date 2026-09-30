@@ -44,11 +44,8 @@ jobs:
       - uses: actions/attest-build-provenance@v3
         with:
           subject-path: "*.tgz"
-      - name: Publish the tested and attested tarball
-        shell: bash
-        run: |
-          tarball="$(node -p "const p=require('./package.json'); p.name.replace(/^@/,'').replace('/','-')+'-'+p.version+'.tgz'")"
-          npm publish "./${tarball}" --provenance --access public
+      - name: Publish or verify the tested and attested tarball
+        run: node dist/scripts/publish-release.js
       - uses: actions/upload-artifact@v6
         with:
           name: rke-npm-package

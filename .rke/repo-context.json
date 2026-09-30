@@ -24,8 +24,8 @@
         "skills/engineering-workflow/**/*"
       ],
       "verified": {
-        "verifiedAt": "2026-09-30T02:38:31.076Z",
-        "evidence": "Reviewed EWF boundary, operation removal, release checks and focused tests against source and package behavior.",
+        "verifiedAt": "2026-09-30T07:39:01.198Z",
+        "evidence": "Reviewed EWF read-only RCC routing, post-mutation validation, npm retry integrity, 103 runtime tests, 28 parity tests, and packed smoke against source.",
         "sourceIdentities": [
           {
             "path": ".github/workflows/ci.yml",
@@ -33,7 +33,7 @@
           },
           {
             "path": ".github/workflows/publish-release.yml",
-            "sha256": "c291a5371eeeda164eeafbd2a411edc42d7d2a3dabad2d48583fb31928355934"
+            "sha256": "d2222861b79422db47b24442f449c2c844d57f103f8c32482c7612e487e39c38"
           },
           {
             "path": ".github/workflows/release-drafter.yml",
@@ -41,11 +41,11 @@
           },
           {
             "path": ".rke/claim-bindings.json",
-            "sha256": "a8762e0e633b49c168916ea850c74990ca07954290d5b92a87470e87e3fef49d"
+            "sha256": "6c1f05a6aafdb9354e0d786bc9c88d42a91103dfd1775f594ac3e2e5b4279142"
           },
           {
             "path": "AGENTS.md",
-            "sha256": "8c02e605972086528ef063d03907ee9af0d030d1062229f0fd4c61fbb4072a34"
+            "sha256": "676b438ead613b4dde9b2b31c975c631e292d125ea036a856402e3442cc03c1e"
           },
           {
             "path": "docs/adr/0001-python-fixtures-only.md",
@@ -73,7 +73,7 @@
           },
           {
             "path": "docs/knowledge/rke-architecture.md",
-            "sha256": "a011ed42cf1bf07486684046c186b412d5ee6667beb538d89f045761f668f719"
+            "sha256": "2449f7db072a9856365f79c4da0b22462092407046668120fa287be531b1f5bf"
           },
           {
             "path": "docs/typescript-rewrite-plan.md",
@@ -89,11 +89,11 @@
           },
           {
             "path": "package.json",
-            "sha256": "02e85695db31f38e99b3e7f6c62792c0d384b499d671e947e680c942aa90a159"
+            "sha256": "4953c5fc847e9c8bbd708b7b172207147e71e2f7743c5f55196a074f4a232e2f"
           },
           {
             "path": "README.md",
-            "sha256": "c1ad2a19cd8deb27e8f3a3191fbf7dbdeae3119944e8a5432e8744a7d50cc941"
+            "sha256": "84c01c0faad38a40fd123fe85de19039be53b1cef80c9f357833d1496a1cf2e2"
           },
           {
             "path": "scripts/benchmark-freshness.ts",
@@ -108,8 +108,12 @@
             "sha256": "4c66b1c2f834f5d995e708e82256562658470c96337b68dc89565809acabbc5b"
           },
           {
+            "path": "scripts/publish-release.ts",
+            "sha256": "b93bde94bf122af61660708beb31d998fbcc2d59e65743b9525a961b8edc0555"
+          },
+          {
             "path": "scripts/smoke-distribution.ts",
-            "sha256": "42ca2f0d9ca429dddd690d5c64eb32f4bf9aee3585e93be2f63583bf9b386297"
+            "sha256": "eed6da0db6c4f9e9cc5ec1d76fcd28b9a06f7c4f1cb6077cf03194df724caee9"
           },
           {
             "path": "scripts/smoke-packed.ts",
@@ -121,7 +125,7 @@
           },
           {
             "path": "scripts/validate-release.ts",
-            "sha256": "21298b45776df4ea56192de3da1de7e48a630fdb86ead98daf8a779ac8230d94"
+            "sha256": "1c744ca4b9c1866429af2eaac20d6fa4dc166dcd6873091ec81d990f1b1a6c56"
           },
           {
             "path": "skills/engineering-workflow/agents/openai.yaml",
@@ -141,7 +145,7 @@
           },
           {
             "path": "skills/engineering-workflow/references/documentation-lifecycle.md",
-            "sha256": "78a40b092444ef828a5e8186a66486dda8fef0227971f6ed8ae4bc56facbfd8c"
+            "sha256": "2ba81c0e08983f8f76aafe0ea3b19ef3e71af0236c18a06b7c10c418861fa54a"
           },
           {
             "path": "skills/engineering-workflow/references/extensions/parallel-delivery.md",
@@ -221,11 +225,11 @@
           },
           {
             "path": "skills/engineering-workflow/SKILL.md",
-            "sha256": "eaf0dc15449b0f65dbfad0e46d924db549097de1cb68ded37d621e80b88e753e"
+            "sha256": "cb4622f6bb8d46947fb3b122530559658d7bcae000163da6d0a97372a3c4c980"
           },
           {
             "path": "skills/engineering-workflow/tests/prompts.md",
-            "sha256": "370908500a202e9137d49b53f27486aca6d9ba5229c7c0e1b8dc93f689e17cf9"
+            "sha256": "97f2d62f7a5b091870f55effca28b53ab718d4dbc5759328cdc327e035c0b937"
           },
           {
             "path": "src/agent-evaluation-trace.ts",
@@ -257,7 +261,7 @@
           },
           {
             "path": "src/evals/agent-behaviour.json",
-            "sha256": "cfc78d236419ae2eb839e99cd394931709d9c7623387b69c69ae3232656c1140"
+            "sha256": "085822677396da96a59157524d2f0c75e3f26160d2cc6a243a05d0196556a75c"
           },
           {
             "path": "src/evals/cross-language-agent.json",
@@ -289,7 +293,7 @@
           },
           {
             "path": "src/knowledge-manifest.ts",
-            "sha256": "7a1fd7bcba07a33a12a215e7f4872dd9b1f662d9a2750646af227566bc72278a"
+            "sha256": "354b6c625b08bd59d8ee9f3c5151446926cdf6efd6575b744d113aade90deaf4"
           },
           {
             "path": "src/mcp.ts",
@@ -297,7 +301,7 @@
           },
           {
             "path": "src/operations.ts",
-            "sha256": "c27621bda53e9f6394f7e29e4d0f1175a85a038a59807448e707874cf942c35a"
+            "sha256": "c3d7423ffa1320037a8e6b42c5a2d663e6bb9c8457c4b648b8be65e8c6fc3ad6"
           },
           {
             "path": "src/parser-process-client.ts",
@@ -324,6 +328,10 @@
             "sha256": "9890340135c4ca47330935c77ead51337cb60a700c9cf85dbebde26d7405e831"
           },
           {
+            "path": "src/release-publication.ts",
+            "sha256": "86154e67f736773ffd68fc4d55991aac8df039daaebf31028fa41a4837325dba"
+          },
+          {
             "path": "src/repository-engine.ts",
             "sha256": "b583c4dc22b76c7f7f1defc44ffb096ee5bd81926fe94bb3b6ad80d69b352bbd"
           },
@@ -337,7 +345,7 @@
           },
           {
             "path": "src/surfaces.ts",
-            "sha256": "c27c8d1c17dab421e08cda05e3aecdf30824e1a0f5427480fca974223c2b07ba"
+            "sha256": "a0635dfc0479218252e58318c4bb7f7eec22db2df111e493d790799d8b16d7f5"
           },
           {
             "path": "src/tracker-preview.ts",
@@ -353,7 +361,7 @@
           },
           {
             "path": "src/workflow.ts",
-            "sha256": "2d3918c570149a5cf2c936733be157a6d0dd03c5a2895a9f628713690c878cc1"
+            "sha256": "84372538ef127adbcb088f100b9b8b428f36f871eb9cc06f186fbf57ce9118f8"
           },
           {
             "path": "tests/claim-bindings.test.ts",
@@ -521,7 +529,7 @@
           },
           {
             "path": "tests/operations.test.ts",
-            "sha256": "9e66db5a9c517b78343e987bac535afe001846a483e2d584e00ec5bd1b1f45ba"
+            "sha256": "e93adcfb6da67d37028ee4beb578c6c77b724fc6e5c6d93557b550a836ea51e9"
           },
           {
             "path": "tests/parser.test.ts",
@@ -532,8 +540,12 @@
             "sha256": "0e3397cd9e418bae1b12340cc1662642a5519238f79005c5ba62c0d3acfe10ff"
           },
           {
+            "path": "tests/release-publication.test.ts",
+            "sha256": "d8012f1463fb82a8a45c2169456b2c949d4c86526e1f5f8a2b2df07d19cfb343"
+          },
+          {
             "path": "tests/review-regressions.test.ts",
-            "sha256": "a12ca2adeec577e22772e1b095f6eca0787bb6c2415864a7eb8c993d8874f9de"
+            "sha256": "85869cb07cfa419ab840f40ac5d4629f08f8376d99e40ea22aae155d253d4e20"
           },
           {
             "path": "tests/security.test.ts",
@@ -541,7 +553,7 @@
           },
           {
             "path": "tests/transport.test.ts",
-            "sha256": "587d25a60a1a6fd8c03a4365239ce325ef4828a58f0d13e7b6bdb65ba654fb44"
+            "sha256": "741e6b27763a9fa266c414b129270929efe0ab694a48be32e540af9a8d4eb6cc"
           },
           {
             "path": "tsconfig.json",
@@ -551,5 +563,5 @@
       }
     }
   ],
-  "revision": 58
+  "revision": 59
 }

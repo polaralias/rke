@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
+import { RkeError } from "./errors.js";
 import { git, gitChangedPaths, gitDelta, readJson, run, sha256, utcNow, withFileLock, writeJson, type CommandResult } from "./io.js";
 import { safeRelative } from "./paths.js";
 import type { OperationOutcome } from "./types.js";
@@ -57,7 +58,7 @@ function validate(state: WorkflowState): string[] {
 }
 
 async function load(root: string): Promise<WorkflowState> { return readJson<WorkflowState>(statePath(root)); }
-async function save(root: string, state: WorkflowState): Promise<void> {const path=statePath(root);const expected=state.revision??0;await withFileLock(path,async()=>{if(existsSync(path)){const current=await readJson<WorkflowState>(path);if(current.revision!==expected)throw new Error("Workflow state changed after it was read; reload it before writing.");}else if(expected!==0)throw new Error("Workflow state was removed after it was read; reload it before writing.");state.revision=expected+1;state.updated_at=utcNow();await writeJson(path,state);});}
+async function save(root: string, state: WorkflowState): Promise<void> {const path=statePath(root);const expected=state.revision??0;await withFileLock(path,async()=>{if(existsSync(path)){const current=await readJson<WorkflowState>(path);if(current.revision!==expected)throw new Error("Workflow state changed after it was read; reload it before writing.");}else if(expected!==0)throw new Error("Workflow state was removed after it was read; reload it before writing.");state.revision=expected+1;state.updated_at=utcNow();const errors=validate(state);if(errors.length)throw new RkeError("workflow_state_invalid",`Refusing to write invalid workflow state: ${errors.join("; ")}`);await writeJson(path,state);});}
 function blocked(root: string, state: WorkflowState): OperationOutcome | null {
   const errors = validate(state);
   if (errors.length) return outcome({ result: "invalid-state", state_path: statePath(root), verification: { valid: false, errors }, state }, 2);

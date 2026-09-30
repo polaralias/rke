@@ -6,12 +6,12 @@
       "document": "docs/knowledge/rke-architecture.md",
       "heading": "## CLI and MCP parity",
       "sectionDigest": "0af5f2b4a21c0acdb98555ecd14877ccaa104a70fe859d5646a44538b1e8b576",
-      "reviewDecision": "Reviewed the current CLI and MCP adapters against the shared 43-operation registry after removing machine explanation, small-change shortcut and static legacy lookup. Both transports dispatch the same handlers and schemas; source hashes record reviewed bytes, not semantic truth.",
+      "reviewDecision": "Reviewed the shared 43-operation registry and its CLI/MCP adapters after adding non-empty string schema metadata and post-mutation write validation. Both transports dispatch the same handlers and schemas; source hashes record reviewed bytes, not semantic truth.",
       "selectors": [
         {
           "role": "implementation",
           "path": "src/operations.ts",
-          "digest": "c27621bda53e9f6394f7e29e4d0f1175a85a038a59807448e707874cf942c35a"
+          "digest": "c3d7423ffa1320037a8e6b42c5a2d663e6bb9c8457c4b648b8be65e8c6fc3ad6"
         },
         {
           "role": "interface",

@@ -6,10 +6,24 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { invokeOperation, releaseRepository } from "../src/operations.js";
+import { mutateManifest } from "../src/knowledge-manifest.js";
 import { RepositoryEngine } from "../src/repository-engine.js";
+import { checkpoint, resolveGate } from "../src/workflow.js";
 
 async function root():Promise<string>{const path=await mkdtemp(join(tmpdir(),"rke-review-"));spawnSync("git",["init"],{cwd:path});return path;}
 const concept=(title:string,link="")=>`---\r\ntype: Architecture Concept\r\ntitle: ${title}\r\ndescription: ${title} contract.\r\n---\r\n\r\n# ${title}\r\n\r\n${link}\r\n`;
+
+test("direct workflow and manifest writers reject invalid post-mutation state",async()=>{
+  const dir=await root();await invokeOperation(dir,"workflow_activate",{});await invokeOperation(dir,"workflow_gate_add",{gates:["validation"]});
+  const statePath=join(dir,".engineering-workflow","state.json"),beforeState=await readFile(statePath,"utf8");
+  await assert.rejects(checkpoint(dir," ","Next action"),/Refusing to write invalid workflow state/);
+  await assert.rejects(resolveGate(dir,"validation"," "),/Refusing to write invalid workflow state/);
+  assert.equal(await readFile(statePath,"utf8"),beforeState);
+  const manifestPath=join(dir,".rke","repo-context.json");await mkdir(join(dir,".rke"));
+  const manifest={schemaVersion:1,revision:0,knowledge:[]};await writeFile(manifestPath,JSON.stringify(manifest));
+  await assert.rejects(mutateManifest(dir,undefined,data=>{(data.knowledge??=[]).push({path:"docs/a.md",sources:["src/a.ts"],verified:{verifiedAt:new Date().toISOString(),evidence:" ",sourceIdentities:[{path:"src/a.ts",sha256:"a".repeat(64)}]}});}),/Malformed verification receipt/);
+  assert.deepEqual(JSON.parse(await readFile(manifestPath,"utf8")),manifest);
+});
 
 test("manifest rejects unknown schemas, malformed receipts and duplicate bindings without rewriting",async()=>{
   const dir=await root();await mkdir(join(dir,".rke"));await mkdir(join(dir,"docs"));await writeFile(join(dir,"docs","a.md"),concept("A"));spawnSync("git",["add","."],{cwd:dir});spawnSync("git",["-c","user.name=RKE Test","-c","user.email=test@example.test","commit","-m","baseline"],{cwd:dir});

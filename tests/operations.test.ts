@@ -17,8 +17,21 @@ test("CLI routes and MCP operation discovery cover the same registry",()=>{asser
 test("matches the frozen public-operation inventory",async()=>{const fixture=JSON.parse(await readFile(join(process.cwd(),"tests/fixtures/public-operations.json"),"utf8")) as {operations:string[]};assert.deepEqual(OPERATIONS.map(value=>value.name),fixture.operations);});
 test("runtime and npm package versions are identical",async()=>{const packageJson=JSON.parse(await readFile(join(process.cwd(),"package.json"),"utf8")) as {version:string};assert.equal(VERSION,packageJson.version);});
 test("workflow lifecycle preserves gates and evidence",async()=>{const root=await mkdtemp(join(tmpdir(),"rke-workflow-"));spawnSync("git",["init"],{cwd:root});let result=await invokeOperation(root,"workflow_activate",{});assert.equal(result.exitCode,0);result=await invokeOperation(root,"workflow_gate_add",{gates:["implementation-validation"]});assert.deepEqual((result.payload.state as Record<string,unknown>).outstanding_gates,["implementation-validation"]);result=await invokeOperation(root,"workflow_close",{});assert.equal(result.exitCode,3);result=await invokeOperation(root,"workflow_gate_resolve",{gate:"implementation-validation",evidence:"tests pass"});assert.equal(result.exitCode,0);result=await invokeOperation(root,"workflow_close",{});assert.equal(result.payload.result,"closed");});
+test("blank evidence and checkpoint text are rejected before mutation",async()=>{
+  const root=await mkdtemp(join(tmpdir(),"rke-blank-evidence-"));spawnSync("git",["init"],{cwd:root});
+  await invokeOperation(root,"workflow_activate",{});await invokeOperation(root,"workflow_gate_add",{gates:["validation"]});
+  const statePath=join(root,".engineering-workflow","state.json"),before=await readFile(statePath,"utf8");
+  for(const [operation,args] of [
+    ["workflow_checkpoint",{summary:" ",nextAction:"Continue"}],
+    ["workflow_checkpoint",{summary:"Summary",nextAction:" "}],
+    ["workflow_gate_resolve",{gate:"validation",evidence:" "}],
+    ["repo_knowledge_verify",{knowledge:"docs/knowledge/a.md",evidence:" "}],
+    ["repo_documentation_apply",{base:"HEAD",bundle:"docs/knowledge",knowledgePaths:["docs/knowledge/a.md"],evidence:" ",readerQueries:["Where is A?"]}],
+  ] as const)await assert.rejects(invokeOperation(root,operation,args),/non-empty string/);
+  assert.equal(await readFile(statePath,"utf8"),before);
+});
 test("a new cycle with durable task tracking retains its reconciliation gate",async()=>{const root=await mkdtemp(join(tmpdir(),"rke-task-cycle-"));spawnSync("git",["init"],{cwd:root});await invokeOperation(root,"workflow_activate",{phase:"deliver",taskMode:"none"});const closed=await invokeOperation(root,"workflow_close",{});assert.equal(closed.exitCode,0);const renewed=await invokeOperation(root,"workflow_activate",{phase:"deliver",taskMode:"lightweight"});assert.equal(renewed.exitCode,0);const state=renewed.payload.state as {task_tracking:{mode:string};active_capabilities:string[];outstanding_gates:string[]};assert.equal(state.task_tracking.mode,"lightweight");assert.ok(state.active_capabilities.includes("task-lifecycle"));assert.ok(state.outstanding_gates.includes("task-reconciliation"));});
-test("Codex host guidance keeps EWF usable without RKE",async()=>{const root=await mkdtemp(join(tmpdir(),"rke-host-routing-"));spawnSync("git",["init"],{cwd:root});const installed=await invokeOperation(root,"repo_host_install",{host:"codex",base:"HEAD",force:false});assert.equal(installed.exitCode,0);const guidance=await readFile(join(root,"AGENTS.md"),"utf8");assert.match(guidance,/every repository implementation, fix, refactor, test, documentation edit, feature design or closure request/);assert.match(guidance,/whether or not RKE is installed/);assert.match(guidance,/ordinary engineering continues if RKE is unavailable/);assert.match(guidance,/rke activate --phase <phase>/);});
+test("Codex host guidance routes code explanations without RKE state",async()=>{const root=await mkdtemp(join(tmpdir(),"rke-host-routing-"));spawnSync("git",["init"],{cwd:root});const installed=await invokeOperation(root,"repo_host_install",{host:"codex",base:"HEAD",force:false});assert.equal(installed.exitCode,0);const guidance=await readFile(join(root,"AGENTS.md"),"utf8");assert.match(guidance,/explanation of repository code, implementation behaviour, or a diff/);assert.match(guidance,/Read-only code and diff explanations use RCC prose without creating RKE workflow state/);assert.match(guidance,/whether or not RKE is installed/);assert.match(guidance,/ordinary engineering continues if RKE is unavailable/);assert.match(guidance,/rke activate --phase <phase>/);});
 test("Claude host installs additive EWF routing and MCP configuration idempotently",async()=>{
   const root=await mkdtemp(join(tmpdir(),"rke-claude-routing-"));
   spawnSync("git",["init"],{cwd:root});
@@ -31,7 +44,7 @@ test("Claude host installs additive EWF routing and MCP configuration idempotent
   assert.match(guidance,/Keep the established test command/);
   assert.match(guidance,/use the installed `engineering-workflow` skill/);
   assert.match(guidance,/rke activate --phase <phase>/);
-  assert.match(guidance,/Ordinary explanation-only questions and trivial read-only inspection remain outside automatic routing/);
+  assert.match(guidance,/Simple document wording questions and trivial read-only inspection remain outside automatic routing/);
   assert.equal(guidance.split("<!-- polaralias-engineering-workflow:start -->").length,2);
   const config=JSON.parse(await readFile(join(root,".mcp.json"),"utf8")) as {mcpServers:Record<string,{command:string}>};
   assert.equal(config.mcpServers.existing?.command,"existing-server");

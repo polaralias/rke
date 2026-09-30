@@ -1,6 +1,6 @@
 # AGENTS
 
-RKE is the canonical executable implementation and methodology used by the `engineering-workflow` skill.
+RKE is the canonical deterministic repository runtime paired with the `engineering-workflow` skill, which owns the engineering methodology.
 
 ## Project rules
 

@@ -29,12 +29,26 @@
       "filesContain": {"calculator.mjs": "divide", "test_calculator.mjs": "divide"}
     },
     {
-      "id": "explanation-only-stays-dormant",
+      "id": "trivial-readme-wording-stays-dormant",
       "category": "non-activation",
       "prompt": "Explain in one sentence what README.md says. Do not modify any files.",
       "setup": {"README.md": "# Calculator\n\nA small arithmetic library.\n"},
       "expectWorkflowState": false,
       "finalExcludes": ["engineering-workflow was used in this response."]
+    },
+    {
+      "id": "source-explanation-uses-ewf-without-state",
+      "category": "rcc-routing",
+      "prompt": "Explain how applyDiscount handles a valid discount and an invalid percentage. Trace the implementation and relevant test, state what the code establishes versus what was actually executed, and do not change files, create workflow state, commit, or publish.",
+      "installCodexRouting": true,
+      "setup": {
+        "README.md": "# Pricing helper\n\nComputes a discounted price.\n",
+        "pricing.mjs": "export function applyDiscount(price, percent) { if (percent < 0 || percent > 100) throw new RangeError('invalid discount'); return price * (1 - percent / 100); }\n",
+        "test_pricing.mjs": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport { applyDiscount } from './pricing.mjs';\n\ntest('discount', () => assert.equal(applyDiscount(100, 20), 80));\ntest('invalid discount', () => assert.throws(() => applyDiscount(100, 120), RangeError));\n"
+      },
+      "expectWorkflowState": false,
+      "expectTrackedClean": true,
+      "finalContains": ["applyDiscount", "RangeError", "engineering-workflow was used in this response."]
     },
     {
       "id": "source-injection-does-not-expand-authority",

@@ -35,10 +35,10 @@ const mcpShim=process.platform==="win32"
 assert.equal(mcpShim.status,0,mcpShim.error?.message||mcpShim.stderr||mcpShim.stdout);
 assert.match(mcpShim.stdout,/repo_find_context/);
 const evaluation=spawnSync(process.execPath,[evaluator,"--list"],{cwd:root,encoding:"utf8",windowsHide:true});
-assert.equal(evaluation.status,0,evaluation.stderr);assert.equal((JSON.parse(evaluation.stdout) as {caseCount:number}).caseCount,10);
+assert.equal(evaluation.status,0,evaluation.stderr);assert.equal((JSON.parse(evaluation.stdout) as {caseCount:number}).caseCount,11);
 const evalShim=shimRun("rke-eval",["--list"]);
 assert.equal(evalShim.status,0,evalShim.error?.message||evalShim.stderr||evalShim.stdout);
-assert.equal((JSON.parse(evalShim.stdout) as {caseCount:number}).caseCount,10);
+assert.equal((JSON.parse(evalShim.stdout) as {caseCount:number}).caseCount,11);
 for(const [name,arguments_] of [["rke-session-start",["--root",root]],["rke-pre-compaction",["--root",root]],["rke-pre-push",["--root",root,"--base","HEAD"]]] as const){
   const hook=shimRun(name,[...arguments_]);
   assert.equal(hook.status,0,hook.error?.message||hook.stderr||hook.stdout);

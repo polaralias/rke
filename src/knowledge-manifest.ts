@@ -23,7 +23,7 @@ function path(value: unknown): string {
   return relative;
 }
 function validTime(value: unknown): boolean { return typeof value === "string" && /(?:Z|[+-]\d\d:\d\d)$/.test(value) && !Number.isNaN(Date.parse(value)); }
-function validate(raw: unknown): Manifest {
+export function validateManifest(raw: unknown): Manifest {
   if (!object(raw)) return invalid("Knowledge binding manifest must be an object.");
   if (raw.schemaVersion !== 1) throw new RkeError("knowledge_manifest_incompatible", `Unsupported knowledge manifest schemaVersion: ${String(raw.schemaVersion)}`);
   if (raw.revision === undefined) raw.revision = 0;
@@ -69,7 +69,7 @@ export async function loadManifest(root: string, value?: unknown): Promise<{path
   if(!presence.effectivePresent)return {path:presence.path,data:{schemaVersion:1,revision:0,knowledge:[]},legacy:false,present:false};
   let raw: unknown;
   try { raw = JSON.parse(await readFile(source,"utf8")); } catch { return invalid(`Knowledge binding manifest is invalid JSON: ${useLegacy ? LEGACY : presence.path}`); }
-  return {path:presence.path,data:validate(raw),legacy:useLegacy,present:true};
+  return {path:presence.path,data:validateManifest(raw),legacy:useLegacy,present:true};
 }
 
 export async function mutateManifest<T>(root:string,value:unknown,mutation:(data:Manifest)=>Promise<T>|T):Promise<{path:string;value:T;data:Manifest}> {
@@ -78,6 +78,7 @@ export async function mutateManifest<T>(root:string,value:unknown,mutation:(data
     const loaded = await loadManifest(root,relative);
     const data = loaded.data, result = await mutation(data);
     data.revision = (data.revision ?? 0) + 1;
+    validateManifest(data);
     await writeJson(target,data);
     if (loaded.legacy) await unlink(repositoryPath(root,LEGACY));
     return {path:relative,value:result,data};

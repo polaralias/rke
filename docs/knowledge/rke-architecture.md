@@ -5,7 +5,7 @@ description: Defines the independently installed Repository Knowledge Engineerin
 timestamp: 2026-09-28T08:12:54+01:00
 authority: canonical
 verification: verified-working
-reviewed_at: 2026-09-30T03:30:00+01:00
+reviewed_at: 2026-09-30T08:27:00+01:00
 verified_against:
   - src/operations.ts
   - src/cli.ts
@@ -20,6 +20,8 @@ verified_against:
   - src/coordination-cleanup.ts
   - src/evaluate-agent.ts
   - src/agent-evaluation-trace.ts
+  - src/release-publication.ts
+  - scripts/publish-release.ts
   - .github/workflows/ci.yml
   - .github/workflows/release-drafter.yml
   - .github/workflows/publish-release.yml
@@ -78,7 +80,7 @@ At 1.0, that contract stabilises CLI operation names and principal arguments, MC
 
 The model or EWF journey traces real runtime evidence and writes the necessary human-readable content. Knowledge registration, documentation apply, and context verification provide machine receipts. Apply validates bundle conformance, affected-concept coverage, top-five reader retrieval, index generation, and source-binding freshness before writing a completion receipt. For a reviewed material delta with no affected canonical binding, `documentation disposition` records why no durable update is warranted and covers every changed path without creating a knowledge bundle; closure rechecks the exact-delta receipt and independently validates any existing knowledge. These checks do not establish semantic truth; source review, focused tests and runtime evidence remain separate.
 
-The frontmatter `reviewed_at` records the human content-review point. The verification receipt and current source hashes in `.rke/repo-context.json` are the authoritative machine freshness record. Manifest reads validate schema version, revision, unique binding paths and source patterns, and receipt identity hashes and timestamps. An unsupported schema or ambiguous coexistence with `.polaralias/repo-context.json` is refused; a valid legacy manifest is migrated on the next write. Registration requires an existing typed concept. Knowledge graph checks reject disconnected durable components while excluding transient material; missing title or description is a warning. The index builder writes nested navigation with correct relative links.
+The frontmatter `reviewed_at` records the human content-review point. The verification receipt and current source hashes in `.rke/repo-context.json` are the authoritative machine freshness record. Manifest reads and post-mutation writes validate schema version, revision, unique binding paths and source patterns, and receipt identity hashes, evidence and timestamps. Workflow state is likewise validated before atomic write. The shared CLI/MCP operation boundary rejects empty or whitespace-only string inputs before mutation. An unsupported schema or ambiguous coexistence with `.polaralias/repo-context.json` is refused; a valid legacy manifest is migrated on the next write. Registration requires an existing typed concept. Knowledge graph checks reject disconnected durable components while excluding transient material; missing title or description is a warning. The index builder writes nested navigation with correct relative links.
 
 ## Repository selection
 
@@ -108,7 +110,7 @@ RKE `0.10.x` is the pre-1.0 qualification series and ships only the TypeScript r
 
 Isolated agent evaluation stages an installed RKE package with `--rke-package-root`. Restricted cases use a Git-ignored copy in the disposable fixture; full-access delegated-provider cases place it outside the fixture so authoritative OKF validation sees only the repository's governed concepts. The agent invokes the staged Node CLI rather than a stale host shim. Documentation authoring cases grade a registered concept's content, reading-order link, reader rank and freshness without requiring one fixed filename.
 
-`package.json` is the sole release version source and `src/version.ts` reads the MCP and CLI identity from it at runtime. CI covers Node 24.15 and 25 on Linux, Windows, and macOS, strict TypeScript checking, deterministic tests including the executable legacy-parity contract, release-contract validation, the no-Python architecture audit, and clean npm artefact smoke tests that exercise all six installed bin shims, parser retrieval, MCP discovery, and the bundled agent-evaluation corpus. The same parity contract runs during `prepack` and the tag publish workflow. Catalogue validation and digest parity run in the adjacent skills repository during release qualification. A matching `vX.Y.Z` tag must be reachable from `main` before the workflow builds, smokes, attests and publishes the npm tarball with provenance and promotes the GitHub release. The tarball combines an Apache-2.0 runtime with a separately proprietary EWF skill, as declared in `NOTICE`.
+`package.json` is the sole release version source and `src/version.ts` reads the MCP and CLI identity from it at runtime. CI covers Node 24.15 and 25 on Linux, Windows, and macOS, strict TypeScript checking, deterministic tests including the executable legacy-parity contract, release-contract validation, the no-Python architecture audit, and clean npm artefact smoke tests that exercise all six installed bin shims, parser retrieval, MCP discovery, and the bundled agent-evaluation corpus. The same parity contract runs during `prepack` and the tag publish workflow. Catalogue validation and digest parity run in the adjacent skills repository during release qualification. A matching `vX.Y.Z` tag must be reachable from `main` before the workflow builds, smokes and attests the npm tarball. On retry, the publish step compares the tested tarball's SHA-512 integrity with the exact npm version; matching bytes allow GitHub Release promotion to continue, while a mismatch or registry error blocks. A new version publishes with provenance. The tarball combines an Apache-2.0 runtime with a separately proprietary EWF skill, as declared in `NOTICE`.
 
 ## Methodology
 
@@ -129,4 +131,4 @@ EWF is the engineering methodology. RKE assists this journey when available:
 
 RKE does not absorb OKF Tasks. OKF Tasks owns execution records, validation and lifecycle truth. RKE may invoke its authoritative CLI through a bounded adapter.
 
-EWF does not absorb RKE. EWF is the agent-facing engineering methodology; RKE is the optional installed repository evidence and safety toolbelt it directs. RCC causal explanation, design, and knowledge editorial judgement remain in EWF prose. The public runtime omits the former `change explain`, `closure complete-small`, and static `legacy route` operations.
+EWF does not absorb RKE. EWF is the agent-facing engineering methodology; RKE is the optional installed repository evidence and safety toolbelt it directs. Read-only questions about repository code, implementation behaviour, or a diff route to EWF's RCC prose without starting RKE workflow state. Simple document wording questions remain outside EWF. RCC causal explanation, design, and knowledge editorial judgement remain in EWF prose. The public runtime omits the former `change explain`, `closure complete-small`, and static `legacy route` operations.

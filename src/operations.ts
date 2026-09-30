@@ -11,7 +11,7 @@ import * as surfaces from "./surfaces.js";
 import type { JsonObject, OperationDefinition, OperationOutcome } from "./types.js";
 import * as workflow from "./workflow.js";
 
-const string = { type: "string" } as const;
+const string = { type: "string", minLength: 1 } as const;
 const strings = { type: "array", items: string, minItems: 1 } as const;
 const optionalStrings = { type: "array", items: string } as const;
 function schema(properties:Record<string,unknown>,required:string[]=[]):JsonObject{return{type:"object",properties,required,additionalProperties:false} as JsonObject;}

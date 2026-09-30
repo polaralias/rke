@@ -13,6 +13,7 @@ assert.match(await readFile("NOTICE","utf8"),/Apache-2\.0[\s\S]*proprietary/i);
 const publishWorkflow=await readFile(".github/workflows/publish-release.yml","utf8");
 assert.match(publishWorkflow,/npm run test:legacy-parity/);
 assert.match(publishWorkflow,/git merge-base --is-ancestor HEAD origin\/main/);
+assert.match(publishWorkflow,/node dist\/scripts\/publish-release\.js/);
 assert.equal(packageDocument.engines?.node,">=24.15.0","supported Node floor changed without release-contract update");
 for(const command of ["rke","rke-mcp","rke-eval","rke-session-start","rke-pre-compaction","rke-pre-push"])assert.ok(packageDocument.bin?.[command],`missing executable: ${command}`);
 assert.equal(OPERATIONS.length,43,"public operation inventory changed without fixture update");
