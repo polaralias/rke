@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "claims": [
+    {
+      "id": "cli-mcp-parity",
+      "document": "docs/knowledge/rke-architecture.md",
+      "heading": "## CLI and MCP parity",
+      "sectionDigest": "0af5f2b4a21c0acdb98555ecd14877ccaa104a70fe859d5646a44538b1e8b576",
+      "reviewDecision": "Reviewed the shared 43-operation registry and its CLI/MCP adapters after adding non-empty string schema metadata and post-mutation write validation. Both transports dispatch the same handlers and schemas; source hashes record reviewed bytes, not semantic truth.",
+      "selectors": [
+        {
+          "role": "implementation",
+          "path": "src/operations.ts",
+          "digest": "c3d7423ffa1320037a8e6b42c5a2d663e6bb9c8457c4b648b8be65e8c6fc3ad6"
+        },
+        {
+          "role": "interface",
+          "path": "src/cli.ts",
+          "digest": "2c77f1327bbf88b467cb4c648c300b5db1a19a854e84481f453ff16dc16a0546"
+        },
+        {
+          "role": "interface",
+          "path": "src/mcp.ts",
+          "digest": "86c3fa089be4eadf542b87efcee6ec6b31b688c49be97bd430edefd495a38635"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,153 @@
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+import { RkeError } from "./errors.js";
+import { git, gitChangedPaths, gitDelta, readJson, run, sha256, utcNow, withFileLock, writeJson, type CommandResult } from "./io.js";
+import { safeRelative } from "./paths.js";
+import type { OperationOutcome } from "./types.js";
+
+const STATE = ".engineering-workflow/state.json";
+const PHASES = new Set(["understand", "design", "deliver", "close", "pause", "resume"]);
+const MODES = new Set(["none", "lightweight", "full"]);
+
+interface WorkflowState extends Record<string, unknown> {
+  schema_version: number; revision: number; status: "active" | "closed"; primary_phase: string;
+  active_capabilities: string[]; outstanding_gates: string[];
+  task_tracking: { mode: string; task_ref: string | null; bundle?: string };
+  continuity: { checkpoint: Record<string, unknown> | null; previous_cycle?: Record<string, unknown> };
+  created_at: string; updated_at: string; closed_at?: string;
+  gate_receipts?: Record<string, unknown>[]; phase_history?: Record<string, unknown>[];
+}
+
+const JOURNEYS: Record<string, Record<string, unknown>> = {
+  understand: { name: "understand", reference: "references/journeys/understand.md", capabilities: ["context-retrieval"], gates: [] },
+  design: { name: "design", reference: "references/journeys/design.md", capabilities: [], gates: ["acceptance-defined"] },
+  close: { name: "close", reference: "references/journeys/close.md", capabilities: [], gates: [] },
+};
+const CAPABILITIES: Record<string, Record<string, unknown>> = {
+  "query-to-knowledge": { name: "query-to-knowledge", reference: "references/extensions/query-to-knowledge.md", gates: ["shared-understanding"] },
+  "parallel-delivery": { name: "parallel-delivery", reference: "references/extensions/parallel-delivery.md", gates: ["integrated-tree-validation", "worktree-cleanup"] },
+  publication: { name: "publication", reference: "references/extensions/publication.md", gates: ["publication-safety"] },
+};
+
+function statePath(root: string): string { return join(root, STATE); }
+function unique(values: string[]): string[] { return [...new Set(values)]; }
+function outcome(payload: Record<string, unknown>, exitCode = 0): OperationOutcome { return { payload, exitCode }; }
+
+function record(value:unknown):value is Record<string,unknown>{return value!==null&&typeof value==="object"&&!Array.isArray(value);}
+function timestamp(value:unknown):boolean{return typeof value==="string"&&/(?:Z|[+-]\d\d:\d\d)$/.test(value)&&!Number.isNaN(Date.parse(value));}
+function relativePath(value:string):boolean{try{return safeRelative(value)===value.replaceAll("\\","/");}catch{return false;}}
+function stringList(value:unknown,name:string,errors:string[]):void{if(!Array.isArray(value)||value.some(item=>typeof item!=="string"||!item.trim()))errors.push(`${name} must be an array of non-empty strings`);else if(new Set(value).size!==value.length)errors.push(`${name} must not contain duplicates`);}
+function validate(state: WorkflowState): string[] {
+  const errors: string[] = [];
+  if(!record(state))return["workflow state must be an object"];
+  if (state.schema_version !== 1) errors.push("unsupported schema_version");
+  if (!Number.isInteger(state.revision) || state.revision < 0) errors.push("revision must be a non-negative integer");
+  if(state.status!=="active"&&state.status!=="closed")errors.push("status must be active or closed");
+  if (!PHASES.has(state.primary_phase)) errors.push("primary_phase is not recognised");
+  stringList(state.active_capabilities,"active_capabilities",errors);stringList(state.outstanding_gates,"outstanding_gates",errors);
+  if(!record(state.task_tracking))errors.push("task_tracking must be an object");
+  else{if(!MODES.has(state.task_tracking.mode))errors.push("task_tracking.mode is not recognised");if(state.task_tracking.task_ref!==null&&(typeof state.task_tracking.task_ref!=="string"||!relativePath(state.task_tracking.task_ref)))errors.push("task_tracking.task_ref must be null or a repository-relative path");if(state.task_tracking.bundle!==undefined&&(typeof state.task_tracking.bundle!=="string"||!relativePath(state.task_tracking.bundle)))errors.push("task_tracking.bundle must be a repository-relative path when present");}
+  if(!record(state.continuity))errors.push("continuity must be an object");
+  else{const checkpoint=state.continuity.checkpoint;if(checkpoint!==null){if(!record(checkpoint))errors.push("continuity.checkpoint must be null or an object");else{if(!timestamp(checkpoint.at))errors.push("continuity.checkpoint.at must be an ISO-8601 timestamp");for(const field of ["summary","next_action"])if(typeof checkpoint[field]!=="string"||!String(checkpoint[field]).trim())errors.push(`continuity.checkpoint.${field} must be a non-empty string`);}}if(state.continuity.previous_cycle!==undefined&&!record(state.continuity.previous_cycle))errors.push("continuity.previous_cycle must be an object when present");}
+  for(const field of ["created_at","updated_at"])if(!timestamp(state[field]))errors.push(`${field} must be an ISO-8601 timestamp`);
+  if(state.status==="closed"&&!timestamp(state.closed_at))errors.push("closed_at must be an ISO-8601 timestamp for closed state");
+  if(state.gate_receipts!==undefined){if(!Array.isArray(state.gate_receipts))errors.push("gate_receipts must be an array");else state.gate_receipts.forEach((receipt,index)=>{if(!record(receipt)){errors.push(`gate_receipts[${index}] must be an object`);return;}for(const field of ["gate","evidence"])if(typeof receipt[field]!=="string"||!String(receipt[field]).trim())errors.push(`gate_receipts[${index}].${field} must be a non-empty string`);if(!timestamp(receipt.resolved_at))errors.push(`gate_receipts[${index}].resolved_at must be an ISO-8601 timestamp`);});}
+  if(state.phase_history!==undefined){if(!Array.isArray(state.phase_history))errors.push("phase_history must be an array");else state.phase_history.forEach((item,index)=>{if(!record(item)||!PHASES.has(String(item.from))||!PHASES.has(String(item.to))||!timestamp(item.entered_at))errors.push(`phase_history[${index}] must be a valid transition`);});}
+  return errors;
+}
+
+async function load(root: string): Promise<WorkflowState> { return readJson<WorkflowState>(statePath(root)); }
+async function save(root: string, state: WorkflowState): Promise<void> {const path=statePath(root);const expected=state.revision??0;await withFileLock(path,async()=>{if(existsSync(path)){const current=await readJson<WorkflowState>(path);if(current.revision!==expected)throw new Error("Workflow state changed after it was read; reload it before writing.");}else if(expected!==0)throw new Error("Workflow state was removed after it was read; reload it before writing.");state.revision=expected+1;state.updated_at=utcNow();const errors=validate(state);if(errors.length)throw new RkeError("workflow_state_invalid",`Refusing to write invalid workflow state: ${errors.join("; ")}`);await writeJson(path,state);});}
+function blocked(root: string, state: WorkflowState): OperationOutcome | null {
+  const errors = validate(state);
+  if (errors.length) return outcome({ result: "invalid-state", state_path: statePath(root), verification: { valid: false, errors }, state }, 2);
+  if (state.status === "closed") return outcome({ result: "workflow-closed", state_path: statePath(root), state }, 3);
+  return null;
+}
+
+export async function start(root: string, phase: string, capabilities: string[], gates: string[], taskMode: string, newCycle = false): Promise<OperationOutcome> {
+  const path = statePath(root);
+  if (existsSync(path)) {
+    const current = await load(root); const errors = validate(current);
+    if (errors.length) return outcome({ result: "invalid-state", state_path: path, verification: { valid: false, errors }, state: current }, 2);
+    if (!(newCycle && current.status === "closed")) return outcome({ result: "resumed-existing", state_path: path, state: current });
+    const now = utcNow();
+    const next: WorkflowState = { schema_version: 1, revision: current.revision, status: "active", primary_phase: phase,
+      active_capabilities: unique(taskMode==="none"?capabilities:[...capabilities,"task-lifecycle"]), outstanding_gates: unique(taskMode==="none"?gates:[...gates,"task-reconciliation"]), task_tracking: { mode: taskMode, task_ref: null },
+      continuity: { checkpoint: null, previous_cycle: { created_at: current.created_at, closed_at: current.closed_at, primary_phase: current.primary_phase } }, created_at: now, updated_at: now };
+    const nextErrors=validate(next);if(nextErrors.length)return outcome({result:"invalid-state",state_path:path,verification:{valid:false,errors:nextErrors},state:next},2);
+    await save(root, next); return outcome({ result: "new-cycle-started", state_path: path, state: next });
+  }
+  const now = utcNow(); const state: WorkflowState = { schema_version: 1, revision: 0, status: "active", primary_phase: phase,
+    active_capabilities: unique(taskMode==="none"?capabilities:[...capabilities,"task-lifecycle"]), outstanding_gates: unique(taskMode==="none"?gates:[...gates,"task-reconciliation"]), task_tracking: { mode: taskMode, task_ref: null },
+    continuity: { checkpoint: null }, created_at: now, updated_at: now };
+  const errors=validate(state);if(errors.length)return outcome({result:"invalid-state",state_path:path,verification:{valid:false,errors},state},2);
+  await save(root, state); return outcome({ result: "started", state_path: path, state });
+}
+
+export async function activate(root: string, phase: string, taskMode: string): Promise<OperationOutcome> {
+  let result: OperationOutcome;
+  if (!existsSync(statePath(root))) result = await start(root, phase, [], [], taskMode);
+  else { const current = await load(root); const errors=validate(current);if(errors.length)return outcome({result:"invalid-state",state_path:statePath(root),verification:{valid:false,errors},state:current},2);result = current.status === "closed" ? await start(root, phase, [], [], taskMode, true) : outcome({ result: "activated-existing", state_path: statePath(root), state: current }); }
+  const state = result.payload.state as WorkflowState; const head = git(root, "rev-parse", "HEAD"); const changed = git(root, "status", "--porcelain=v1", "-z");
+  const dirtyPaths = changed.code ? [] : changed.stdout.split("\0").filter(Boolean).map((entry) => entry.slice(3));
+  state.activation = { activatedAt: utcNow(), gitRepository: head.code === 0, head: head.code === 0 ? head.stdout.trim() : null, dirtyPaths, dirtyPathCount: dirtyPaths.length };
+  await save(root, state); result.payload.state = state; result.payload.activation = state.activation; return result;
+}
+
+export async function resume(root: string): Promise<OperationOutcome> { const state = await load(root); const errors = validate(state); return errors.length ? outcome({ result: "invalid-state", state_path: statePath(root), verification: {valid:false,errors}, state }, 2) : outcome({ result: "resumed", state_path: statePath(root), verification: {valid:true,errors:[]}, state }); }
+export async function checkpoint(root: string, summary: string, nextAction: string): Promise<OperationOutcome> { const state = await load(root); const stop = blocked(root,state); if(stop)return stop; state.continuity.checkpoint={at:utcNow(),summary,next_action:nextAction}; await save(root,state); return outcome({result:"checkpointed",state_path:statePath(root),state}); }
+export async function addGates(root:string,gates:string[]):Promise<OperationOutcome>{const state=await load(root);const stop=blocked(root,state);if(stop)return stop;const added=unique(gates).filter(g=>!state.outstanding_gates.includes(g));state.outstanding_gates.push(...added);await save(root,state);return outcome({result:"gates-added",state_path:statePath(root),added,state});}
+export async function resolveGate(root:string,gate:string,evidence:string):Promise<OperationOutcome>{const state=await load(root);const stop=blocked(root,state);if(stop)return stop;if(!state.outstanding_gates.includes(gate))return outcome({result:"gate-not-outstanding",state_path:statePath(root),gate,state},3);state.outstanding_gates=state.outstanding_gates.filter(g=>g!==gate);(state.gate_receipts??=[]).push({gate,evidence,resolved_at:utcNow()});await save(root,state);return outcome({result:"gate-resolved",state_path:statePath(root),gate,state});}
+export async function enterJourney(root:string,journey:string):Promise<OperationOutcome>{const state=await load(root);const stop=blocked(root,state);if(stop)return stop;const specification=JOURNEYS[journey]!;const previous=state.primary_phase;state.primary_phase=journey;state.active_capabilities=unique([...state.active_capabilities,...specification.capabilities as string[]]);state.outstanding_gates=unique([...state.outstanding_gates,...specification.gates as string[]]);(state.phase_history??=[]).push({from:previous,to:journey,entered_at:utcNow()});await save(root,state);return outcome({result:"journey-entered",state_path:statePath(root),journey:specification,state});}
+export async function enableCapability(root:string,capability:string):Promise<OperationOutcome>{const state=await load(root);const stop=blocked(root,state);if(stop)return stop;const specification=CAPABILITIES[capability]!;state.active_capabilities=unique([...state.active_capabilities,capability]);state.outstanding_gates=unique([...state.outstanding_gates,...specification.gates as string[]]);await save(root,state);return outcome({result:"capability-enabled",state_path:statePath(root),capability:specification,state});}
+export async function configureTasks(root:string,mode:string,taskRef:string|null,bundle:string,force:boolean):Promise<OperationOutcome>{const state=await load(root);const stop=blocked(root,state);if(stop)return stop;const rank:Record<string,number>={none:0,lightweight:1,full:2};if(rank[mode]!<rank[state.task_tracking.mode]!&&!force)return outcome({result:"task-mode-reduction-requires-force",state},2);if(mode==="none"&&taskRef)return outcome({result:"task-mode-invalid",state},2);state.task_tracking={mode,task_ref:taskRef?safeRelative(taskRef):mode==="none"?null:state.task_tracking.task_ref,bundle:safeRelative(bundle)};if(mode!=="none"){state.active_capabilities=unique([...state.active_capabilities,"task-lifecycle"]);state.outstanding_gates=unique([...state.outstanding_gates,"task-reconciliation"]);}else if(force)state.active_capabilities=state.active_capabilities.filter(v=>v!=="task-lifecycle");await save(root,state);return outcome({result:"task-tracking-configured",state_path:statePath(root),state});}
+export function validateOkfBundle(root:string,bundle:string,executable:string,runner:(command:string,args:string[],cwd:string)=>CommandResult=run):OperationOutcome{
+  if(executable.toLowerCase().endsWith(".py"))return outcome({result:"okf-tasks-incompatible",executed:false,error:"Python task adapters are not supported by the TypeScript runtime."},2);
+  const version=runner(executable,["--version"],root),match=version.stdout.trim().match(/^okf-tasks\s+(\d+)\.(\d+)\.(\d+)$/);
+  if(version.code||!match)return outcome({result:"okf-tasks-unavailable",executed:false,error:version.stderr.trim()||"The configured executable did not identify itself as okf-tasks."},2);
+  if(match[1]!=="0"||match[2]!=="1")return outcome({result:"okf-tasks-incompatible",executed:false,adapter:{name:"okf-tasks",version:`${match[1]}.${match[2]}.${match[3]}`},error:"RKE 0.10 supports the OKF Tasks 0.1 strict-validation contract."},2);
+  const command=[executable,"validate","--root",root,"--bundle",bundle,"--strict"],validation=runner(executable,command.slice(1),root);
+  return outcome({result:validation.code===0?"task-bundle-valid":"task-bundle-invalid",executed:true,adapter:{name:"okf-tasks",version:`${match[1]}.${match[2]}.${match[3]}`},command,bundle,validation:{valid:validation.code===0,stdout:validation.stdout.trim(),stderr:validation.stderr.trim()}},validation.code===0?0:3);
+}
+export async function checkTasks(root:string,cli?:string):Promise<OperationOutcome>{const state=await load(root),errors=validate(state);if(errors.length)return outcome({result:"invalid-state",state_path:statePath(root),verification:{valid:false,errors},state},2);if(state.task_tracking.mode==="none")return outcome({result:"task-tracking-disabled",executed:false,plan:{mode:"none",durable:false},state});const checked=validateOkfBundle(root,state.task_tracking.bundle??"tasks",cli??"okf-tasks");return outcome({...checked.payload,state},checked.exitCode);}
+async function receiptStatus(root:string,base:string,file:string):Promise<{status:string;issues:string[]}>{if(git(root,"rev-parse","--verify","HEAD").code)return{status:"not-required",issues:[]};const diff=gitDelta(root,base);if(diff.code)return{status:"invalid-base",issues:["closure-base-invalid"]};if(!diff.stdout)return{status:"not-required",issues:[]};const path=join(root,".engineering-workflow",file);if(!existsSync(path))return{status:"pending",issues:[`${file.replace(".json","")}-missing`]};try{const receipt=await readJson<Record<string,unknown>>(path);if(receipt.deltaDigest!==sha256(diff.stdout))return{status:"stale",issues:[`${file.replace(".json","")}-stale`]};
+  if(file==="documentation-receipt.json"&&receipt.disposition==="no-canonical-update"){
+    const changed=gitChangedPaths(root,base).filter(path=>!/(^|\/)(?:index\.md|log\.md)$/.test(path)&&!path.startsWith(".engineering-workflow/"));
+    const reviewed=receipt.changedPaths;
+    if(receipt.version!==2||!Array.isArray(reviewed)||reviewed.length!==changed.length||reviewed.some((value,index)=>value!==changed[index])||typeof receipt.evidence!=="string"||receipt.evidence.trim().length<24)return{status:"invalid",issues:["documentation-disposition-invalid"]};
+    const {documentationAssess}=await import("./surfaces.js"),assessment=await documentationAssess(root,base);
+    const claims=(assessment.payload.claimBindings as {status:string}[]|null)??[];
+    if(assessment.exitCode===2||((assessment.payload.affectedKnowledge as string[]|undefined)??[]).length||claims.some(claim=>claim.status!=="current"))return{status:"invalid",issues:["documentation-disposition-affected-knowledge"]};
+    const {loadManifest}=await import("./knowledge-manifest.js");
+    const manifest=await loadManifest(root);
+    if(changed.some(path=>path.startsWith("docs/knowledge/")||(manifest.data.knowledge??[]).some(item=>item.path===path)))return{status:"invalid",issues:["documentation-disposition-canonical-changed"]};
+    return{status:"no-update-current",issues:[]};
+  }
+  return{status:"receipt-current",issues:[]};}catch{return{status:"invalid",issues:[`${file.replace(".json","")}-invalid`]};}}
+export async function closureAssessment(root:string,base="HEAD"):Promise<OperationOutcome>{
+  const state=await load(root),errors=validate(state);if(errors.length)return outcome({result:"invalid-state",state_path:statePath(root),verification:{valid:false,errors},state},2);
+  const documentation=await receiptStatus(root,base,"documentation-receipt.json");
+  const validationGates=state.outstanding_gates.filter(g=>["implementation-validation","integrated-tree-validation"].includes(g)),taskGates=state.outstanding_gates.filter(g=>g==="task-reconciliation"),knowledgeGates=state.outstanding_gates.filter(g=>g.includes("knowledge"));
+  const bundle=state.task_tracking.bundle??"tasks",taskPath=join(root,bundle),hasTasks=existsSync(taskPath)&&readdirSync(taskPath,{recursive:true}).some(item=>{const name=String(item);if(!name.endsWith(".md"))return false;try{return /^---\r?\n[\s\S]{0,4096}?\btype:\s*(Task|Workstream)\b/m.test(readFileSync(join(taskPath,name),"utf8").slice(0,4096));}catch{return false;}});
+  let taskValidation:OperationOutcome|undefined;
+  if(hasTasks)taskValidation=validateOkfBundle(root,bundle,"okf-tasks");
+  const knowledgeBundle=join(root,"docs","knowledge"),{manifestPresence}=await import("./knowledge-manifest.js"),manifest=manifestPresence(root);
+  let knowledgeValidation:OperationOutcome|undefined;
+  if(existsSync(knowledgeBundle)||manifest.effectivePresent||manifest.ambiguous){
+    const surfaces=await import("./surfaces.js");
+    if(existsSync(knowledgeBundle))knowledgeValidation=await surfaces.checkKnowledge(root,"docs/knowledge");
+    if(manifest.ambiguous)knowledgeValidation=outcome({result:"knowledge-manifest-ambiguous"},3);
+    else if(manifest.effectivePresent){const freshness=await surfaces.contextCheck(root);if(freshness.exitCode)knowledgeValidation=freshness;}
+  }
+  let claimValidation:OperationOutcome|undefined;
+  if(existsSync(join(root,".rke","claim-bindings.json"))){
+    try{const {loadClaimBindings,assessClaimBindings}=await import("./claim-bindings.js"),bindings=await loadClaimBindings(root),claims=await assessClaimBindings(root,bindings??[]);claimValidation=outcome({result:claims.every(claim=>claim.status==="current")?"claim-bindings-current":"claim-binding-review-required",claims},claims.every(claim=>claim.status==="current")?0:3);}
+    catch(error){claimValidation=outcome({result:"claim-bindings-invalid",error:String(error)},3);}
+  }
+  const ready=!state.outstanding_gates.length&&!documentation.issues.length&&!taskValidation?.exitCode&&!knowledgeValidation?.exitCode&&!claimValidation?.exitCode;
+  const lanes={knowledge:{...documentation,gates:knowledgeGates,validation:knowledgeValidation?.payload??null,claims:claimValidation?.payload??null},validation:{status:validationGates.length?"pending":"clear",gates:validationGates},tasks:{status:taskGates.length||taskValidation?.exitCode?"pending":"clear",gates:taskGates,validation:taskValidation?.payload??null},other:state.outstanding_gates};
+  return outcome({result:ready?"closure-ready":"closure-blocked",ready,base,state_path:statePath(root),lanes,outstandingGates:state.outstanding_gates,state},ready?0:3);
+}
+export async function close(root:string,base="HEAD"):Promise<OperationOutcome>{const state=await load(root),errors=validate(state);if(errors.length)return outcome({result:"invalid-state",state_path:statePath(root),verification:{valid:false,errors},state},2);if(state.status==="closed")return outcome({result:"already-closed",state_path:statePath(root),outstanding_gates:state.outstanding_gates,state});const assessment=await closureAssessment(root,base);if(assessment.exitCode)return outcome({result:"closure-blocked",state_path:statePath(root),outstanding_gates:state.outstanding_gates,assessment:assessment.payload,state},3);state.status="closed";state.primary_phase="close";state.closed_at=utcNow();await save(root,state);return outcome({result:"closed",state_path:statePath(root),outstanding_gates:[],assessment:assessment.payload,state});}

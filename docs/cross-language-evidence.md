@@ -1,0 +1,29 @@
+# Cross-language repository evidence
+
+Status: Stage 2 selected-repository measurements and paired agent cases completed, 2026-09-27. The command `npm run benchmark:repository -- --repo <path> --query <text> --expected <tracked-relative-path> [--scope <directory>]` copies tracked files into a disposable Git snapshot, indexes that copy, compares a ten-path RKE result with ordinary `rg` file discovery, edits one copied source file, and measures incremental refresh. It does not alter the source repository. Results below are individual Windows runs, not latency guarantees.
+
+| Source snapshot and question | RKE result | Ordinary `rg` result | Index and memory |
+| --- | --- | --- | --- |
+| RKE, 130 tracked files, “workflow activate”, expected `src/workflow.ts` | implementation ranked 1; warm query about 0.24 s; one-file refresh about 0.84 s | 56 candidate files; implementation outside the first ten in discovery order; query about 0.25 s | cold index about 3.7 s; parent peak about 66 MB; largest language child observed about 397 MB; SQLite about 3.4 MB |
+| Home Assistant CozyLife, 90 tracked files, “TCP reconnect”, expected `custom_components/cozylife/tcp_client.py` | expected implementation missed the first ten unscoped distinct paths; warm query about 0.18 s | 28 candidate files; expected implementation also outside the first ten; query about 0.08 s | cold index about 1.6 s; parent peak about 69 MB; largest language child observed about 90 MB; SQLite about 4.1 MB |
+| Same Python snapshot, “socket reconnect retry” | expected implementation ranked 7; warm query about 0.20 s | expected implementation in first ten of 14 candidates; query about 0.08 s | same repository shape; one-file refresh under one second |
+| Same Python snapshot, scoped to `custom_components/cozylife` for “TCP reconnect” | expected implementation ranked 6 among eight returned source paths; warm query about 0.18 s | expected implementation in first ten of nine candidates; query about 0.07 s | scope improved implementation coverage without changing the index |
+| Skills catalogue, 464 tracked files, “engineering workflow activation” | canonical EWF skill ranked 2; warm query about 0.65 s | 162 candidates; canonical skill outside the first ten; query about 0.19 s | cold index about 3.1 s; parent peak about 147 MB; SQLite about 13.4 MB |
+
+The RKE result is strongest where ranking separates one implementation from many overlapping workflow documents. The Python question shows a real limitation: documentation and tests can outrank the requested implementation. A source-directory scope improves navigation; EWF still has to read the test, documentation and source and decide whether the returned path is the extension point. Ordinary `rg` is faster per query on these small snapshots.
+
+## Paired feature-extension and dynamic-dispatch tasks
+
+The checked-in `src/evals/cross-language-agent.json` holds isolated identical repository fixtures for each ordinary-tools and EWF/RKE pair. The evaluator records completion, repository changes, observed commands, focused test exits, wall time and token usage without retaining command arguments in its bounded trace. Times and input counts are single-run observations; cached input is included in the reported input count.
+
+| Task | Ordinary tools | EWF/RKE | Outcome and limitation |
+| --- | --- | --- | --- |
+| JavaScript action-registry extension | 60 s, 116k input tokens | 123 s, 282k input tokens after proportionality correction (previous run 152 s, 311k) | Both added `pause` through the existing registration path and passed two focused tests. EWF activated before edits and kept the single dispatcher. This obvious small route did not need an RKE retrieval call; the added lifecycle cost was not offset by a correctness gain in this case. |
+| Python `getattr` dispatch planning | 69 s, 112k input tokens | Corrected design-phase rerun passed; first run 142 s, 298k input tokens | Both identified `src/api.py`, `src/handlers.py` and the focused test. The RKE run used file API and trace but correctly said the runtime-selected handler edge could not be resolved statically. The initial host guidance activated `deliver` for a plan-only request; the rerun activated `design` and left product files untouched. |
+| PHP handler-table planning | 51 s, 89k input tokens | 117 s, 291k input tokens | Both identified the router, registration table and test, and withheld runtime claims. EWF/RKE activated in `design`, used bounded retrieval, and left acceptance open because the refund payload and response are undecided. |
+
+The paired fixtures have no missed extension path or false confirmed call edge. They show a clear cost penalty for EWF/RKE on small, legible repositories. RKE's value claim therefore remains conditional on larger or more ambiguous tasks, deterministic gates and retrieval misses that ordinary inspection does not avoid. This finding drives Stage 4 simplification; it does not justify another SQLite table or CLI command.
+
+The current Tree-sitter extractor uses generic node traversal. `file-api` reports extracted definitions, lexical imports and name-only calls explicitly. Unique same-file and relative static import targets can be resolved; ambiguous edges remain unresolved. Grammar availability alone does not establish cross-file call binding. Digest-bound agent review can supplement partial extraction as well as unsupported source. The [parser isolation decision](adr/0002-isolate-broad-tree-sitter-grammar-mixes.md) records the memory-cost finding and its tradeoff.
+
+The corrected Python plan-only route and the default suite passed locally on 2026-09-27; the later full CI matrix passed on Linux, Windows and macOS. These measurements do not establish broad real-repository agent superiority. They establish the observed discovery routes, uncertainty boundary and cost tradeoff for Stage 2, and informed Stage 4 simplification.

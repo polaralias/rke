@@ -21,18 +21,17 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Set up Node
+        uses: actions/setup-node@v6
         with:
-          python-version: "3.12"
+          node-version: "24.15.0"
 
       - name: Read package version
         id: repo-version
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install . --no-deps
-          version="$(python -c 'import rke; print(rke.__version__)')"
+          version="$(node -p 'require("./package.json").version')"
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
       - name: Update release draft
