@@ -2,6 +2,8 @@
 
 Status: ordered v0.10 qualification record; all retained outcome cases have local positive and adversarial evidence as of 2026-09-27. Release qualification remains open. The case IDs and adversarial prompts are defined in `tests/fixtures/legacy-parity-scenarios.json`. Legacy source packages are archived in [Polaralias skills at `ad7205f`](https://github.com/polaralias/skills/tree/ad7205f7591bd53c2addaba4536bda6b2aec0ab6/archive).
 
+The 2026-09-30 boundary reduction supersedes historical activation, change-explanation receipt, and `complete-small` expectations in the dated rows below. EWF owns ordinary engineering and RCC without requiring RKE state; RKE supplies deterministic evidence and optional persistence.
+
 ## Priority rule
 
 - **P0:** can falsely assert closure, safety, verified runtime, or external publication; can lose work; or blocks trustworthy evaluation of all other cases.

@@ -6,11 +6,16 @@ import { OPERATIONS } from "../src/operations.js";
 import { SourceParser } from "../src/parser.js";
 import { VERSION } from "../src/version.js";
 
-const packageDocument=JSON.parse(await readFile("package.json","utf8")) as {version:string;engines?:{node?:string};bin?:Record<string,string>};
+const packageDocument=JSON.parse(await readFile("package.json","utf8")) as {version:string;license?:string;engines?:{node?:string};bin?:Record<string,string>};
 assert.equal(packageDocument.version,VERSION,"package and runtime versions differ");
+assert.equal(packageDocument.license,"SEE LICENSE IN NOTICE","mixed runtime and skill licensing must point to NOTICE");
+assert.match(await readFile("NOTICE","utf8"),/Apache-2\.0[\s\S]*proprietary/i);
+const publishWorkflow=await readFile(".github/workflows/publish-release.yml","utf8");
+assert.match(publishWorkflow,/npm run test:legacy-parity/);
+assert.match(publishWorkflow,/git merge-base --is-ancestor HEAD origin\/main/);
 assert.equal(packageDocument.engines?.node,">=24.15.0","supported Node floor changed without release-contract update");
 for(const command of ["rke","rke-mcp","rke-eval","rke-session-start","rke-pre-compaction","rke-pre-push"])assert.ok(packageDocument.bin?.[command],`missing executable: ${command}`);
-assert.equal(OPERATIONS.length,46,"public operation inventory changed without fixture update");
+assert.equal(OPERATIONS.length,43,"public operation inventory changed without fixture update");
 
 const database=new DatabaseSync(":memory:");
 try{database.exec("CREATE VIRTUAL TABLE release_fts USING fts5(body); INSERT INTO release_fts(body) VALUES ('release validation');");assert.equal((database.prepare("SELECT COUNT(*) AS count FROM release_fts WHERE release_fts MATCH 'validation'").get() as {count:number}).count,1,"SQLite FTS5 is unavailable");}finally{database.close();}
@@ -27,4 +32,4 @@ const grammarFixtures:Record<string,string>={
 for(const [path,source] of Object.entries(grammarFixtures)){const parsed=await parser.parse(path,source);assert.notEqual(parsed.status,"failed",`grammar failed to load: ${path}: ${parsed.diagnostics.join("; ")}`);}
 parser.close();
 
-console.log(`Release contract validated for RKE ${VERSION}: version identity, bins, 46 operations, SQLite FTS5, and ${Object.keys(grammarFixtures).length} grammar fixtures.`);
+console.log(`Release contract validated for RKE ${VERSION}: version identity, bins, 43 operations, SQLite FTS5, and ${Object.keys(grammarFixtures).length} grammar fixtures.`);

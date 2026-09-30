@@ -44,9 +44,6 @@ test("EWO-01 closes a reviewed small change without manufacturing canonical know
   assert.equal(disposition.exitCode,0,JSON.stringify(disposition.payload));
   assert.equal(disposition.payload.result,"documentation-disposition-recorded");
   assert.equal(await readFile(join(root,"docs","knowledge","architecture.md"),"utf8").then(()=>true,()=>false),false,"no bundle should be manufactured");
-  await mkdir(join(root,".engineering-workflow"),{recursive:true});
-  await writeFile(join(root,".engineering-workflow","detail.json"),JSON.stringify({before:"Only add existed",after:"divide is available",why:"The requested calculator operation is now implemented",causalPath:[{path:"calculator.mjs",symbol:"divide"}],verification:[{claim:"divide returns three",kind:"test",evidence:"test_calculator.mjs"}]}));
-  assert.equal((await invokeOperation(root,"repo_change_explain",{base:"HEAD",summary:"The calculator now divides numbers with a focused executable test.",detailFile:".engineering-workflow/detail.json"})).exitCode,0);
   assert.equal((await invokeOperation(root,"workflow_activate",{phase:"deliver",taskMode:"none"})).exitCode,0);
   const closure=await invokeOperation(root,"workflow_closure_assess",{base:"HEAD"});
   assert.equal(closure.exitCode,0,JSON.stringify(closure.payload));
@@ -74,34 +71,12 @@ test("EWO-01 refuses no-update disposition for bound or changed canonical knowle
   assert.equal(bound.exitCode,3);
   assert.equal((bound.payload.error as {code:string}).code,"documentation_affected_knowledge");
   await invokeOperation(root,"workflow_activate",{phase:"deliver",taskMode:"none"});
-  const small=await invokeOperation(root,"workflow_complete_small_change",{base:"HEAD",summary:"The service status changed after source review.",detailFile:".engineering-workflow/detail.json",reviewedPaths:["service.ts"],evidence:"Reviewed the service status; there is a bound canonical concept."});
-  assert.equal(small.payload.result,"small-change-ineligible");
+  assert.equal((await invokeOperation(root,"workflow_closure_assess",{base:"HEAD"})).exitCode,3);
   await writeFile(join(root,"service.ts"),"export const status = 'old';\n");
   await writeFile(join(root,"docs","knowledge","service.md"),"---\ntype: Architecture Concept\ntitle: Service\ndescription: Service status.\n---\n\n# Service\n\nThe service reports new status.\n");
   const canonical=await invokeOperation(root,"repo_documentation_disposition",{base:"HEAD",reviewedPaths:["docs/knowledge/service.md"],evidence:"I reviewed the changed canonical concept and want to skip documentation."});
   assert.equal(canonical.exitCode,3);
   assert.equal((canonical.payload.error as {code:string}).code,"documentation_canonical_changed");
-});
-
-test("EWO-01 complete-small closes a reviewed bounded delta and refuses hidden obligations",async t=>{
-  const root=await fixture(t);
-  await writeFile(join(root,"calculator.mjs"),"export const add = (a, b) => a + b;\n");
-  git(root,"add",".");git(root,"commit","-m","baseline");
-  await invokeOperation(root,"workflow_activate",{phase:"deliver",taskMode:"none"});
-  await writeFile(join(root,"calculator.mjs"),"export const add = (a, b) => a + b;\nexport const divide = (a, b) => a / b;\n");
-  await writeFile(join(root,".engineering-workflow","detail.json"),JSON.stringify({before:"Only add was exported",after:"divide is exported",why:"The requested calculator operation is available",causalPath:[{path:"calculator.mjs",symbol:"divide"}],verification:[]}));
-  const args={base:"HEAD",summary:"The calculator now exports a divide operation.",detailFile:".engineering-workflow/detail.json",reviewedPaths:["calculator.mjs"],evidence:"Reviewed the focused source delta; no durable knowledge update is warranted."};
-  const incomplete=await invokeOperation(root,"workflow_complete_small_change",{...args,reviewedPaths:["README.md"]});
-  assert.equal(incomplete.exitCode,3);
-  assert.equal((await readFile(join(root,".engineering-workflow","change-explanation.json"),"utf8").then(()=>true,()=>false)),false);
-  await invokeOperation(root,"workflow_gate_add",{gates:["acceptance-defined"]});
-  assert.equal((await invokeOperation(root,"workflow_complete_small_change",args)).payload.result,"small-change-ineligible");
-  await invokeOperation(root,"workflow_gate_resolve",{gate:"acceptance-defined",evidence:"Acceptance is now established."});
-  const finished=await invokeOperation(root,"workflow_complete_small_change",args);
-  assert.equal(finished.exitCode,0,JSON.stringify(finished.payload));
-  assert.equal(finished.payload.result,"small-change-closed");
-  const resumed=await invokeOperation(root,"workflow_resume",{});
-  assert.equal((resumed.payload.state as {status:string}).status,"closed");
 });
 
 test("RDS-01 distinguishes a declared package launcher from observed runtime support",async t=>{
@@ -298,24 +273,13 @@ test("RPF-01 accounts for PII and unreadable tracked coverage without returning 
   assert.ok(!JSON.stringify(result.payload).includes("jane.smith@personal.example"));
 });
 
-test("RCC-01 rejects or enriches a vacuous explanation rather than accepting it as comprehension", async t => {
-  const root = await fixture(t);
-  await writeFile(join(root, "service.ts"), "export function calculateTotal(value: number) { return value; }\n");
-  git(root, "add", "service.ts"); git(root, "commit", "-m", "baseline");
-  await writeFile(join(root, "service.ts"), "export function calculateTotal(value: number) { return value * 2; }\n");
-  const result = await invokeOperation(root, "repo_change_explain", { base: "HEAD", summary: "Updated files." });
-  assert.ok(result.exitCode !== 0 || JSON.stringify(result.payload).includes("calculateTotal"), "a receipt must contain inspected code-level evidence or refuse the claim");
-});
-
-test("RCC-01 stores a code-level before/after account tied to the delta",async t=>{
-  const root=await fixture(t);
-  await writeFile(join(root,"service.ts"),"export function calculateTotal(value: number) { return value; }\n");git(root,"add","service.ts");git(root,"commit","-m","baseline");
-  await writeFile(join(root,"service.ts"),"export function calculateTotal(value: number) { return value * 2; }\n");
-  await mkdir(join(root,".engineering-workflow"),{recursive:true});
-  await writeFile(join(root,".engineering-workflow","detail.json"),JSON.stringify({before:"calculateTotal returned the input",after:"calculateTotal doubles the input",why:"the accepted total rule changed",causalPath:[{path:"service.ts",symbol:"calculateTotal"}],verification:[{claim:"the implementation doubles",kind:"code-only",evidence:"service.ts"}]}));
-  const result=await invokeOperation(root,"repo_change_explain",{base:"HEAD",summary:"The calculation now doubles the supplied total.",detailFile:".engineering-workflow/detail.json"});
-  assert.equal(result.exitCode,0);const detail=(result.payload.receipt as Record<string,unknown>).detail as Record<string,unknown>;
-  assert.match(String(detail.after),/doubles/);
+test("RCC-01 keeps causal comprehension in prose rather than a public operation", async () => {
+  const { OPERATIONS } = await import("../src/operations.js");
+  assert.ok(!OPERATIONS.some(item => item.name === "repo_change_explain"));
+  assert.ok(!OPERATIONS.some(item => item.name === "workflow_complete_small_change"));
+  assert.ok(!OPERATIONS.some(item => item.name === "workflow_legacy_route"));
+  const close = await readFile(join(process.cwd(), "skills/engineering-workflow/references/journeys/close.md"), "utf8");
+  assert.match(close, /before\/after branch or data flow/);
 });
 
 test("RSA-01 does not call an invalid task lane ready just because no EWF gate was registered", async t => {
@@ -476,7 +440,7 @@ test("RKE-01 bootstrap does not require fixed filenames in an otherwise verified
   const verified = await invokeOperation(root, "repo_knowledge_verify", { knowledge: "docs/knowledge/architecture.md", evidence: "Reviewed the runtime source." });
   assert.equal(verified.exitCode, 0);
   const result = await invokeOperation(root, "repo_documentation_bootstrap", { bundle: "docs/knowledge" });
-  assert.deepEqual(result.payload.recommendedFoundation, [], "a foundation must be derived from actual gaps rather than fixed filenames");
+  assert.equal(Object.hasOwn(result.payload, "recommendedFoundation"), false, "foundation choice belongs to prose methodology");
 });
 
 test("RKE-02 documentation apply refuses an invalid affected knowledge bundle", async t => {

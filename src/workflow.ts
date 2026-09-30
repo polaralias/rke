@@ -28,16 +28,6 @@ const CAPABILITIES: Record<string, Record<string, unknown>> = {
   "parallel-delivery": { name: "parallel-delivery", reference: "references/extensions/parallel-delivery.md", gates: ["integrated-tree-validation", "worktree-cleanup"] },
   publication: { name: "publication", reference: "references/extensions/publication.md", gates: ["publication-safety"] },
 };
-const LEGACY: Record<string, [string, string, string[]]> = {
-  EWO: ["engineering-workflow-orchestrator", "lifecycle", ["start"]], RDS: ["repo-dissection", "understand", ["dissection", "assess"]],
-  QTK: ["query-to-knowledge", "query-to-knowledge", ["capability", "enable", "query-to-knowledge"]], RKE: ["repo-knowledge-engineering", "understand", ["journey", "enter", "understand"]],
-  DDD: ["doc-driven-development", "design", ["journey", "enter", "design"]], RTL: ["repo-task-lifecycle", "tasks", ["task", "configure"]],
-  WTC: ["worktree-task-coordinator", "parallel-delivery", ["coordination", "validate"]], RCC: ["repo-change-comprehension", "close", ["journey", "enter", "close"]],
-  RSA: ["repo-session-alignment", "close", ["closure", "assess"]], LHO: ["local-handoff", "handoff-write", ["handoff", "write", "--visibility", "local"]],
-  LPK: ["local-pickup", "handoff-inspect", ["handoff", "inspect", "--visibility", "local"]], RPF: ["repo-publish-finaliser", "publication", ["capability", "enable", "publication"]],
-  RST: ["repo-setup", "repository-setup", ["use-separate-bootstrap-capability"]],
-  TPU: ["tracker-publisher", "tracker-publication", ["use-tracker-publication-adapter"]],
-};
 
 function statePath(root: string): string { return join(root, STATE); }
 function unique(values: string[]): string[] { return [...new Set(values)]; }
@@ -129,15 +119,15 @@ async function receiptStatus(root:string,base:string,file:string):Promise<{statu
     const {documentationAssess}=await import("./surfaces.js"),assessment=await documentationAssess(root,base);
     const claims=(assessment.payload.claimBindings as {status:string}[]|null)??[];
     if(assessment.exitCode===2||((assessment.payload.affectedKnowledge as string[]|undefined)??[]).length||claims.some(claim=>claim.status!=="current"))return{status:"invalid",issues:["documentation-disposition-affected-knowledge"]};
-    const {readJsonOr}=await import("./io.js");
-    const manifest=await readJsonOr<{knowledge?:{path:string}[]}>(join(root,".rke/repo-context.json"),{knowledge:[]});
-    if(changed.some(path=>path.startsWith("docs/knowledge/")||(manifest.knowledge??[]).some(item=>item.path===path)))return{status:"invalid",issues:["documentation-disposition-canonical-changed"]};
+    const {loadManifest}=await import("./knowledge-manifest.js");
+    const manifest=await loadManifest(root);
+    if(changed.some(path=>path.startsWith("docs/knowledge/")||(manifest.data.knowledge??[]).some(item=>item.path===path)))return{status:"invalid",issues:["documentation-disposition-canonical-changed"]};
     return{status:"no-update-current",issues:[]};
   }
   return{status:"receipt-current",issues:[]};}catch{return{status:"invalid",issues:[`${file.replace(".json","")}-invalid`]};}}
 export async function closureAssessment(root:string,base="HEAD"):Promise<OperationOutcome>{
   const state=await load(root),errors=validate(state);if(errors.length)return outcome({result:"invalid-state",state_path:statePath(root),verification:{valid:false,errors},state},2);
-  const change=await receiptStatus(root,base,"change-explanation.json"),documentation=await receiptStatus(root,base,"documentation-receipt.json");
+  const documentation=await receiptStatus(root,base,"documentation-receipt.json");
   const validationGates=state.outstanding_gates.filter(g=>["implementation-validation","integrated-tree-validation"].includes(g)),taskGates=state.outstanding_gates.filter(g=>g==="task-reconciliation"),knowledgeGates=state.outstanding_gates.filter(g=>g.includes("knowledge"));
   const bundle=state.task_tracking.bundle??"tasks",taskPath=join(root,bundle),hasTasks=existsSync(taskPath)&&readdirSync(taskPath,{recursive:true}).some(item=>{const name=String(item);if(!name.endsWith(".md"))return false;try{return /^---\r?\n[\s\S]{0,4096}?\btype:\s*(Task|Workstream)\b/m.test(readFileSync(join(taskPath,name),"utf8").slice(0,4096));}catch{return false;}});
   let taskValidation:OperationOutcome|undefined;
@@ -155,27 +145,8 @@ export async function closureAssessment(root:string,base="HEAD"):Promise<Operati
     try{const {loadClaimBindings,assessClaimBindings}=await import("./claim-bindings.js"),bindings=await loadClaimBindings(root),claims=await assessClaimBindings(root,bindings??[]);claimValidation=outcome({result:claims.every(claim=>claim.status==="current")?"claim-bindings-current":"claim-binding-review-required",claims},claims.every(claim=>claim.status==="current")?0:3);}
     catch(error){claimValidation=outcome({result:"claim-bindings-invalid",error:String(error)},3);}
   }
-  const ready=!state.outstanding_gates.length&&!change.issues.length&&!documentation.issues.length&&!taskValidation?.exitCode&&!knowledgeValidation?.exitCode&&!claimValidation?.exitCode;
-  const lanes={change,knowledge:{...documentation,gates:knowledgeGates,validation:knowledgeValidation?.payload??null,claims:claimValidation?.payload??null},validation:{status:validationGates.length?"pending":"clear",gates:validationGates},tasks:{status:taskGates.length||taskValidation?.exitCode?"pending":"clear",gates:taskGates,validation:taskValidation?.payload??null},other:state.outstanding_gates};
+  const ready=!state.outstanding_gates.length&&!documentation.issues.length&&!taskValidation?.exitCode&&!knowledgeValidation?.exitCode&&!claimValidation?.exitCode;
+  const lanes={knowledge:{...documentation,gates:knowledgeGates,validation:knowledgeValidation?.payload??null,claims:claimValidation?.payload??null},validation:{status:validationGates.length?"pending":"clear",gates:validationGates},tasks:{status:taskGates.length||taskValidation?.exitCode?"pending":"clear",gates:taskGates,validation:taskValidation?.payload??null},other:state.outstanding_gates};
   return outcome({result:ready?"closure-ready":"closure-blocked",ready,base,state_path:statePath(root),lanes,outstandingGates:state.outstanding_gates,state},ready?0:3);
 }
 export async function close(root:string,base="HEAD"):Promise<OperationOutcome>{const state=await load(root),errors=validate(state);if(errors.length)return outcome({result:"invalid-state",state_path:statePath(root),verification:{valid:false,errors},state},2);if(state.status==="closed")return outcome({result:"already-closed",state_path:statePath(root),outstanding_gates:state.outstanding_gates,state});const assessment=await closureAssessment(root,base);if(assessment.exitCode)return outcome({result:"closure-blocked",state_path:statePath(root),outstanding_gates:state.outstanding_gates,assessment:assessment.payload,state},3);state.status="closed";state.primary_phase="close";state.closed_at=utcNow();await save(root,state);return outcome({result:"closed",state_path:statePath(root),outstanding_gates:[],assessment:assessment.payload,state});}
-export async function completeSmallChange(root:string,base:string,summary:string,detailFile:string,reviewedPaths:string[],evidence:string):Promise<OperationOutcome>{
-  const state=await load(root),stop=blocked(root,state);if(stop)return stop;
-  const {manifestPresence}=await import("./knowledge-manifest.js"),manifest=manifestPresence(root);
-  if(state.task_tracking.mode!=="none"||state.outstanding_gates.length||existsSync(join(root,"docs","knowledge"))||manifest.effectivePresent||manifest.ambiguous||existsSync(join(root,".rke","claim-bindings.json")))
-    return outcome({result:"small-change-ineligible",reason:"A task lane, open gate, or canonical knowledge surface requires ordinary reconciliation."},3);
-  const surfaces=await import("./surfaces.js"),assessment=await surfaces.documentationAssess(root,base);
-  if(assessment.exitCode===2)return assessment;
-  const changed=assessment.payload.changedPaths as string[];
-  if(assessment.payload.detailsTruncated||!changed.length||changed.length>10||assessment.payload.outcome!=="decision-required")
-    return outcome({result:"small-change-ineligible",assessment:assessment.payload},3);
-  const reviewed=[...new Set(reviewedPaths.map(safeRelative))].sort();
-  if(reviewed.length!==changed.length||reviewed.some((path,index)=>path!==changed[index]))
-    return outcome({result:"small-change-review-incomplete",changedPaths:changed,reviewedPaths:reviewed},3);
-  const explanation=await surfaces.changeExplain(root,base,summary,detailFile);if(explanation.exitCode)return explanation;
-  const disposition=await surfaces.documentationDisposition(root,base,reviewed,evidence);if(disposition.exitCode)return disposition;
-  const finished=await close(root,base);
-  return outcome({result:finished.exitCode?"small-change-blocked":"small-change-closed",base,changedPaths:changed,receipts:{explanation:explanation.payload.result,documentation:disposition.payload.result},closure:{result:finished.payload.result,ready:!finished.exitCode,...(finished.exitCode?{assessment:finished.payload.assessment}:{})}},finished.exitCode);
-}
-export function routeLegacy(value:string):OperationOutcome{const normalized=value.trim().toLowerCase();const item=Object.entries(LEGACY).find(([alias,[name]])=>alias.toLowerCase()===normalized||name.toLowerCase()===normalized);if(!item)return outcome({result:"legacy-route-unknown",requested:value,knownAliases:Object.keys(LEGACY).sort()},2);const [alias,[legacyName,destination,command]]=item;return outcome({result:"legacy-route",alias,legacyName,destination,command,deprecatedPeer:alias!=="RST",separateCapability:alias==="RST"});}

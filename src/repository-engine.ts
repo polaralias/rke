@@ -291,7 +291,7 @@ export class RepositoryEngine {
         if(expanded.length>=Math.min(20,limit))break;
       }
     }
-    const relationshipSlots=expanded.length?Math.min(expanded.length,Math.max(1,Math.floor(limit/4))):0;
+    const relationshipSlots=expanded.length&&limit>1?Math.min(expanded.length,Math.max(1,Math.floor(limit/4))):0;
     return [...rows.slice(0,limit-relationshipSlots),...expanded.slice(0,relationshipSlots)];
   }
 

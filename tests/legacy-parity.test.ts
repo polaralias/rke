@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
-import { routeLegacy } from "../src/workflow.js";
 
 interface Scenario {
   id: string;
@@ -36,9 +35,9 @@ test("legacy parity scenarios cover every retained outcome and the two explicit 
   }
   assert.equal(fixture.cases.find(item => item.id === "TPU-01")?.status, "pending");
   assert.equal(fixture.cases.find(item => item.id === "TPW-01")?.status, "excluded-from-ewf");
-  assert.equal(routeLegacy("TPU").payload.destination, "tracker-publication");
-  assert.equal(routeLegacy("tracker-publisher").payload.destination, "tracker-publication");
-  assert.equal(routeLegacy("TPW").exitCode, 2);
+  const migration = await readFile(join(process.cwd(), "skills/engineering-workflow/references/migration.md"), "utf8");
+  assert.match(migration, /\| TPU \| tracker-publisher \|/);
+  assert.match(migration, /TPW is deliberately outside EWF/);
   assert.ok(fixture.cases.filter(item => item.category.includes("injection") || item.category.includes("authority") || item.category.includes("safety")).length >= 3);
 });
 

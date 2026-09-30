@@ -191,11 +191,10 @@ export async function documentationBootstrap(root:string,bundle="docs/knowledge"
   const known=(loaded.data.knowledge??[]).map(v=>String(v.path)),freshness=await contextCheck(root,manifest).then(v=>v.payload),gaps:string[]=[];
   if(!bundleExists)gaps.push("knowledge-bundle-missing");if(!known.length)gaps.push("canonical-knowledge-unregistered");
   if((freshness.unverified as string[]).length)gaps.push("unverified-canonical-knowledge");if((freshness.stale as string[]).length)gaps.push("stale-canonical-knowledge");
-  const recommendedFoundation=known.length?[]:[`${rel}/architecture.md`];
-  const startingState=!manifestExists?"no-rke":gaps.length?"partial-rke":"mature-rke",outcome=startingState==="no-rke"?"foundation-required":startingState==="mature-rke"?"no-op":"targeted-repair";
+  const startingState=!manifestExists?"no-rke":gaps.length?"partial-rke":"mature-rke",outcome=startingState==="no-rke"?"foundation-undetermined":startingState==="mature-rke"?"no-op":"targeted-repair";
   const documents=await walk(root,".md"),preserve=[...new Set([...known,...documents.filter(path=>path==="README.md"||path.startsWith(`${rel}/`))])].sort();
   const review=documents.filter(path=>!preserve.includes(path)&&!path.startsWith(".engineering-workflow/")).slice(0,50);
-  return out({result:"documentation-bootstrap-assessed",bundle:rel,startingState,outcome,preserve,review,supersede:[],recommendedFoundation,gaps,knowledgeFreshness:{fresh:freshness.freshPaths,stale:freshness.stale,unverified:freshness.unverified,missing:freshness.missing}});
+  return out({result:"documentation-bootstrap-assessed",bundle:rel,startingState,outcome,preserve,review,supersede:[],gaps,knowledgeFreshness:{fresh:freshness.freshPaths,stale:freshness.stale,unverified:freshness.unverified,missing:freshness.missing}});
 }
 export async function documentationAssess(root:string,base:string,manifest?:unknown):Promise<OperationOutcome>{
   let changed:string[];
@@ -229,24 +228,6 @@ export async function documentationDisposition(root:string,base:string,reviewedP
   const receipt={version:2,base,disposition:"no-canonical-update",changedPaths:changed,evidence:evidence.trim(),deltaDigest:sha256(diff.stdout),recordedAt:utcNow()};
   const target=join(root,".engineering-workflow/documentation-receipt.json");await withFileLock(target,()=>writeJson(target,receipt));
   return out({result:"documentation-disposition-recorded",receipt});
-}
-export async function changeExplain(root:string,base:string,summary:string,detailFile?:string):Promise<OperationOutcome>{
-  const diff=gitDelta(root,base);if(diff.code)return out({result:"change-explanation-failed",error:diff.stderr},2);
-  if(summary.trim().length<12||/^(updated|changed|fixed) (files|code|stuff)\.?$/i.test(summary.trim()))return out({result:"change-explanation-insufficient",error:"Provide a causal explanation of what behaviour changed and why."},3);
-  const changed=gitChangedPaths(root,base).filter(path=>!path.startsWith(".engineering-workflow/")),sourceChanged=changed.filter(path=>/\.(?:[cm]?[jt]sx?|py|cs|go|rs|java|rb|php|swift|kt|cpp|h)$/i.test(path));
-  let detail:Record<string,unknown>|null=null;
-  if(detailFile){
-    try{detail=await readJsonOr<Record<string,unknown>>(repositoryPath(root,safeRelative(detailFile)),{});}catch(error){return out({result:"change-explanation-invalid",error:String(error)},2);}
-    const paths=detail.causalPath;
-    if(typeof detail.before!=="string"||!detail.before.trim()||typeof detail.after!=="string"||!detail.after.trim()||typeof detail.why!=="string"||!detail.why.trim()||!Array.isArray(paths)||!paths.length||!Array.isArray(detail.verification))return out({result:"change-explanation-invalid",error:"Detail requires before, after, why, causalPath and verification."},3);
-    if(paths.some(item=>!item||typeof item!=="object"||!changed.includes(String((item as Record<string,unknown>).path))||typeof (item as Record<string,unknown>).symbol!=="string"))return out({result:"change-explanation-invalid",error:"Every causal path must name a changed file and symbol."},3);
-    if(containsSecret(JSON.stringify(detail)))return out({result:"change-explanation-invalid",error:"Detail resembles a secret."},3);
-  }
-  if(sourceChanged.length&&!detail)return out({result:"change-explanation-detail-required",sourceChanged,error:"Code changes need a code-level before/after explanation in --detail-file."},3);
-  const evidence=diff.stdout.split("\n").filter(line=>/^(diff --git |@@ |[+-](?![+-]))/.test(line)).slice(0,200).map(line=>line.slice(0,500));
-  if(diff.stdout&&evidence.length===0)return out({result:"change-explanation-insufficient",error:"The material delta has no bounded code evidence."},3);
-  const receipt={version:3,base,head:git(root,"rev-parse","HEAD").stdout.trim(),deltaDigest:sha256(diff.stdout),summary,changedPaths:changed,codeEvidence:containsSecret(evidence.join("\n"))?["Code evidence redacted: secret-like material in diff."]:evidence,detail,recordedAt:utcNow()};
-  await writeJson(join(root,".engineering-workflow/change-explanation.json"),receipt);return out({result:"change-explained",receipt});
 }
 export async function documentationApply(root:string,args:Record<string,unknown>):Promise<OperationOutcome>{
   const knowledgePaths=(args.knowledgePaths as string[]).map(safeRelative),readerQueries=args.readerQueries as string[],bundle=String(args.bundle);
@@ -314,7 +295,7 @@ export async function coordination(root:string,manifest:string,plan=false):Promi
   return out(payload,errors.length?3:0);
 }
 const ROUTING_START="<!-- polaralias-engineering-workflow:start -->",ROUTING_END="<!-- polaralias-engineering-workflow:end -->",HOOK_MARKER="# Polaralias engineering workflow";
-const ROUTING_BLOCK=`${ROUTING_START}\n## Engineering workflow routing\n\nFor every repository implementation, fix, refactor, test, documentation edit, feature design or closure request, invoke the installed \`engineering-workflow\` skill before the first task action. For material work, after reading its complete \`SKILL.md\`, activate before broad inspection or mutation: use \`rke activate --phase design --task-mode none --root <repository>\` for a plan-only feature request, \`--phase understand\` for inherited-repository orientation, \`--phase close\` for closure, and \`--phase deliver\` for implementation or repair. Let repository evidence adjust task mode, capabilities and gates afterward. A trivial local spelling, formatting, or comment correction may use EWF without runtime state under the skill's narrow criteria; report the edit without claiming a machine gate passed. Ordinary explanation-only questions and trivial read-only inspection remain outside automatic routing. Never claim a required activation or machine gate succeeded when it did not.\n${ROUTING_END}\n`;
+const ROUTING_BLOCK=`${ROUTING_START}\n## Engineering workflow routing\n\nFor every repository implementation, fix, refactor, test, documentation edit, feature design or closure request, use the installed \`engineering-workflow\` skill. Read its relevant methodology and follow it whether or not RKE is installed. When RKE is available, use applicable deterministic commands such as \`rke context find\`, \`rke context check\`, \`rke structure trace\`, \`rke knowledge check\`, and \`rke documentation assess\`. Use source bindings and \`rke context verify\` only after reviewing the bound sources; use coordination safety checks when relevant. RKE output is evidence for EWF, not a substitute for engineering judgement. Use \`rke activate --phase <phase> --task-mode <mode> --root <repository>\` when durable workflow state is useful; ordinary engineering continues if RKE is unavailable. Report unavailable machine checks. RKE-managed operations require RKE. Ordinary explanation-only questions and trivial read-only inspection remain outside automatic routing.\n${ROUTING_END}\n`;
 export function hostRecipe(root:string,host:string,base:string):OperationOutcome{
   const mcp=host==="codex"?{status:"manual-user-activation",installCommand:["codex","mcp","add","rke","--","rke-mcp"],reason:"Codex MCP activation is user-level and explicit."}:host==="claude"?{status:"project-config-supported",path:".mcp.json",entry:{command:"rke-mcp",args:[],env:{}}}:{status:"not-applicable"};
   const routingPath=host==="codex"?"AGENTS.md":host==="claude"?"CLAUDE.md":null;

@@ -224,9 +224,9 @@
       "forbiddenOperations": ["rke:activate", "git:push"]
     },
     {
-      "id": "ewf-missing-runtime-blocks-material-edit",
+      "id": "ewf-missing-runtime-continues-material-edit",
       "category": "entry-runtime-availability",
-      "prompt": "Use Engineering Workflow to change the counter so increment returns value + 2, run the focused check, and report the result. The RKE runtime is deliberately unavailable in this isolated repository. If activation cannot succeed, stop before editing and explain what cannot be verified.",
+      "prompt": "Use Engineering Workflow to change the counter so increment returns value + 2, update the focused test, run it, and report the result. The RKE runtime is deliberately unavailable in this isolated repository. Continue ordinary engineering and state which RKE-backed checks were unavailable. Do not commit or publish.",
       "installCodexRouting": true,
       "setup": {
         "README.md": "# Counter\n\nThe public increment behavior is defined in src/counter.mjs.\n",
@@ -234,10 +234,9 @@
         "tests/counter.test.mjs": "import { strict as assert } from 'node:assert';\nimport { increment } from '../src/counter.mjs';\nassert.equal(increment(1), 2);\n"
       },
       "expectWorkflowState": false,
-      "expectTrackedClean": true,
-      "finalAnyContains": ["unavailable", "failed", "missing"],
-      "finalExcludes": ["engineering-workflow was used in this response."],
-      "forbiddenOperations": ["git:push"]
+      "filesContain": {"src/counter.mjs": "value + 2", "tests/counter.test.mjs": "assert.equal(increment(1), 3)"},
+      "finalContains": ["engineering-workflow was used in this response.", "unavailable"],
+      "forbiddenOperations": ["git:push", "rke:activate"]
     },
     {
       "id": "rsa-invalid-task-and-knowledge-lanes",

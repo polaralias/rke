@@ -5,7 +5,7 @@ description: Defines the independently installed Repository Knowledge Engineerin
 timestamp: 2026-09-28T08:12:54+01:00
 authority: canonical
 verification: verified-working
-reviewed_at: 2026-09-29T15:44:00+01:00
+reviewed_at: 2026-09-30T03:30:00+01:00
 verified_against:
   - src/operations.ts
   - src/cli.ts
@@ -42,6 +42,8 @@ navigation:
 
 RKE turns repository evidence into bounded, retrievable engineering context without confusing generated indexes, authored knowledge, execution records or workflow state.
 
+EWF owns engineering judgement and remains usable without RKE. RKE supplies deterministic retrieval, structural navigation, knowledge graph and freshness evidence, bounded safety operations, and optional continuity state. A runtime operation is justified when code provides evidence or a safe operation that EWF prose cannot reliably provide on its own.
+
 ## Distribution
 
 The `@polaralias/rke` npm package is the sole executable implementation. It exposes two adapters over one operation registry:
@@ -59,7 +61,7 @@ Transport parity does not establish legacy-skill outcome parity. The [legacy ski
 
 Workflow state and authored receipts use atomic replacement. Existing workflow state is validated before activation, checkpoint, task checks, or closure can use it; malformed status, continuity, task tracking, timestamps, and receipts fail closed. Repository indexing uses SQLite WAL mode, foreign keys and an immediate transaction per changed or deleted file. A failed parse or transaction cannot leave half of a file's symbols, chunks, knowledge relationships, or edges visible. The disposable database can always be rebuilt and is never canonical knowledge.
 
-Manifest reads and writes resolve symlink parents against the repository boundary. Canonical and legacy manifest presence is assessed once for bootstrap, closure freshness and small-change eligibility. Documentation apply snapshots the manifest, legacy manifest, receipt and all affected generated indexes; a later validation failure restores prior content and removes indexes that were newly created.
+Manifest reads and writes resolve symlink parents against the repository boundary. Canonical and legacy manifest presence is assessed for bootstrap and closure freshness. Documentation apply snapshots the manifest, legacy manifest, receipt and all affected generated indexes; a later validation failure restores prior content and removes indexes that were newly created.
 
 The EWF skill is co-versioned in `skills/engineering-workflow`. Its operating contracts live only under the skill's `references/` directory: shared contracts are flat, phase-specific guidance is under `journeys/`, and opt-in capability guidance is under `extensions/`. The repository's `docs/knowledge/` directory is reserved for canonical RKE project knowledge and must not mirror those skill instructions.
 
@@ -72,7 +74,7 @@ At 1.0, that contract stabilises CLI operation names and principal arguments, MC
 
 ## Documentation bootstrap
 
-`rke documentation bootstrap` is the read-only deterministic entry point for “document this repository.” It classifies a repository as `no-rke`, `partial-rke`, or `mature-rke`; inventories existing canonical knowledge and instructions; and reports preserve/review candidates and `fresh`/`stale`/`unverified` binding sets. It compares registered source hashes with receipts without writing the disposable context index. Receipt presence alone does not establish freshness. A verified existing foundation is preserved regardless of its filenames; a missing foundation receives one minimal candidate rather than a fixed document set.
+`rke documentation bootstrap` is read-only evidence for “document this repository.” It classifies a repository as `no-rke`, `partial-rke`, or `mature-rke`; inventories existing canonical knowledge and instructions; and reports preserve/review candidates and `fresh`/`stale`/`unverified` binding sets. It compares registered source hashes with receipts without writing the disposable context index. Receipt presence alone does not establish freshness. It does not select a foundation document or filename. EWF chooses whether to strengthen an existing README or create a glossary, decision, architecture, operating, or other durable surface from repository evidence.
 
 The model or EWF journey traces real runtime evidence and writes the necessary human-readable content. Knowledge registration, documentation apply, and context verification provide machine receipts. Apply validates bundle conformance, affected-concept coverage, top-five reader retrieval, index generation, and source-binding freshness before writing a completion receipt. For a reviewed material delta with no affected canonical binding, `documentation disposition` records why no durable update is warranted and covers every changed path without creating a knowledge bundle; closure rechecks the exact-delta receipt and independently validates any existing knowledge. These checks do not establish semantic truth; source review, focused tests and runtime evidence remain separate.
 
@@ -106,25 +108,25 @@ RKE `0.10.x` is the pre-1.0 qualification series and ships only the TypeScript r
 
 Isolated agent evaluation stages an installed RKE package with `--rke-package-root`. Restricted cases use a Git-ignored copy in the disposable fixture; full-access delegated-provider cases place it outside the fixture so authoritative OKF validation sees only the repository's governed concepts. The agent invokes the staged Node CLI rather than a stale host shim. Documentation authoring cases grade a registered concept's content, reading-order link, reader rank and freshness without requiring one fixed filename.
 
-`package.json` is the sole release version source and `src/version.ts` reads the MCP and CLI identity from it at runtime. CI covers Node 24.15 and 25 on Linux, Windows, and macOS, strict TypeScript checking, deterministic tests including the executable legacy-parity contract, release-contract validation, the no-Python architecture audit, and clean npm artefact smoke tests that exercise version identity, parser retrieval, MCP discovery, and the bundled agent-evaluation corpus. The same parity contract runs during `prepack`. Catalogue validation and digest parity run in the adjacent skills repository during release qualification. A matching `vX.Y.Z` tag builds, smokes, attests and publishes the npm tarball with provenance before promoting the GitHub release.
+`package.json` is the sole release version source and `src/version.ts` reads the MCP and CLI identity from it at runtime. CI covers Node 24.15 and 25 on Linux, Windows, and macOS, strict TypeScript checking, deterministic tests including the executable legacy-parity contract, release-contract validation, the no-Python architecture audit, and clean npm artefact smoke tests that exercise all six installed bin shims, parser retrieval, MCP discovery, and the bundled agent-evaluation corpus. The same parity contract runs during `prepack` and the tag publish workflow. Catalogue validation and digest parity run in the adjacent skills repository during release qualification. A matching `vX.Y.Z` tag must be reachable from `main` before the workflow builds, smokes, attests and publishes the npm tarball with provenance and promotes the GitHub release. The tarball combines an Apache-2.0 runtime with a separately proprietary EWF skill, as declared in `NOTICE`.
 
 ## Methodology
 
 Documentation-driven development is the principle: make intended behaviour and durable decisions legible, implement against them, and validate them against source and runtime evidence.
 
-RKE is the operational methodology, expressed as one normal journey:
+EWF is the engineering methodology. RKE assists this journey when available:
 
-1. Activate the repository workflow.
+1. Understand the repository and task; activate optional RKE state when durable continuity is useful.
 2. Retrieve or trace bounded evidence and resolve facts separately from user intent.
 3. Use Query-to-Knowledge when consequential intent remains uncertain.
 4. Design and implement against explicit acceptance.
 5. Assess documentation impact from the real Git delta.
 6. Use Repository Change Comprehension to explain the causal final state.
-7. Apply documentation validation and freshness receipts.
-8. Close only when validation, task truth, knowledge and documentation evidence reconcile.
+7. Use RKE to validate authored knowledge and record freshness only after source review.
+8. Reconcile validation, task truth, knowledge, and documentation evidence; close persistent state if used.
 
 ## Independent primitives
 
 RKE does not absorb OKF Tasks. OKF Tasks owns execution records, validation and lifecycle truth. RKE may invoke its authoritative CLI through a bounded adapter.
 
-EWF does not absorb RKE. EWF is the agent-facing workflow skill; RKE is the installed tool and methodology it directs.
+EWF does not absorb RKE. EWF is the agent-facing engineering methodology; RKE is the optional installed repository evidence and safety toolbelt it directs. RCC causal explanation, design, and knowledge editorial judgement remain in EWF prose. The public runtime omits the former `change explain`, `closure complete-small`, and static `legacy route` operations.

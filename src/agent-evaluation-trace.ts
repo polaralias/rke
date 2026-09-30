@@ -12,7 +12,7 @@ const MAX_EVENTS = 32;
 
 function commandOperation(command: unknown): string | undefined {
   if (typeof command !== "string") return undefined;
-  const match = command.match(/(?:\brke(?:\.cmd)?|\bnode(?:\.exe)?\s+(?:["']?[^\s"']*[\\/])?dist[\\/]src[\\/]cli\.js["']?)\s+(activate|resume|status|journey|gate|change|documentation|context|knowledge|task|close|closure|checkpoint|dissection|tracker|publication|coordination|handoff|structure|host)\b(?:\s+(enter|add|resolve|assess|explain|check|verify|validate|apply|preview|complete-small|scan|cleanup-check|cleanup|write|inspect|plan|trace|file-api|map|impact|search|find|build-indexes|recipe|install))?/i);
+  const match = command.match(/(?:\brke(?:\.cmd)?|\bnode(?:\.exe)?\s+(?:["']?[^\s"']*[\\/])?dist[\\/]src[\\/]cli\.js["']?)\s+(activate|resume|status|journey|gate|documentation|context|knowledge|task|close|closure|checkpoint|dissection|tracker|publication|coordination|handoff|structure|host)\b(?:\s+(enter|add|resolve|assess|check|verify|validate|apply|preview|scan|cleanup-check|cleanup|write|inspect|plan|trace|file-api|map|impact|search|find|build-indexes|recipe|install))?/i);
   if (match) return `rke:${match[1]!.toLowerCase()}${match[2] ? `:${match[2].toLowerCase()}` : ""}`;
   const okf = command.match(/\bokf-tasks(?:\.exe)?\s+(validate|stop-time|set-status|build-index|create|add-workstream)\b/i);
   if (okf) return `okf:${okf[1]!.toLowerCase()}`;

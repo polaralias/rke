@@ -19,6 +19,8 @@ jobs:
     environment: npm
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: "24.15.0"
@@ -29,10 +31,15 @@ jobs:
       - run: npm run check
       - run: npm run lint
       - run: npm test
+      - run: npm run test:legacy-parity
       - run: npm run validate:release
       - run: npm run verify:no-python
       - name: Validate tag identity
         run: test "${GITHUB_REF_NAME}" = "v$(node -p 'require("./package.json").version')"
+      - name: Validate tag ancestry
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor HEAD origin/main
       - run: npm run smoke:packed
       - uses: actions/attest-build-provenance@v3
         with:

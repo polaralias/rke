@@ -1,12 +1,12 @@
 # RKE
 
-Repository Knowledge Engineering is an installable local runtime and methodology for understanding codebases, maintaining trustworthy documentation, and preserving engineering evidence across agent sessions.
+Repository Knowledge Engineering is an installable local runtime for retrieving repository evidence, tracking knowledge freshness, and preserving optional engineering continuity across agent sessions.
 
-RKE follows a documentation-driven-development principle: accepted behaviour and durable repository knowledge guide implementation, while source, tests and runtime evidence continuously verify that documentation remains true. RKE supplies the deterministic mechanics; the `engineering-workflow` skill supplies agent routing, judgement and lifecycle policy.
+The `engineering-workflow` skill supplies the engineering methodology: accepted behaviour and durable repository knowledge guide implementation, while source, tests and runtime evidence verify that documentation remains true. RKE supplies deterministic retrieval, validation, freshness, and safety operations when available.
 
 ## Identity and boundaries
 
-- **RKE** owns repository retrieval, structural analysis, knowledge bindings, documentation impact, causal change comprehension and workflow evidence.
+- **RKE** owns repository retrieval, structural analysis, knowledge bindings, documentation impact, deterministic safety checks, and optional workflow evidence.
 - **Engineering Workflow (EWF)** is the agent-facing skill and the normal entry point for material engineering work.
 - **OKF Tasks** remains an independent execution-record specification and CLI. RKE delegates strict task validation rather than copying its schema or lifecycle.
 - **Doc-driven development** is the guiding principle. RKE is the methodology and toolchain that operationalises it.
@@ -15,13 +15,13 @@ The runtime is installed once per machine. Every operation selects its repositor
 
 ## Normal engineering journey
 
-Use one installed runtime and one EWF entry point:
+Use EWF as the engineering method, with RKE when available:
 
 ```text
-activate → retrieve/trace → change → documentation assess → explain → disposition or apply → close
+understand → design when needed → change and validate → explain → review knowledge impact → close
 ```
 
-The agent chooses the smallest relevant operations for the work. Retrieval and traces guide inspection; they do not replace source verification. Explanation and documentation receipts are tied to the Git delta; source changes require a code-level explanation detail. Documentation apply checks bundle conformance, affected coverage, reader rank, and freshness when canonical knowledge changes. A reviewed no-update disposition can close an unbound small change without inventing a knowledge bundle; it must cover every changed path and becomes stale with the delta. Optional [selected claim bindings](docs/claim-binding-prototype.md) add section-sized review candidates to the existing documentation assessment; they never certify behavior from a hash. Review the [parity matrix](docs/legacy-skill-parity-matrix.md) for agent and delegated-provider evidence.
+EWF remains usable without the runtime. When available, RKE retrieval and traces guide inspection; they do not replace source verification. RKE can persist continuity state and exact-delta documentation receipts when those are useful. Documentation apply checks bundle conformance, affected coverage, reader rank, and freshness when canonical knowledge changes. A reviewed no-update disposition can close an unbound small change without inventing a knowledge bundle; it must cover every changed path and becomes stale with the delta. Causal change explanation stays in EWF prose. Optional [selected claim bindings](docs/claim-binding-prototype.md) add section-sized review candidates; they never certify behavior from a hash. Review the [parity matrix](docs/legacy-skill-parity-matrix.md) for agent and delegated-provider evidence.
 
 ## Install
 
@@ -54,6 +54,8 @@ Installed commands:
 
 ## Examples
 
+The activation example is for work that benefits from durable state. Retrieval and safety operations can be used directly, and EWF methodology does not require an installed RKE runtime.
+
 ```powershell
 rke activate --phase deliver --task-mode none --root C:\repos\service
 rke context find "where are credentials hydrated" --root C:\repos\service
@@ -67,7 +69,6 @@ rke coordination cleanup-check --lane runtime --branch feat/runtime --review-hea
 rke tracker preview --packages design/work-packages.yml --tracker github --scope team/service --root C:\repos\service
 rke publication scan --root C:\repos\service
 rke documentation assess --base main --root C:\repos\service
-rke change explain --base main --summary "Moved credential hydration behind the provider boundary." --detail-file .engineering-workflow/change-detail.json --root C:\repos\service
 ```
 
 Register the optional machine-wide MCP adapter once:
@@ -109,7 +110,7 @@ Run `npm run benchmark` to measure cold indexing, warm retrieval, memory, and to
 Query-to-Knowledge and Repository Change Comprehension remain distinct named concepts:
 
 - **Query-to-Knowledge (QTK)** is a human clarification loop. It groups consequential questions, recommends answers with rationale, and keeps a hard `shared-understanding` gate open until the user and agent agree on an implementation target. It is not ordinary repository orientation.
-- **Repository Change Comprehension (RCC)** reconstructs the causal behaviour of the final Git delta. `change explain` rejects summary-only source changes and requires a code-level detail file with before/after, why, changed symbols, and evidence-labelled verification. The agent must still inspect the code and communicate the full account; the receipt cannot prove its semantic correctness.
+- **Repository Change Comprehension (RCC)** reconstructs the causal behaviour of the final Git delta. EWF guides the agent to inspect code, reconstruct before and after, and communicate the full causal account with labelled evidence. This explanation is prose judgement, not a machine receipt.
 
 The formerly separate repository-dissection, design/decomposition, session-alignment, local handoff/pickup, and worktree-coordination behaviours are routed through EWF. Retained legacy outcomes have local positive and adversarial evidence; the delivery-plan stages have been implemented and the coordinated PRs remain open for review. TPU supports both OKF Tasks as the durable-execution default and stable non-OKF work packages for tracker mapping; standalone QA-plan writing is outside EWF.
 
@@ -123,5 +124,9 @@ The formerly separate repository-dissection, design/decomposition, session-align
 - `scripts/` — TypeScript release, benchmark, mirror-parity and architecture-validation utilities.
 
 The copy of `engineering-workflow` in the Polaralias skills catalogue is a synchronized distribution mirror. Runtime implementation does not live in the skills repository.
+
+## License
+
+The RKE runtime uses Apache-2.0 under [LICENSE](LICENSE). The packaged EWF skill is proprietary under [its own license](skills/engineering-workflow/license.txt). [NOTICE](NOTICE) explains the mixed package license metadata.
 
 The planned 1.x public-interface, repository-format, directory-ownership, deprecation, and runtime-to-skill promises are consolidated in [docs/compatibility.md](docs/compatibility.md).

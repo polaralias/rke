@@ -37,8 +37,6 @@ const definitions:Array<[string,JsonObject,boolean,boolean,Handler]> = [
   ["workflow_task_check",schema({cli:string}),true,true,(r,a)=>workflow.checkTasks(r,a.cli?String(a.cli):undefined)],
   ["workflow_capability_enable",schema({capability:{type:"string",enum:["query-to-knowledge","parallel-delivery","publication"]}},["capability"]),false,true,(r,a)=>workflow.enableCapability(r,value(a,"capability"))],
   ["workflow_closure_assess",schema({base:string}),true,true,(r,a)=>workflow.closureAssessment(r,value(a,"base","HEAD"))],
-  ["workflow_complete_small_change",schema({base:string,summary:string,detailFile:string,reviewedPaths:strings,evidence:string},["base","summary","detailFile","reviewedPaths","evidence"]),false,false,(r,a)=>workflow.completeSmallChange(r,value(a,"base"),value(a,"summary"),value(a,"detailFile"),stringsValue(a,"reviewedPaths"),value(a,"evidence"))],
-  ["workflow_legacy_route",schema({name:string},["name"]),true,true,(_r,a)=>workflow.routeLegacy(value(a,"name"))],
   ["repo_host_recipe",schema({host:{type:"string",enum:["codex","claude","git"]},base:{type:"string",default:"main"}},["host"]),true,true,(r,a)=>surfaces.hostRecipe(r,value(a,"host"),value(a,"base","main"))],
   ["repo_host_install",schema({host:{type:"string",enum:["codex","claude","git"]},base:{type:"string",default:"main"},force:{type:"boolean",default:false}},["host"]),false,true,(r,a)=>surfaces.installHost(r,value(a,"host"),value(a,"base","main"),value(a,"force",false))],
   ["repo_context_benchmark",schema({corpus:string},["corpus"]),true,true,benchmark("context")],
@@ -62,7 +60,6 @@ const definitions:Array<[string,JsonObject,boolean,boolean,Handler]> = [
   ["repo_documentation_assess",schema({base:string,manifest:string},["base"]),true,true,(r,a)=>surfaces.documentationAssess(r,value(a,"base"),a.manifest)],
   ["repo_documentation_disposition",schema({base:string,reviewedPaths:strings,evidence:string},["base","reviewedPaths","evidence"]),false,false,(r,a)=>surfaces.documentationDisposition(r,value(a,"base"),stringsValue(a,"reviewedPaths"),value(a,"evidence"))],
   ["repo_documentation_apply",schema({base:string,bundle:string,knowledgePaths:strings,evidence:string,readerQueries:strings,manifest:string},["base","bundle","knowledgePaths","evidence","readerQueries"]),false,false,(r,a)=>surfaces.documentationApply(r,a)],
-  ["repo_change_explain",schema({base:string,summary:string,detailFile:string},["base","summary"]),false,false,(r,a)=>surfaces.changeExplain(r,value(a,"base"),value(a,"summary"),a.detailFile?String(a.detailFile):undefined)],
   ["repo_file_api",schema({path:string},["path"]),true,true,async(r,a)=>ok({result:"file-api",...await engine(r,e=>e.fileApi(value(a,"path")))})],
   ["repo_prepare_code_review",schema({path:string},["path"]),true,true,prepareReview],
   ["repo_record_code_review",schema({path:string,review:{type:"object"}},["path","review"]),false,true,recordReview],
@@ -88,20 +85,18 @@ async function prepareReview(root:string,args:Record<string,unknown>):Promise<Op
 async function recordReview(root:string,args:Record<string,unknown>):Promise<OperationOutcome>{const receipt=await saveReview(root,value(args,"path"),value(args,"review"));return ok({result:"code-review-recorded",receipt});}
 
 const DESCRIPTIONS:Record<string,string>={
-  workflow_activate:"Start or validate the repository workflow before material engineering work. Returns phase, task mode, gates and the activation Git baseline.",
+  workflow_activate:"Start or validate optional repository continuity state. Returns phase, task mode, gates and the activation Git baseline.",
   workflow_start:"Initialize workflow state or open an explicit new cycle. Returns durable local control state; existing truth surfaces still require verification.",
   workflow_checkpoint:"Save a compact verified continuation summary and next action before pause or compaction. Does not copy full task or source records.",
   workflow_resume:"Read and validate saved workflow state after interruption. Recheck Git, task and knowledge truth before acting.",
   workflow_close:"Attempt to close the active workflow after evidence gates and exact-delta documentation checks. Returns blockers when obligations remain.",
   workflow_gate_add:"Register concrete unresolved obligations in the active workflow. Gates require evidence from their owning truth surface.",
   workflow_gate_resolve:"Record concise owning-surface evidence for one outstanding gate. A receipt does not replace tests, task records or source review.",
-  workflow_journey_enter:"Enter the understand, design or close journey and receive its required reference. Preserves existing gates.",
+  workflow_journey_enter:"Persist an understand, design or close transition when workflow state is active. Preserves existing gates.",
   workflow_task_configure:"Set none, lightweight or full task tracking and a repository-local task reference. Durable modes delegate truth to OKF Tasks.",
   workflow_task_check:"Run the authoritative OKF Tasks strict validator for the configured bundle. None mode is a deterministic no-op.",
   workflow_capability_enable:"Enable a justified optional workflow capability and its evidence gates. Availability alone grants no external authority.",
   workflow_closure_assess:"Inspect independent closure lanes against an explicit Git base. Reports current blockers without closing state.",
-  workflow_complete_small_change:"Complete an eligible small correction with exact-delta evidence and reviewed paths. Refuses ineligible or unresolved changes.",
-  workflow_legacy_route:"Map a documented legacy skill name to its current journey or capability. Mapping does not execute the destination.",
   repo_host_recipe:"Preview repository-specific host integration steps and hook commands. Read-only; output is not installation authority.",
   repo_host_install:"Install marker-owned host routing and optional Git hook configuration. Refuses independently owned entries unless forced.",
   repo_context_benchmark:"Measure ranked retrieval against a repository-local query corpus. Recall scores measure navigation, not correctness.",
@@ -132,7 +127,6 @@ const DESCRIPTIONS:Record<string,string>={
   repo_documentation_assess:"Classify the material Git delta against an explicit base as no-op, update or decision-required. Reports bound and unmatched changes.",
   repo_documentation_disposition:"Record a reviewed no-update decision for an exact material delta. Refuses insufficient evidence.",
   repo_documentation_apply:"Validate authored canonical changes, rebuild navigation, test reader queries and record exact-delta receipts. Does not generate prose.",
-  repo_change_explain:"Record a bounded causal explanation for an explicit Git delta. Receipt is neither test proof nor publication authority.",
   repo_structure_benchmark:"Run a repository-local structural corpus against file API, trace and impact. Reports expected-string evidence only.",
 };
 function description(name:string):string{

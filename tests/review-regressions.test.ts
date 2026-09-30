@@ -94,8 +94,7 @@ test("legacy-only manifest drives bootstrap, closure freshness and small-change 
   const activation=await invokeOperation(dir,"workflow_activate",{phase:"deliver",taskMode:"none"});assert.equal(activation.exitCode,0);
   const closure=await invokeOperation(dir,"workflow_closure_assess",{base:"HEAD"});
   assert.equal((closure.payload.lanes as {knowledge:{validation:{result:string}}}).knowledge.validation.result,"context-checked");
-  const shortcut=await invokeOperation(dir,"workflow_complete_small_change",{base:"HEAD",summary:"A meaningful small change",detailFile:"detail.json",reviewedPaths:["src/a.ts"],evidence:"Reviewed relevant repository files."});
-  assert.equal(shortcut.payload.result,"small-change-ineligible");
+
 });
 
 test("documentation apply restores nested indexes after later freshness failure",async()=>{
@@ -119,7 +118,7 @@ test("relationship results remain available when direct lexical matches fill the
   await writeFile(join(bundle,"alpha.md"),concept("Crowdedquery","See [Linked](linked.md)."));
   await writeFile(join(bundle,"linked.md"),concept("Linked","See [Alpha](alpha.md)."));
   for(let index=0;index<8;index++)await writeFile(join(dir,`f${index}.ts`),`// Crowdedquery lexical result ${index}\n`);
-  const engine=await RepositoryEngine.open(dir);try{const rows=await engine.search("Crowdedquery",8);assert.equal(rows.length,8);assert.ok(rows.some(row=>row.path==="docs/knowledge/linked.md"&&(row.reasons as string[]).includes("knowledge-relationship")));}finally{engine.close();}
+  const engine=await RepositoryEngine.open(dir);try{const rows=await engine.search("Crowdedquery",8);assert.equal(rows.length,8);assert.ok(rows.some(row=>row.path==="docs/knowledge/linked.md"&&(row.reasons as string[]).includes("knowledge-relationship")));const first=await engine.search("Crowdedquery",1);assert.equal(first.length,1);assert.notEqual(first[0]?.path,"docs/knowledge/linked.md","limit=1 keeps the best lexical result");}finally{engine.close();}
 });
 
 test("namespace reverse trace matches outgoing calls while default imports remain unresolved",async()=>{
