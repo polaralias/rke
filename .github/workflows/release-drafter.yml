@@ -1,0 +1,51 @@
+name: Release Drafter
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: release-drafter-${{ github.repository }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  update-release-draft:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.15.0"
+
+      - name: Read package version
+        id: repo-version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -p 'require("./package.json").version')"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Update release draft
+        uses: release-drafter/release-drafter@v7
+        with:
+          config-name: release-drafter.yml
+          version: ${{ steps.repo-version.outputs.version }}
+          name: v${{ steps.repo-version.outputs.version }}
+          tag: v${{ steps.repo-version.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

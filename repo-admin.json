@@ -1,0 +1,31 @@
+{
+  "repoType": "typescript-cli-mcp",
+  "license": "Apache-2.0",
+  "skillLicense": "Proprietary; see each skill license.txt",
+  "summary": "Local repository intelligence for source navigation, documentation review, and optional engineering continuity.",
+  "descriptionWip": true,
+  "enforcePrs": true,
+  "releaseProfile": "mcp",
+  "versionSource": "package.json",
+  "codeOwners": [
+    "@polaralias"
+  ],
+  "rulesetName": "Protect default branch",
+  "requiredApprovals": 1,
+  "requireCodeOwnerReview": true,
+  "requireReviewThreadResolution": true,
+  "organizationAdminBypass": false,
+  "allowedMergeMethods": [
+    "merge",
+    "squash",
+    "rebase"
+  ],
+  "requiredStatusChecks": [
+    "release-gate",
+    "OKF Tasks (ubuntu-latest)",
+    "OKF Tasks (windows-latest)"
+  ],
+  "releaseWorkflow": ".github/workflows/publish-release.yml",
+  "releaseRequiresQualification": true,
+  "repositoryAdminBypass": true
+}

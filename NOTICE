@@ -1,0 +1,18 @@
+Copyright (c) 2026 James Whelan / Polaralias
+
+This product includes software originally developed by James Whelan / Polaralias.
+
+The RKE runtime is distributed under Apache-2.0. The separately licensed
+engineering-workflow skill in skills/engineering-workflow and the rke skill in
+.agents/skills/rke are proprietary;
+their license.txt and SKILL.md files state their terms. The package-level license
+metadata points here because the tarball contains material under both terms.
+
+Syntax highlighting uses highlight.js 11.12.0 under BSD-3-Clause.
+The complete notice is in licenses/highlight.js-11.12.0.txt.
+The exported reader contains derived text/style tokens and requires no browser library.
+
+Optional isolated diagram rendering uses Mermaid 11.10.1 under MIT.
+The pinned browser asset is in assets/mermaid-11.10.1.min.js; complete terms
+are in licenses/mermaid-11.10.1.txt. Diagram execution is separate from the
+reader document and never establishes structural or canonical evidence.

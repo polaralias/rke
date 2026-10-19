@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "knowledge": [
+    {
+      "path": "docs/knowledge/code-context.md",
+      "sources": [
+        "src/**/*.ts",
+        "scripts/**/*.ts",
+        "tests/**/*.ts",
+        "tests/fixtures/**/*",
+        "skills/engineering-workflow/**/*",
+        ".agents/skills/rke/**/*",
+        "docs/cross-language-evidence.md",
+        "package.json"
+      ]
+    },
+    {
+      "path": "docs/knowledge/rke-architecture.md",
+      "sources": [
+        ".github/workflows/*.yml",
+        ".rke/claim-bindings.json",
+        "AGENTS.md",
+        "README.md",
+        "package.json",
+        "package-lock.json",
+        "tsconfig.json",
+        "eslint.config.js",
+        "docs/compatibility.md",
+        "docs/typescript-rewrite-plan.md",
+        "docs/benchmark-*.json",
+        "docs/adr/*.md",
+        "scripts/**/*.ts",
+        "src/**/*.ts",
+        "src/evals/*.json",
+        "tests/**/*.ts",
+        "tests/fixtures/**/*",
+        "skills/engineering-workflow/**/*"
+      ]
+    }
+  ],
+  "revision": 71
+}
