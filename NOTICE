@@ -2,10 +2,10 @@ Copyright (c) 2026 James Whelan / Polaralias
 
 This product includes software originally developed by James Whelan / Polaralias.
 
-The RKE runtime is distributed under Apache-2.0. The separately licensed
-engineering-workflow skill in skills/engineering-workflow and the rke skill in
-.agents/skills/rke are proprietary;
-their license.txt and SKILL.md files state their terms. The package-level license
+The RKE runtime and the rke adapter skill in .agents/skills/rke are distributed
+under Apache-2.0; see LICENSE and the adapter's license.txt. The separately
+licensed engineering-workflow skill in skills/engineering-workflow remains
+proprietary under its license.txt and SKILL.md terms. The package-level license
 metadata points here because the tarball contains material under both terms.
 
 Syntax highlighting uses highlight.js 11.12.0 under BSD-3-Clause.

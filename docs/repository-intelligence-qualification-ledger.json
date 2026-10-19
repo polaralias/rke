@@ -751,7 +751,7 @@
     "releaseApproved": false,
     "runtimeVersion": "0.1.0",
     "skillVersion": "6.2.1",
-    "adapterVersion": "1.2.1",
+    "adapterVersion": "1.2.2",
     "tasksSourceCommit": "99a2907181c029446ffaf9c6bff664a7b0ff487c",
     "gates": [
       {

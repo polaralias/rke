@@ -106,7 +106,7 @@ Structural operations query normalized SQLite files, symbols, imports, edges and
 
 ## Evaluation and release
 
-RKE **0.1.0** is the initial TypeScript runtime. EWF 6.2.1 supplies independent engineering methodology; RKE adapter 1.2.1 supplies optional command guidance from [`.agents/skills/rke`](.agents/skills/rke/SKILL.md). Both have synchronized catalogue copies with exact source provenance.
+RKE **0.1.0** is the initial TypeScript runtime. EWF 6.2.1 supplies independent engineering methodology; RKE adapter 1.2.2 supplies optional command guidance from [`.agents/skills/rke`](.agents/skills/rke/SKILL.md). Both have synchronized catalogue copies with exact source provenance.
 
 The [repository intelligence acceptance contract](docs/repository-intelligence-acceptance.md) and [original-skill inventory](docs/legacy-source-clause-inventory.json) describe independent obligations. Scenario definitions and unit tests do not certify current agent decisions. [The initial candidate declaration](docs/release-completion-status.json) grants no release approval.
 
@@ -143,7 +143,7 @@ The copies of `engineering-workflow` and `rke` in the Polaralias skills catalogu
 
 ## License
 
-The RKE runtime uses Apache-2.0 under [LICENSE](LICENSE). The packaged EWF and RKE adapter skills are proprietary under their respective [EWF](skills/engineering-workflow/license.txt) and [adapter](.agents/skills/rke/license.txt) licenses. [NOTICE](NOTICE) explains the mixed package license metadata.
+The RKE runtime and [RKE adapter skill](.agents/skills/rke/license.txt) use Apache-2.0 under [LICENSE](LICENSE). The packaged [EWF skill](skills/engineering-workflow/license.txt) remains proprietary. [NOTICE](NOTICE) explains the mixed package license metadata.
 
 The planned 1.x public-interface, repository-format, directory-ownership, deprecation, and runtime-to-skill promises are consolidated in [docs/compatibility.md](docs/compatibility.md).
 

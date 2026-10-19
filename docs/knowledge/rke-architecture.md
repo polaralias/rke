@@ -2,7 +2,7 @@
 type: Architecture Concept
 title: RKE architecture
 description: Defines the independently installed Repository Knowledge Engineering runtime, its shared CLI and MCP operation layer, repository boundaries, and relationship with EWF and OKF Tasks.
-timestamp: 2026-10-19T06:59:06.230Z
+timestamp: 2026-10-19T16:14:12+00:00
 authority: canonical
 verification: needs-review
 reviewed_at: 2026-10-08T17:33:10+00:00
@@ -139,7 +139,7 @@ Installed MCP and native hooks carry a physical root identity derived from the c
 
 Isolated agent evaluation stages an installed RKE package with `--rke-package-root`. Restricted cases use a Git-ignored copy in the disposable fixture; full-access delegated-provider cases place it outside the fixture so authoritative OKF validation sees only the repository's governed concepts. The agent invokes the staged Node CLI rather than a stale host shim. Documentation authoring cases grade a registered concept's content, reading-order link, reader rank and freshness without requiring one fixed filename.
 
-`package.json` is the sole release version source and `src/version.ts` reads the MCP and CLI identity from it at runtime. CI covers Node 24.15 and the maintained Node 24 line on Linux, Windows, and macOS, strict TypeScript checking, deterministic tests including the executable legacy-parity contract, release-contract validation, the no-Python architecture audit, and clean npm artefact smoke tests that exercise all eight installed bin shims, parser retrieval, MCP discovery, and the bundled agent-evaluation corpus. The same parity contract runs during `prepack` and the tag publish workflow. Catalogue validation and digest parity run in the adjacent skills repository during release qualification. A matching `vX.Y.Z` tag must be reachable from `main` before the workflow builds, smokes and attests the npm tarball. On retry, the publish step compares the tested tarball's SHA-512 integrity with the exact npm version; matching bytes allow GitHub Release promotion to continue, while a mismatch or registry error blocks. A new version publishes with provenance. The tarball combines an Apache-2.0 runtime with separately proprietary EWF and RKE adapter skills, as declared in `NOTICE`.
+`package.json` is the sole release version source and `src/version.ts` reads the MCP and CLI identity from it at runtime. CI covers Node 24.15 and the maintained Node 24 line on Linux, Windows, and macOS, strict TypeScript checking, deterministic tests including the executable legacy-parity contract, release-contract validation, the no-Python architecture audit, and clean npm artefact smoke tests that exercise all eight installed bin shims, parser retrieval, MCP discovery, and the bundled agent-evaluation corpus. The same parity contract runs during `prepack` and the tag publish workflow. Catalogue validation and digest parity run in the adjacent skills repository during release qualification. A matching `vX.Y.Z` tag must be reachable from `main` before the workflow builds, smokes and attests the npm tarball. On retry, the publish step compares the tested tarball's SHA-512 integrity with the exact npm version; matching bytes allow GitHub Release promotion to continue, while a mismatch or registry error blocks. A new version publishes with provenance. The tarball combines the Apache-2.0 runtime and RKE adapter skill with the separately proprietary EWF skill, as declared in `NOTICE`.
 
 ## Methodology
 

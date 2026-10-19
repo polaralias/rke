@@ -1,9 +1,9 @@
 {
   "repoType": "typescript-cli-mcp",
   "license": "Apache-2.0",
-  "skillLicense": "Proprietary; see each skill license.txt",
-  "summary": "Local repository intelligence for source navigation, documentation review, and optional engineering continuity.",
-  "descriptionWip": true,
+  "skillLicense": "RKE adapter: Apache-2.0; EWF: Proprietary; see each skill license.txt",
+  "summary": "Local code and documentation intelligence for AI coding agents, with CLI and MCP support.",
+  "descriptionWip": false,
   "enforcePrs": true,
   "releaseProfile": "mcp",
   "versionSource": "package.json",
