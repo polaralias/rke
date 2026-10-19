@@ -1,0 +1,150 @@
+name: Publish Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: npm
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.package.outputs.version }}
+      integrity: ${{ steps.package.outputs.integrity }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.15.0"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Validate tag identity
+        run: test "${GITHUB_REF_NAME}" = "v$(node -p 'require("./package.json").version')"
+      - name: Validate tag ancestry
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor HEAD origin/main
+      - run: npm run check
+      - run: npm run build
+      - run: node dist/scripts/verify-build.js --output "$RUNNER_TEMP/build-identity.json"
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:legacy-parity
+      - run: npm run validate:release
+      - run: npm run verify:no-python
+      - run: npm run smoke:packed
+      - name: Require reviewed qualification for this exact source and tarball
+        env:
+          RKE_RELEASE_QUALIFICATION: ${{ vars.RKE_RELEASE_QUALIFICATION }}
+        run: |
+          node -e "require('node:fs').writeFileSync(process.env.RUNNER_TEMP + '/rke-release-qualification.json', process.env.RKE_RELEASE_QUALIFICATION || '')"
+          node dist/scripts/validate-publication.js --qualification "$RUNNER_TEMP/rke-release-qualification.json"
+      - name: Bind the verified package identity
+        id: package
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          const {name, version} = JSON.parse(readFileSync('package.json', 'utf8'));
+          if (name !== '@polaralias/rke' || !/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Invalid release package identity');
+          const bytes = readFileSync(`polaralias-rke-${version}.tgz`);
+          const integrity = `sha512-${createHash('sha512').update(bytes).digest('base64')}`;
+          appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\nintegrity=${integrity}\n`);
+          NODE
+      - uses: actions/upload-artifact@v6
+        with:
+          name: rke-npm-package
+          path: "*.tgz"
+          if-no-files-found: error
+
+  publish-npm:
+    name: publish-npm
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      # Publishers consume the verified artifact, never a source checkout.
+      - uses: actions/download-artifact@v7
+        with:
+          name: rke-npm-package
+          path: dist
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.15.0"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm install --global npm@11 --ignore-scripts
+      - uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: "dist/*.tgz"
+      - name: Publish or verify the exact tested tarball
+        env:
+          RELEASE_VERSION: ${{ needs.verify.outputs.version }}
+          RELEASE_INTEGRITY: ${{ needs.verify.outputs.integrity }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          import { spawnSync } from 'node:child_process';
+          const version = process.env.RELEASE_VERSION;
+          if (!/^\d+\.\d+\.\d+$/.test(version || '')) throw new Error('Invalid release version');
+          const tarball = `dist/polaralias-rke-${version}.tgz`;
+          const integrity = `sha512-${createHash('sha512').update(readFileSync(tarball)).digest('base64')}`;
+          if (integrity !== process.env.RELEASE_INTEGRITY) throw new Error('Verified tarball integrity changed');
+          const response = await fetch(`https://registry.npmjs.org/%40polaralias%2Frke/${version}`, {signal: AbortSignal.timeout(20000)});
+          if (response.status === 200) {
+            const metadata = await response.json();
+            if (metadata.dist?.integrity !== integrity) throw new Error('Published npm version has different or missing tarball integrity');
+            console.log('The exact verified tarball is already published.');
+          } else if (response.status === 404) {
+            const result = spawnSync('npm', ['publish', tarball, '--provenance', '--access', 'public', '--ignore-scripts'], {stdio: 'inherit'});
+            if (result.error) throw result.error;
+            if (result.status !== 0) throw new Error('npm publish failed');
+          } else throw new Error(`Unable to verify npm registry identity: HTTP ${response.status}`);
+          NODE
+
+  publish-github:
+    name: publish-github
+    needs: publish-npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      # No checkout or repository-code execution with a write-capable token.
+      - uses: actions/download-artifact@v7
+        with:
+          name: rke-npm-package
+          path: dist
+      - name: Promote the existing draft or create one release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/* --clobber
+            gh release edit "$tag" --draft=false --latest --verify-tag --title "$tag"
+          else
+            gh release create "$tag" dist/* --verify-tag --generate-notes --latest --title "$tag"
+          fi

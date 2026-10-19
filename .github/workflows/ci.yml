@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }}, Node ${{ matrix.node }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ["24.15.0", "24"]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+      - run: node dist/scripts/verify-build.js --output build-identity.json
+      - uses: actions/upload-artifact@v6
+        with:
+          name: build-${{ matrix.os }}-${{ matrix.node }}
+          path: build-identity.json
+      - run: node dist/scripts/validate-candidate.js
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:legacy-parity
+      - run: npm run validate:release
+      - run: npm run verify:no-python
+      - run: npm run smoke:packed
+      - run: node dist/scripts/validate-candidate.js --packed
+
+  distribution:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.15.0"
+          cache: npm
+      - run: npm ci
+      - run: npm run smoke:packed
+      - uses: actions/upload-artifact@v6
+        with:
+          name: rke-npm-package
+          path: "*.tgz"
+
+  reproducibility:
+    timeout-minutes: 30
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.15.0"
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: build-*
+          path: build-reports
+      - run: node dist/scripts/verify-build.js --compare build-reports/*/build-identity.json
+
+  release-gate:
+    name: release-gate
+    if: ${{ always() }}
+    needs: [test, distribution, reproducibility]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Require every verification job
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: node -e "const jobs=Object.values(JSON.parse(process.env.RESULTS)); if(jobs.length!==3 || jobs.some(job=>job.result!=='success')) process.exit(1)"

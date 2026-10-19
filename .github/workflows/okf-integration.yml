@@ -1,0 +1,40 @@
+name: Real OKF Tasks integration
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  real-cli:
+    name: OKF Tasks (${{ matrix.os }})
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      RKE_REQUIRE_OKF_TASKS: "1"
+      RKE_TEST_OKF_SOURCE: ${{ github.workspace }}/.rke-external/okf-tasks
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          repository: polaralias/okf-tasks
+          ref: 99a2907181c029446ffaf9c6bff664a7b0ff487c
+          path: .rke-external/okf-tasks
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.15.0"
+          cache: npm
+      # Python belongs solely to the independently installed authoritative CLI.
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install ./.rke-external/okf-tasks
+      - run: npm ci
+      - run: npm run test:legacy-parity

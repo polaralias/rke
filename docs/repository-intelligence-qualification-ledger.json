@@ -1,0 +1,794 @@
+{
+  "schemaVersion": 1,
+  "status": "initial-development",
+  "authority": "capability-inventory-not-a-release-receipt",
+  "claims": [
+    {
+      "id": "artifact-identity",
+      "level": "code-supported",
+      "scope": "Loaded runtime, bundled EWF and explicitly selected repository-local EWF hashes, baseline drift and bounded dirty-source identity.",
+      "evidence": [
+        "../src/qualification.ts",
+        "../tests/qualification.test.ts",
+        "../scripts/smoke-distribution.ts"
+      ],
+      "limits": [
+        "No full dependency attestation",
+        "No live-host or behavioural proof from matching hashes"
+      ]
+    },
+    {
+      "id": "controlled-study-analysis",
+      "level": "code-supported",
+      "scope": "Seeded paired schedules, pinned measured controls, missing/failed-run retention, task-cluster intervals and protected qualification thresholds.",
+      "evidence": [
+        "../src/evaluation-study.ts",
+        "../src/evaluation-study-cli.ts",
+        "../tests/evaluation-study.test.ts",
+        "agent-study-contract.md"
+      ],
+      "limits": [
+        "No representative cohort or isolated paid executor yet",
+        "Synthetic measurements cannot establish agent benefit",
+        "Grader quality and actual control selection require independent evidence"
+      ]
+    },
+    {
+      "id": "static-structure",
+      "level": "code-supported",
+      "scope": "TS/JS, Python, Java and Go maintained static bindings, with bounded Kotlin/C# enclosing-class and delegate-shadow cases; other loaded grammars retain broad extraction and uncertainty.",
+      "evidence": [
+        "../src/parser.ts",
+        "../src/repository-engine.ts",
+        "../tests/context-capabilities.test.ts",
+        "../tests/language-fidelity.test.ts",
+        "language-support.md"
+      ],
+      "exportScopeQualification": {
+        "date": "2026-10-10",
+        "status": "The initial value-export/scoped-import build passed 130 applicable checks including all 32 workspace and 28 retained contracts. The later final build passed 19 language/parser checks, including fifteen public language cases and Kotlin/C# delegate-local regressions. Broader Java/Kotlin/C#, Go/PHP/Swift and project/server qualification remain open.",
+        "runtimeDigest": "3b4ccb107abf5bcb9fd7a0d2674dfee89401eba41ad6f1e55b02a21c43275afc",
+        "skillDigest": "1dc269e7c06a4e24e814427ca9023654cdd4369bec641c1ab3065513c40e4096"
+      },
+      "limits": [
+        "Dynamic dispatch, ambiguous imports and runtime reachability are not certified",
+        "P4 broader qualification remains open"
+      ]
+    },
+    {
+      "id": "semantic-evidence",
+      "level": "code-supported",
+      "scope": "Trusted host-profile call hierarchy adapter with input and implementation identity expiry.",
+      "evidence": [
+        "../src/language-server.ts",
+        "../scripts/qualify-language-server.ts",
+        "cross-language-evidence.md",
+        "qualification-pyright-2026-10-10.json"
+      ],
+      "historicalQualification": {
+        "date": "2026-10-07",
+        "pairings": [
+          "Pyright/Python",
+          "typescript-language-server 6.0.1/TypeScript 5.9.3"
+        ],
+        "status": "previously-recorded-not-reexecuted-in-this-slice"
+      },
+      "limits": [
+        "Go, Rust, C/C++, Java, Kotlin and C# project/server qualification remains open",
+        "The dated Pyright witness does not cover broader projects or real-server UTF-16 positions"
+      ]
+    },
+    {
+      "id": "host-routing",
+      "level": "code-supported",
+      "scope": "Codex, Claude, Gemini, Cursor, Copilot/VS Code, Windsurf and Kiro routing profiles; MCP format and native hooks vary by host.",
+      "evidence": [
+        "../src/host-profile.ts",
+        "../src/host-lifecycle.ts",
+        "../src/host-git-scope.ts",
+        "../skills/engineering-workflow/references/host-integration.md",
+        "../tests/host-lifecycle.test.ts",
+        "../scripts/smoke-distribution.ts"
+      ],
+      "lifecycleStatus": "Owned inspection, preview, repair and removal implemented; fifteen lifecycle groups and 101 applicable final-runtime checks passed, plus five affected native-hook/context groups and final clean packed lifecycle smoke QPOBOo",
+      "lifecycleArtifact": {
+        "runtimeDigest": "8d964145aa7c8c789ae7c1b30023050ad6ea658f7f46b68947447154a598dea0",
+        "skillDigest": "3f18fdc3d23988566474c71fab77e24d6f7f509ff9cd596ed6429dedb9333fb1",
+        "date": "2026-10-10",
+        "liveHostQualification": "not-executed"
+      },
+      "upgradeScopeStatus": "All 105 applicable final-runtime regression checks passed, including nineteen lifecycle groups, 28 retained-outcome contracts and public-operation/security/transport checks; five affected native-hook/context checks and final clean packed relocation smoke 84WX4a also passed",
+      "upgradeScopeArtifact": {
+        "runtimeDigest": "4cec5931dd010afbb9f392bfc99851648e7fb1e13f490acf04b1f310b62199ac",
+        "skillDigest": "ed816037d9c1f344801040887264e8641cb17ce00ae71dd1fcbbd99387061fef",
+        "date": "2026-10-10",
+        "liveHostQualification": "not-executed"
+      },
+      "physicalBoundaryStatus": "The initial full run passed 270 of 272 checks and exposed two Windows linked-worktree path failures. After correction, all 276 deterministic cases passed, including 28 retained contracts. The preceding 31 lifecycle/root-boundary checks and one additional Git locator regression, plus final packed smoke pUXBkU, also passed on that runtime identity. Later reader construction has separate qualification.",
+      "physicalBoundaryArtifact": {
+        "runtimeDigest": "dc786c77a30f663f247696115d026c7aa1cd304715d2b290cf5f406a9c83f77c",
+        "skillDigest": "6a2be3f3cd174f29b65cea63923b1556c9419f5368501063ac7794011f40015a",
+        "date": "2026-10-11",
+        "liveHostQualification": "not-executed"
+      },
+      "limits": [
+        "Configuration fixtures do not establish live selection",
+        "Live-host qualification and modern host profiles remain open",
+        "Physical pins and result/access checks do not establish a filesystem-wide transaction",
+        "Legacy unpinned receipts cannot prove their historical root",
+        "Shared Git extension/settings migration remains an explicit owner action; active installation refuses scope drift"
+      ]
+    },
+    {
+      "id": "agent-benefit",
+      "level": "code-supported",
+      "scope": "Controlled repeated held-out correctness and efficiency improvement target.",
+      "evidence": [
+        "cross-language-evidence.md",
+        "repository-intelligence-implementation-plan.md"
+      ],
+      "historicalQualification": {
+        "date": "2026-10-07",
+        "status": "Both arms passed small fixtures; EWF/RKE consumed more time and context"
+      },
+      "limits": [
+        "No general correctness or efficiency superiority claim",
+        "P1 representative repeated evaluation remains open"
+      ]
+    },
+    {
+      "id": "derived-explanations",
+      "level": "code-supported",
+      "scope": "Bounded preparation/crux excerpts, schema and provenance validation, atomic inferred cache persistence, input drift rejection, compact checks and opt-in retrieval.",
+      "evidence": [
+        "../src/derived-explanations.ts",
+        "../src/operations.ts",
+        "../tests/explanations.test.ts",
+        "derived-explanations.md",
+        "../skills/engineering-workflow/references/derived-explanations.md"
+      ],
+      "limits": [
+        "Validated exchange mechanics do not certify inferred prose truth",
+        "No canonical promotion or parser/LSP confirmation",
+        "External/ignored dependencies and environment are outside the certified input boundary",
+        "Actual consuming-agent qualification deferred until implementation is built"
+      ]
+    },
+    {
+      "id": "workspace-query",
+      "level": "code-supported",
+      "scope": "Explicit-root find/map/selected local neighbourhood, caller authorization, qualified identities, fair local-rank allocation, content snapshots and explicit nested/submodule selection.",
+      "evidence": [
+        "../src/workspace.ts",
+        "../src/operations.ts",
+        "../tests/workspace.test.ts",
+        "workspace-federation.md"
+      ],
+      "limits": [
+        "No global filesystem transaction",
+        "Ignored/external dependencies and environment are outside the input certificate",
+        "Representative real-workspace and agent qualification remains open",
+        "Representative agent benefit remains unmeasured"
+      ]
+    },
+    {
+      "id": "workspace-dependency-links",
+      "level": "code-supported",
+      "scope": "Optional manifest declarations projected into maps and directly incident selected neighbourhoods; package/import/export/call validation, explicit contract provenance and non-traversable service/ambiguous/stale candidates.",
+      "evidence": [
+        "../src/workspace-dependencies.ts",
+        "../src/workspace.ts",
+        "../tests/workspace.test.ts",
+        "../scripts/smoke-distribution.ts",
+        "workspace-federation.md"
+      ],
+      "limits": [
+        "Navigation evidence does not prove semantic/runtime reachability",
+        "Literal source export mappings only; unsupported exports remain candidates",
+        "Final-source qualification follows later lexical changes separately",
+        "Representative agent, real-project and coordinated release qualification remain open"
+      ]
+    },
+    {
+      "id": "workspace-dependency-impact",
+      "level": "code-supported",
+      "scope": "Reviewed package/export or explicit contract mappings and per-root base/snapshot-bound cross-root change impact.",
+      "evidence": [
+        "../src/workspace-impact.ts",
+        "../src/workspace.ts",
+        "../tests/workspace.test.ts",
+        "../scripts/smoke-distribution.ts",
+        "workspace-federation.md",
+        "repository-intelligence-progress.md"
+      ],
+      "limits": [
+        "Matching names cannot prove a cross-root edge",
+        "Navigation/declaration evidence does not prove semantic or runtime reachability",
+        "Later lexical/semantic changes require their own current-build regressions",
+        "Representative agent/real-project qualification and coordinated release remain open"
+      ]
+    },
+    {
+      "id": "workspace-reader",
+      "level": "code-supported",
+      "scope": "Bounded single-root static reader/comparison export over authored knowledge, safe source, explicit bindings, selected source-qualified caller/callee evidence, opt-in validated inferred subsystem receipts and explicit Git-versus-working source snapshots.",
+      "evidence": [
+        "../src/reader.ts",
+        "../src/reader-projection.ts",
+        "../src/reader-export.ts",
+        "../src/reader-explanations.ts",
+        "../src/reader-changes.ts",
+        "../tests/reader.test.ts",
+        "../tests/reader-changes.test.ts",
+        "reader-workspace.md",
+        "repository-intelligence-progress.md"
+      ],
+      "selectedNeighbourhoodQualification": {
+        "date": "2026-10-11",
+        "status": "All final 84 reader/public-operation/transport/retained checks passed, including twelve reader groups. Final packed smoke y0qg0d and build/lint/release 58 operations and 24 grammars/no-Python/mirror/catalogue checks passed. Earlier 83 checks and packed sqGZe9 passed before the dense endpoint-priority correction; the full 276-case suite certifies the preceding security artifact.",
+        "runtimeDigest": "1c3cc45b1ac7da7456509599000ac625131431fe778bb40e7fe0ddf2a72a1deb",
+        "skillDigest": "dc745c929e58f70513b53b2a2f8acdd212eb8f7c8fccba4746c0b9c31ae00294",
+        "realCheckoutWitness": "Bounded RKE knowledge/source export retains seven direct source dependencies, stale canonical provenance, declared source caps and known omissions. Desktop/mobile browser checks, history and local-only loading pass; not a formative study."
+      },
+      "inferredReaderQualification": {
+        "date": "2026-10-11",
+        "status": "All 90 final reader/public-operation/transport/retained checks passed, including eighteen reader groups and all 28 retained contracts. Packed installed inferred projection/export h9n6f7, build/lint/release 58 operations and 24 grammars/no-Python/mirror/catalogue checks passed. Owned inferred/source browser fixture passes desktop/mobile, inert hostile quotes, local-only loading and physical source navigation/history.",
+        "runtimeDigest": "6ac3d0425d2eaedca3d803dd2693dc33165eb7f35166a195e90ef38e5b95d250",
+        "skillDigest": "987911e939b5f32c180a85012c1b536356747f83d52cd5d74de1e6f6088fef18"
+      },
+      "historicalComparisonQualification": {
+        "date": "2026-10-11",
+        "status": "All final 98 reader/comparison/public-operation/transport/retained checks passed, including eight comparison groups, eighteen reader groups and 28 retained contracts. Packed installed comparison projection/export CRAHZm and build/lint/release 58 operations and 24 grammars/no-Python/mirror/catalogue checks passed. Owned modified/added/deleted browser fixtures pass desktop/mobile, explicit absence, inert hostile history and local-only loading. Real RKE source comparison passes layout and comparison/history restoration.",
+        "runtimeDigest": "e819b8204e5120f385404c8a2dda5d9a7a22b64646ebabf553a36d949d851f32",
+        "skillDigest": "5213f1dab12089b193dd4757307d0bba338c85d77ebbf6b670371e288f988cf4"
+      },
+      "locationQualification": {
+        "date": "2026-10-11",
+        "status": "All 100 reader/comparison/public-operation/transport/retained checks passed, including twenty reader groups, eight comparison groups and 28 retained contracts. Three final fixture/client/security checks passed after a fixture-only lint adjustment; rebuilt runtime/skill identities unchanged. Packed installed export 9emWSA and build/lint/release/no-Python/mirror/catalogue checks passed. Owned and real-checkout browser witnesses cover exact line/section focus, duplicate/Unicode headings, reload/history, stale/missing target notices, desktop/mobile and local-only loading.",
+        "runtimeDigest": "b58e88f7d1d84cc34e42af3b843ac49b6e2fc4e2462e23a50da0f5c21dae312d",
+        "skillDigest": "8d5d146e81f60e229311b8d3c91318adae4d2178c1969971ec0722feca210ae3"
+      },
+      "paneQualification": {
+        "date": "2026-10-11",
+        "status": "Earlier pane artifact passed 101 reader/comparison/public-operation/transport/retained checks and packed oM25Q7. After actual-reading-width stacking refinement, all final 49 reader/comparison/transport checks and packed thq7vF passed. Build/lint/release/no-Python/mirror/catalogue checks passed. Owned and real RKE browser witnesses cover collapse/reset, width/balance bounds, keyboard resizing and search, narrow-window reflow, mobile control disabling, visible coverage and local-only loading.",
+        "runtimeDigest": "791f3a90313e40dde0b4dd4de88f5469235ea74b9ff21c71f5bb59d379fc0c20",
+        "skillDigest": "8a17adc34aa1fceb5178dd72f66c9a860ce5643723801aef3619ae819f8fe1d8"
+      },
+      "limits": [
+        "Cross-root reader implementation/qualification is tracked separately",
+        "Pane settings last for the page session; reload uses defaults",
+        "Location bookmarks bind the exported projection; missing/capped/stale locations remain unavailable",
+        "Historical comparison is side-by-side source; no aligned line diff, automatic path pairing or historical canonical freshness",
+        "Git rename similarity is a candidate, not semantic move proof",
+        "Inferred producer receipts do not certify prose truth, canonical review or consuming-agent quality",
+        "Structural projection is capped selected navigation, not runtime reachability or a complete graph",
+        "Fixed-root live refresh and formative user evidence remain open",
+        "OKF producer/upstream parity remains required",
+        "Bounded input/output preflight checks are not a filesystem-wide transaction",
+        "Earlier complete 276-case suite certifies the preceding security artifact"
+      ]
+    },
+    {
+      "id": "cross-root-reader",
+      "level": "code-supported",
+      "scope": "Explicit primary/comparison records over caller-authorized workspace sessions, alias-qualified identities/local links, scoped hydration, canonical/source/inferred separation, fair shared caps and visible failed/changed roots.",
+      "evidence": [
+        "../src/workspace-reader.ts",
+        "../src/workspace.ts",
+        "../src/reader-projection.ts",
+        "../src/reader.ts",
+        "../tests/workspace-reader.test.ts",
+        "../scripts/smoke-distribution.ts",
+        "reader-workspace.md",
+        "repository-intelligence-progress.md"
+      ],
+      "finalRefinementQualification": {
+        "date": "2026-10-11",
+        "status": "Preceding combined run finished86/87; remaining stale-source-identity fixture assertion corrected. Final nine focused groups pass combined completeness/fairness, declared/stale/denied cross-root provenance, reader controls/line/CSP and four HTTP core groups. Final build/lint/release60 grammars24/no-Python/mirror pass. Desktop labels/overflow pass on regenerated owned export. Final packed smoke skyN4i passed. This is not a current-artifact rerun of all87 groups.",
+        "runtimeDigest": "6d03b769c35d76141cafe45efe5a64f675a13c300cea7fc34d25813718ab225e",
+        "skillDigest": "fa0614769221533b0322d99c133dd3f2bd7bd4590a5e5d30edccb2b9436a8e56"
+      },
+      "limits": [
+        "Coordinated current-tree checks remain pending",
+        "Only explicit primary/comparison roots contribute reader records; other selected roots are snapshot checked",
+        "Authored validation requires a complete scoped knowledge bundle",
+        "Scopes narrow queries/hydration rather than sandbox all producer reads inside an authorized root",
+        "Source-bound workspace declarations remain inferred navigation rather than semantic/runtime confirmation",
+        "Cross-root Git-base comparison is not inferred",
+        "Fixed-root live refresh, formative study, OKF upstream/producer parity and coordinated release remain open"
+      ]
+    },
+    {
+      "id": "live-reader-session-core",
+      "level": "code-supported",
+      "scope": "Internal authenticated single-page loopback HTTP service over trusted validation/read callbacks; no source-selected HTTP paths or commands.",
+      "evidence": [
+        "../src/reader-live.ts",
+        "../tests/reader-live.test.ts",
+        "repository-intelligence-progress.md"
+      ],
+      "limits": [
+        "Callback lifecycle checks do not qualify a real fixed-root adapter",
+        "Shared CLI/MCP routes, physical root/manifest pinning and EOF/signal lifecycle remain pending",
+        "Real served-browser and idle-expiry qualification remain pending",
+        "Static exports retain their independent zero-connection contract"
+      ]
+    },
+    {
+      "id": "live-reader-public-adapters",
+      "level": "code-supported",
+      "scope": "Captured canonical owner/caller roots and selected workspace topology/scopes, authenticated refresh through shared CLI/MCP serve operations, process-owned EOF/signal lifecycle.",
+      "evidence": [
+        "../src/reader-live-adapter.ts",
+        "../src/reader-live.ts",
+        "../src/workspace.ts",
+        "../tests/reader-live-adapter.test.ts",
+        "../tests/reader-live.test.ts"
+      ],
+      "limits": [
+        "Installed serve distribution passed; wider coordinated release remains open",
+        "Owned served-browser witness passes; broad signal lifecycle qualification pending",
+        "Mocked idle expiry is deterministic lifecycle evidence",
+        "No OKF producer/upstream or formative-study qualification"
+      ],
+      "browserQualification": {
+        "date": "2026-10-11",
+        "runtimeDigest": "009b378e23c72f70c37b61222ae0365fb4ddf132ec1778531504b5130293d1db",
+        "scope": "Owned selected workspace served over loopback; desktop1440/mobile390",
+        "status": "Current source refreshed; old revision bookmark visibly stale; current L1 bookmark restored on completed reload. Inert hostile markup, zero images/overflow/console, one local document request per navigation. Owned helper identity-checked and stopped.",
+        "limits": [
+          "No formative user claim",
+          "Transient navigation errors resolved by explicit completed reload",
+          "No graceful-signal claim from helper termination"
+        ]
+      }
+    },
+    {
+      "id": "reader-syntax-presentation",
+      "level": "code-supported",
+      "scope": "Server-side pinned syntax decoration, exact text reconstruction, inert bounded token data and original source-line/bookmark identity.",
+      "evidence": [
+        "../src/reader-code.ts",
+        "../tests/reader-code.test.ts",
+        "../src/reader.ts",
+        "../licenses/highlight.js-11.12.0.txt",
+        "reader-workspace.md"
+      ],
+      "limits": [
+        "Syntax colors are not structural or semantic qualification",
+        "64KiB decoration bound; unsupported/failed/capped code stays plain",
+        "Initial isolated file-origin warning not diagnosed; completed mobile reload is clean",
+        "Strict diagram rendering and formative user study remain open",
+        "No complete current-tree release-suite claim"
+      ]
+    },
+    {
+      "id": "active-task-upstream-parity",
+      "level": "code-supported",
+      "scope": "Current active OKF execution-record package under EWF, preserving RKE/QTK/DDD routing and reviewed working-tree producer resources.",
+      "evidence": [
+        "../../skills/skills/engineering/repo-task-lifecycle/SKILL.md",
+        "../../skills/skills/engineering/repo-task-lifecycle/OKF_UPSTREAM.json",
+        "../../skills/scripts/sync_okf_task_skill.py",
+        "../../skills/scripts/tests/test_sync_okf_task_skill.py"
+      ],
+      "limits": [
+        "Live provider behavior is not qualified by mocked tests",
+        "Future producer changes require same-slice resynchronization and complete applicable qualification",
+        "Task viewer modernization remains open",
+        "No model trials or full coordinated release claim"
+      ]
+    },
+    {
+      "id": "reader-directional-neighbourhood",
+      "level": "code-supported",
+      "scope": "Incoming/selected/outgoing read-only projected links, bounded reveal, explicit certainty/omissions, snapshot-local expansion and existing reading-position retention.",
+      "evidence": [
+        "../src/reader.ts",
+        "../tests/reader.test.ts",
+        "../tests/reader-browser-fixture.ts",
+        "../scripts/smoke-distribution.ts",
+        "reader-workspace.md"
+      ],
+      "limits": [
+        "Projected relationships remain bounded evidence, not complete runtime dependency truth",
+        "Candidates remain unresolved; export-wide omission direction is unknown",
+        "Owned mobile browser fixture is not a formative human study",
+        "Strict diagram rendering and coordinated OKF producer/upstream viewer improvements remain open",
+        "No complete current-tree release qualification or model-performance claim"
+      ]
+    },
+    {
+      "id": "reader-isolated-diagrams",
+      "level": "code-supported",
+      "scope": "Pinned on-demand Mermaid presentation in opaque frames with source retention, bounded input/job/dimension messages, timeout/disposal and shared static/live rendering.",
+      "evidence": [
+        "../src/reader-diagrams.ts",
+        "../src/reader.ts",
+        "../tests/reader-diagrams.test.ts",
+        "../scripts/smoke-distribution.ts",
+        "../assets/mermaid-11.10.1.min.js",
+        "../licenses/mermaid-11.10.1.txt",
+        "reader-diagram-design.md"
+      ],
+      "limits": [
+        "Owned browser rendering fixtures are distinct from installed controller smoke",
+        "Two CSP style refusals precede nonced stylesheet replacement; no clean-console claim",
+        "Dense/mobile/responsive diagram fidelity and human study remain open",
+        "No broad diagram type or full current-tree release qualification",
+        "OKF producer/current own skill/active upstream viewer improvement remains open",
+        "No model-quality or performance claim"
+      ]
+    },
+    {
+      "id": "reader-diagram-export-refresh",
+      "level": "code-supported",
+      "scope": "Valid larger diagram exports refresh through exact digest reconciliation within a separate12MiB HTML bound; source/projection budgets unchanged.",
+      "evidence": [
+        "../src/reader-export.ts",
+        "../tests/reader-export.test.ts",
+        "../src/reader-diagrams.ts",
+        "reader-workspace.md"
+      ],
+      "limits": [
+        "Latest natural-size/reduced-motion/practical geometry changes still require dense/mobile browser checks",
+        "Two transient CSP stylesheet refusals remain",
+        "Prior broad run is not a final-tree artifact certificate",
+        "No human/agent-performance or complete release qualification"
+      ]
+    },
+    {
+      "id": "reader-styling-and-task-navigation",
+      "level": "code-supported",
+      "scope": "Opaque diagram styling and bounded SVG adoption; coordinated included-document comparison, local bookmarks/history, reading positions and responsive context controls in the OKF producer and compatible active upstream.",
+      "evidence": [
+        "../src/reader-diagrams.ts",
+        "../tests/reader-diagrams.test.ts",
+        "../scripts/smoke-distribution.ts",
+        "../../okf-tasks/scripts/visualizer_template.html",
+        "../../okf-tasks/tests/reader-navigation-browser.mjs",
+        "../../okf-tasks/conformance/visualization-manifest.json",
+        "../../skills/skills/engineering/repo-task-lifecycle/OKF_UPSTREAM.json",
+        "reader-diagram-design.md",
+        "repository-intelligence-progress.md"
+      ],
+      "limits": [
+        "Previous qualification entries retain their historical artifact scope and observed failures",
+        "No general SVG security proof or broad diagram-type certification",
+        "Remaining relationship improvements, broader resize/reduced-motion and formative five-user study are open",
+        "No complete current-tree coordinated-release certificate",
+        "No controlled models or demonstrated agent benefit; trials deferred until implementation is built"
+      ]
+    },
+    {
+      "id": "task-reader-directional-workflow-parity",
+      "level": "code-supported",
+      "scope": "Independent OKF selected incoming/outgoing lanes with four-link reveal, visible hidden counts, collapse, per-document/direction retention and reduced-motion scrolling; corresponding RKE directional regressions unchanged.",
+      "evidence": [
+        "../../okf-tasks/scripts/visualizer_template.html",
+        "../../okf-tasks/tests/reader-navigation-browser.mjs",
+        "../../okf-tasks/SPEC.md",
+        "../../okf-tasks/conformance/visualization-manifest.json",
+        "../../skills/skills/engineering/repo-task-lifecycle/OKF_UPSTREAM.json",
+        "../tests/reader.test.ts",
+        "repository-intelligence-progress.md"
+      ],
+      "limits": [
+        "Document links do not prove runtime dependencies",
+        "Browser synthetic dense edges are not a human utility study",
+        "No complete coordinated release qualification",
+        "Broader language/host/evaluation/reader obligations remain open; controlled model trials deferred"
+      ]
+    },
+    {
+      "id": "go-imported-call-visibility",
+      "level": "code-supported",
+      "scope": "Aliased local-module package calls require a unique exported top-level function; private imported functions and instance methods remain unresolved, while private same-package calls remain usable.",
+      "evidence": [
+        "../src/repository-engine.ts",
+        "../src/parser.ts",
+        "../tests/language-fidelity.test.ts",
+        "../scripts/smoke-distribution.ts",
+        "language-support.md",
+        "repository-intelligence-progress.md"
+      ],
+      "limits": [
+        "No general Go lexical-shadow, implicit package-name, receiver, build-tag or compiler qualification",
+        "Go real-server/project pairing remains unqualified",
+        "Broader P4 and original full implementation scope remain open",
+        "No controlled model calls or demonstrated agent efficiency",
+        "No current-tree complete coordinated-release certificate"
+      ]
+    },
+    {
+      "id": "go-lexical-import-shadows",
+      "level": "code-supported",
+      "scope": "Go lexical parameters, named results, local declarations and range bindings prevent imported-package confirmation; independent unshadowed caller remains eligible in outgoing and incoming traces.",
+      "evidence": [
+        "../src/parser.ts",
+        "../src/repository-engine.ts",
+        "../tests/language-fidelity.test.ts",
+        "../scripts/smoke-distribution.ts",
+        "language-support.md",
+        "repository-intelligence-progress.md"
+      ],
+      "limits": [
+        "Block and function-literal bindings conservatively cover the containing function; no precise control-flow guarantee",
+        "Additional receiver/closure extraction checks do not prove public receiver resolution",
+        "Implicit Go package naming, receiver/build semantics and real-server/project qualification remain open",
+        "No complete current-tree coordinated-release certificate or controlled agent-performance evidence",
+        "Original P0-P6 implementation scope remains active"
+      ]
+    },
+    {
+      "id": "go-declared-package-imports",
+      "level": "code-supported",
+      "scope": "Default local-module imports use unique declared package names; aliases retain authored names; regular-file/direct-directory boundaries exclude test-only targets and SQL wildcard collisions; inconsistent or colliding local packages withhold confirmation.",
+      "evidence": [
+        "../src/parser.ts",
+        "../src/repository-engine.ts",
+        "../tests/language-fidelity.test.ts",
+        "../scripts/smoke-distribution.ts",
+        "language-support.md",
+        "repository-intelligence-progress.md"
+      ],
+      "limits": [
+        "Go build constraints and external modules are not compiler-qualified",
+        "Escaped interpreted import strings and general Unicode call extraction remain unqualified",
+        "Default import lookup caps at500 declarations; missing or inconsistent local package names conservatively withhold confirmation",
+        "Positive receiver semantics, broader P4 and full P0-P6 scope remain open",
+        "No full current-tree coordinated-release or controlled agent-benefit claim"
+      ]
+    },
+    {
+      "id": "shared-view-selection",
+      "level": "code-supported",
+      "scope": "Included Graph and Board selections become Reader primary identity, with reading position saved before view exit and distinct comparison retention.",
+      "evidence": [
+        "../../okf-tasks/scripts/visualizer_template.html",
+        "../../okf-tasks/tests/reader-navigation-browser.mjs",
+        "../../okf-tasks/SPEC.md",
+        "../../skills/skills/engineering/repo-task-lifecycle/OKF_UPSTREAM.json",
+        "repository-intelligence-progress.md"
+      ],
+      "limits": [
+        "Read-only view changes do not mutate execution or knowledge records",
+        "No five-user formative utility or full P6 coordinated-release claim"
+      ]
+    },
+    {
+      "id": "go-unicode-and-dynamic-targets",
+      "level": "code-supported",
+      "scope": "Unicode and parenthesized Go call targets preserve identity; indexed/factory receiver calls retain dynamic markers instead of binding a bare same-name function.",
+      "evidence": [
+        "../src/parser.ts",
+        "../tests/language-fidelity.test.ts",
+        "../tests/parser.test.ts",
+        "../scripts/smoke-distribution.ts",
+        "language-support.md",
+        "repository-intelligence-progress.md"
+      ],
+      "limits": [
+        "No general receiver/type/generic-instantiation/build or compiler qualification",
+        "Broader P4 languages/project servers and original full implementation remain open",
+        "No controlled model trials, human formative study or full coordinated-release certificate"
+      ]
+    },
+    {
+      "id": "go-concrete-receiver-identity",
+      "level": "code-supported",
+      "scope": "Unique non-generic concrete struct methods in the same regular Go package directory; typed parameters/results/variables and single composite literals; receiver-qualified incoming identity.",
+      "evidence": [
+        "../src/parser.ts",
+        "../src/repository-engine.ts",
+        "../tests/language-fidelity.test.ts",
+        "../scripts/smoke-distribution.ts",
+        "language-support.md"
+      ],
+      "limits": [
+        "Interfaces, aliases, generic/local types, imported/promoted receivers and factory/new inference remain unresolved",
+        "No Go compiler/build-tag or full language qualification"
+      ]
+    },
+    {
+      "id": "swift-extension-protocol-boundary",
+      "level": "code-supported",
+      "scope": "Same-file nominal declarations and unconditional extensions share unique own/self methods; protocol requirements exposed; lexical shadows and dynamic selectors remain uncertain.",
+      "evidence": [
+        "../src/parser.ts",
+        "../src/repository-engine.ts",
+        "../tests/language-fidelity.test.ts",
+        "../scripts/smoke-distribution.ts"
+      ],
+      "limits": [
+        "No concrete protocol dispatch, arbitrary receiver inference, cross-module or compiler qualification",
+        "Constraints, generic types and overloads remain unresolved"
+      ]
+    },
+    {
+      "id": "php-namespace-flat-trait-boundary",
+      "level": "code-supported",
+      "scope": "Syntax-derived same-file namespace-relative/absolute functions and static/instance methods; unique defining methods in explicit flat local traits; caller and incoming identity isolation.",
+      "evidence": [
+        "../src/parser.ts",
+        "../src/repository-engine.ts",
+        "../tests/language-fidelity.test.ts",
+        "../scripts/smoke-distribution.ts",
+        "language-support.md"
+      ],
+      "limits": [
+        "Imports, adapted/conflicting/nested/missing traits, abstract requirements, inherited/autoload/include and arbitrary receivers remain uncertain",
+        "No PHP interpreter or broad semantic qualification"
+      ]
+    },
+    {
+      "id": "map-complete-caller-scope",
+      "level": "code-supported",
+      "scope": "Resolution cache separates methods with distinct lexical shadows in either declaration order.",
+      "evidence": [
+        "../src/repository-engine.ts",
+        "../tests/language-fidelity.test.ts"
+      ],
+      "limits": [
+        "Resolved dependencies remain bounded static navigation; no complete runtime graph"
+      ]
+    },
+    {
+      "id": "controlled-study-workspace-codex-bridge",
+      "level": "code-supported",
+      "scope": "Frozen bytes/prompt/withheld-grader controls, fresh arm repositories/homes, failed-run retention, bounded batches with offsets; selected executable/config/PATH/home/process timeout and JSON usage mechanics.",
+      "evidence": [
+        "../src/evaluation-workspaces.ts",
+        "../src/evaluation-codex.ts",
+        "../tests/evaluation-workspaces.test.ts",
+        "../tests/evaluation-codex.test.ts",
+        "agent-study-contract.md",
+        "agent-study-cohort.md"
+      ],
+      "limits": [
+        "No actual Codex model invoked; Node launchers and trusted deterministic backends only",
+        "Selected host arm preparation, dependencies, reviewed graders and complete cohort remain open",
+        "Unknown total context/evidence time/accounting stay null; no efficiency or correctness benefit claim"
+      ]
+    },
+    {
+      "id": "gopls-minimal-local-module",
+      "level": "code-supported",
+      "scope": "One independent local-module cross-file call and configuration-change semantic expiry through shared public handlers, gopls0.23.0/Go1.27.2.",
+      "evidence": [
+        "qualification-gopls-2026-10-14.json",
+        "../scripts/qualify-language-server.ts",
+        "../src/language-server.ts"
+      ],
+      "limits": [
+        "Declared implementation bytes do not attest SDK library sources and all dependencies/environment",
+        "No general Go build/type/generic/project guarantee; no model trial"
+      ]
+    },
+    {
+      "id": "jdtls-initialized-java-project",
+      "level": "code-supported",
+      "scope": "One initialized two-file Eclipse Java project; source-qualified cross-file call and classpath-change expiry. Cold metadata rewrite was refused without a receipt.",
+      "evidence": [
+        "qualification-jdtls-2026-10-14.json",
+        "../src/language-server.ts",
+        "language-support.md"
+      ],
+      "limits": [
+        "One initialized two-file Eclipse Java project only",
+        "Not an Android, Kotlin, Maven or Gradle project qualification",
+        "Extracted plugin set, all JDK libraries and environment inputs are not fully attested by the declared identity inputs",
+        "Cold project mutation is a refusal, not a passing receipt; project initialization must be independently reviewed",
+        "No general Java inheritance, interfaces, overload, runtime or compiler guarantee",
+        "No controlled model trial or live editor selection proof"
+      ]
+    },
+    {
+      "id": "clangd-header-caller-project",
+      "level": "code-supported",
+      "scope": "One C++17 header/caller compilation-database project; source-qualified cross-file call and configuration-change expiry.",
+      "evidence": [
+        "qualification-clangd-2026-10-14.json",
+        "../src/language-server.ts",
+        "language-support.md"
+      ],
+      "limits": [
+        "One C++17 header/caller project with an explicit compilation database only",
+        "No actual compiler invocation, platform SDK, standard-library, template or macro qualification",
+        "Extracted resource headers, external SDK and environment inputs are not fully attested by declared identity inputs",
+        "No Rust or broader C/C++ project/semantic guarantee",
+        "No model trial or live editor selection proof"
+      ]
+    },
+    {
+      "id": "release-integrity-2026-10-15",
+      "level": "code-supported",
+      "scope": "Declaration and loaded-process artifact identity, source-bound mirror provenance, connected relationship evidence, exact-artifact release refusal and installed public TypeScript consumer.",
+      "evidence": [
+        "release-completion-status.json",
+        "../tests/qualification.test.ts",
+        "../tests/skill-provenance.test.ts",
+        "../tests/release-readiness.test.ts",
+        "../tests/explanations.test.ts"
+      ],
+      "limits": [
+        "Full original-clause/current-agent qualification remains open.",
+        "No current native host, human reader or controlled-model study completion.",
+        "No publication or hosted supported-OS CI result inferred."
+      ]
+    },
+    {
+      "id": "selected-browser-contracts-2026-10-15",
+      "level": "code-supported",
+      "scope": "Actual owned Chrome observation of installed two-root RKE reader and independently generated producer/upstream readers.",
+      "evidence": [
+        "qualification-browser-2026-10-15.json",
+        "../tests/reader-browser.contract.mjs"
+      ],
+      "limits": [
+        "Automated fixture observations do not establish human utility or general OS/browser fidelity.",
+        "Producer/upstream inputs remain reviewed working-tree bytes."
+      ]
+    },
+    {
+      "id": "minimal-lsp-candidate-2026-10-15",
+      "level": "code-supported",
+      "scope": "Minimal Go, Java and C++ cross-file public-handler witnesses and configuration expiry; includes failed attempts.",
+      "evidence": [
+        "qualification-language-servers-2026-10-15.json"
+      ],
+      "limits": [
+        "No broad framework, type-system, compiler or ecosystem claim.",
+        "Declared inputs do not attest every server/runtime dependency.",
+        "Java concurrent timeout retained; EWF audit-only digest carry-forward reviewed separately."
+      ]
+    }
+  ],
+  "initialCandidate": {
+    "schemaVersion": 3,
+    "status": "initial-development",
+    "authority": "initial-candidate-declaration-not-a-release-receipt",
+    "releaseApproved": false,
+    "runtimeVersion": "0.1.0",
+    "skillVersion": "6.2.1",
+    "adapterVersion": "1.2.1",
+    "tasksSourceCommit": "99a2907181c029446ffaf9c6bff664a7b0ff487c",
+    "gates": [
+      {
+        "id": "G0",
+        "status": "open",
+        "reason": "Independent methodology preservation acceptance remains pending."
+      },
+      {
+        "id": "G1",
+        "status": "open",
+        "reason": "Current repository-intelligence journeys need independent outcome qualification."
+      },
+      {
+        "id": "G2",
+        "status": "open",
+        "reason": "Supported-language and representative-project qualification remains pending."
+      },
+      {
+        "id": "G3",
+        "status": "open",
+        "reason": "Live host selection and installed-system composition remain pending."
+      },
+      {
+        "id": "G4",
+        "status": "open",
+        "reason": "Current reader browser and human utility qualification remains pending."
+      },
+      {
+        "id": "G5",
+        "status": "open",
+        "reason": "Controlled effectiveness and cost evaluation remains pending."
+      },
+      {
+        "id": "G6",
+        "status": "open",
+        "reason": "Exact committed artifact, supported hosted CI and packed installation need qualification."
+      }
+    ]
+  }
+}

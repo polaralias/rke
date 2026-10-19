@@ -1,0 +1,26 @@
+{
+  "authority": "historical-contracts-not-current-qualification",
+  "migration": "2026-10-19-optional-runtime",
+  "sources": [
+    {
+      "path": "src/evals/agent-behaviour.json",
+      "historyPath": "docs/history/agent-corpora-before-review-2026-10-19/agent-behaviour.json",
+      "sha256": "085822677396da96a59157524d2f0c75e3f26160d2cc6a243a05d0196556a75c"
+    },
+    {
+      "path": "src/evals/cross-language-agent.json",
+      "historyPath": "docs/history/agent-corpora-before-review-2026-10-19/cross-language-agent.json",
+      "sha256": "649101ce7e41c411420ddf4288f1e8bf30e86cb8258bd479acef7407bb186a7b"
+    },
+    {
+      "path": "src/evals/current-boundary-agent.json",
+      "historyPath": "docs/history/agent-corpora-before-review-2026-10-19/current-boundary-agent.json",
+      "sha256": "3e0496b0ec2ced18450c6b726b3b4219e974fb966bdbfc81bf9e470cafff9462"
+    },
+    {
+      "path": "src/evals/legacy-parity-agent.json",
+      "historyPath": "docs/history/agent-corpora-before-review-2026-10-19/legacy-parity-agent.json",
+      "sha256": "d0d4d55566c779660945083595190d0107e4ea18100b8b1265d9852c944186bd"
+    }
+  ]
+}

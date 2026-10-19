@@ -1,0 +1,369 @@
+{
+  "schema": 1,
+  "cases": [
+    {
+      "id": "current-typescript-ordinary-extension",
+      "category": "typescript-ordinary",
+      "prompt": "Add a pause action through the existing action-registration route. Preserve the single dispatcher, add a focused test, run `node --test tests/actions.test.mjs`, and report the extension point and evidence. Use ordinary repository tools for this comparison; do not use RKE or create workflow state.",
+      "setup": {
+        "package.json": "{\"type\":\"module\"}\n",
+        "src/registry.mjs": "const handlers = new Map();\nexport function register(name, handler) { handlers.set(name, handler); }\nexport function dispatch(name, payload) { return handlers.get(name)?.(payload) ?? null; }\n",
+        "src/actions/resume.mjs": "import { register } from '../registry.mjs';\nregister('resume', payload => ({ status: 'resumed', id: payload.id }));\n",
+        "src/index.mjs": "import './actions/resume.mjs';\nexport { dispatch } from './registry.mjs';\n",
+        "tests/actions.test.mjs": "import { test } from 'node:test';\nimport { strict as assert } from 'node:assert';\nimport { dispatch } from '../src/index.mjs';\ntest('resume action', () => assert.deepEqual(dispatch('resume', { id: 1 }), { status: 'resumed', id: 1 }));\n"
+      },
+      "expectWorkflowState": false,
+      "filesContain": {
+        "src/actions/pause.mjs": "pause",
+        "src/index.mjs": "pause",
+        "tests/actions.test.mjs": "pause"
+      },
+      "finalContains": [
+        "pause",
+        "test"
+      ],
+      "requiredOperationExitCodes": {
+        "test": [
+          0
+        ]
+      },
+      "forbiddenOperations": [
+        "rke:activate",
+        "git:push"
+      ],
+      "filesUnchanged": [
+        "src/registry.mjs"
+      ],
+      "finalAnyContains": [
+        "register",
+        "registry"
+      ]
+    },
+    {
+      "id": "current-typescript-rke-extension",
+      "category": "typescript-rke",
+      "prompt": "Use Engineering Workflow, using available RKE only where its evidence helps, to add a pause action through the existing action-registration route. Preserve the single dispatcher, add a focused test, run `node --test tests/actions.test.mjs`, and report the extension point and evidence. This is a local implementation slice; report remaining gates without performing a full closure. Use no workflow state; persistence adds no value to this bounded slice.",
+      "installCodexRouting": true,
+      "requiresStagedRke": true,
+      "setup": {
+        "package.json": "{\"type\":\"module\"}\n",
+        "src/registry.mjs": "const handlers = new Map();\nexport function register(name, handler) { handlers.set(name, handler); }\nexport function dispatch(name, payload) { return handlers.get(name)?.(payload) ?? null; }\n",
+        "src/actions/resume.mjs": "import { register } from '../registry.mjs';\nregister('resume', payload => ({ status: 'resumed', id: payload.id }));\n",
+        "src/index.mjs": "import './actions/resume.mjs';\nexport { dispatch } from './registry.mjs';\n",
+        "tests/actions.test.mjs": "import { test } from 'node:test';\nimport { strict as assert } from 'node:assert';\nimport { dispatch } from '../src/index.mjs';\ntest('resume action', () => assert.deepEqual(dispatch('resume', { id: 1 }), { status: 'resumed', id: 1 }));\n"
+      },
+      "expectWorkflowState": false,
+      "filesContain": {
+        "src/actions/pause.mjs": "pause",
+        "src/index.mjs": "pause",
+        "tests/actions.test.mjs": "pause"
+      },
+      "finalContains": [
+        "pause",
+        "test",
+        "engineering-workflow was used in this response."
+      ],
+      "requiredOperationExitCodes": {
+        "test": [
+          0
+        ]
+      },
+      "forbiddenOperations": [
+        "rke:activate",
+        "git:push"
+      ],
+      "filesUnchanged": [
+        "src/registry.mjs"
+      ],
+      "finalAnyContains": [
+        "register",
+        "registry"
+      ]
+    },
+    {
+      "id": "current-python-ordinary-dynamic-route",
+      "category": "python-ordinary",
+      "prompt": "Plan how to add a restart command through the existing Python service. Identify the actual dispatch and handler extension points, the focused test to change, and any relationship the source cannot prove statically. Do not edit. Use ordinary repository tools for this comparison; do not use RKE or create workflow state.",
+      "setup": {
+        "README.md": "# Device service\n\nCommands are dispatched by name.\n",
+        "src/api.py": "from . import handlers\n\ndef run(command, payload):\n    selected = getattr(handlers, command, None)\n    return selected(payload) if selected else None\n",
+        "src/handlers.py": "def start(payload):\n    return {'state': 'started', 'id': payload['id']}\n\ndef stop(payload):\n    return {'state': 'stopped', 'id': payload['id']}\n",
+        "tests/test_api.py": "from src.api import run\n\ndef test_start():\n    assert run('start', {'id': 1}) == {'state': 'started', 'id': 1}\n"
+      },
+      "expectWorkflowState": false,
+      "expectTrackedClean": true,
+      "finalContains": [
+        "src/api.py",
+        "src/handlers.py",
+        "tests/test_api.py",
+        "getattr"
+      ],
+      "finalAnyContains": [
+        "unresolved",
+        "cannot prove",
+        "cannot establish",
+        "cannot resolve"
+      ],
+      "forbiddenOperations": [
+        "rke:activate",
+        "git:push"
+      ]
+    },
+    {
+      "id": "current-python-rke-dynamic-route",
+      "category": "python-rke",
+      "prompt": "Use Engineering Workflow and the installed RKE runtime to plan a restart command through the existing Python service. Identify the actual dispatch and handler extension points, the focused test to change, and any relationship the source cannot prove statically. Do not edit or close the workflow. Use no workflow state; persistence adds no value to this bounded slice.",
+      "installCodexRouting": true,
+      "requiresStagedRke": true,
+      "setup": {
+        "README.md": "# Device service\n\nCommands are dispatched by name.\n",
+        "src/api.py": "from . import handlers\n\ndef run(command, payload):\n    selected = getattr(handlers, command, None)\n    return selected(payload) if selected else None\n",
+        "src/handlers.py": "def start(payload):\n    return {'state': 'started', 'id': payload['id']}\n\ndef stop(payload):\n    return {'state': 'stopped', 'id': payload['id']}\n",
+        "tests/test_api.py": "from src.api import run\n\ndef test_start():\n    assert run('start', {'id': 1}) == {'state': 'started', 'id': 1}\n"
+      },
+      "expectWorkflowState": false,
+      "expectTrackedClean": true,
+      "finalContains": [
+        "src/api.py",
+        "src/handlers.py",
+        "tests/test_api.py",
+        "getattr",
+        "engineering-workflow was used in this response."
+      ],
+      "finalAnyContains": [
+        "unresolved",
+        "cannot prove",
+        "cannot establish",
+        "cannot resolve"
+      ],
+      "requiredAnyOperations": [
+        "rke:context:find",
+        "rke:structure:file-api"
+      ],
+      "forbiddenOperations": [
+        "rke:activate",
+        "git:push"
+      ]
+    },
+    {
+      "id": "current-ordinary-unfamiliar-callers",
+      "category": "paired-discovery",
+      "prompt": "Explain which callers are affected if src/payments/charge.ts changes. Disambiguate the same-named legacy implementation. Read the source; do not edit or create workflow state. Use ordinary repository tools without RKE.",
+      "setup": {
+        "package.json": "{\"type\":\"module\"}\n",
+        "src/payments/charge.ts": "export function charge(amount:number){ return amount * 100; }\n",
+        "src/web/request.ts": "import {charge} from '../payments/charge';\nexport function request(amount:number){return charge(amount);}\n",
+        "src/legacy/charge.ts": "export function charge(amount:number){ return amount; }\n",
+        "src/legacy/batch.ts": "import {charge} from './charge';\nexport function batch(amount:number){ return charge(amount); }\n",
+        "src/modules/0.ts": "export function unrelated0(){return 'context';}\n",
+        "src/modules/1.ts": "export function unrelated1(){return 'context';}\n",
+        "src/modules/2.ts": "export function unrelated2(){return 'context';}\n",
+        "src/modules/3.ts": "export function unrelated3(){return 'context';}\n",
+        "src/modules/4.ts": "export function unrelated4(){return 'context';}\n",
+        "src/modules/5.ts": "export function unrelated5(){return 'context';}\n",
+        "src/modules/6.ts": "export function unrelated6(){return 'context';}\n",
+        "src/modules/7.ts": "export function unrelated7(){return 'context';}\n",
+        "src/modules/8.ts": "export function unrelated8(){return 'context';}\n",
+        "src/modules/9.ts": "export function unrelated9(){return 'context';}\n",
+        "src/modules/10.ts": "export function unrelated10(){return 'context';}\n",
+        "src/modules/11.ts": "export function unrelated11(){return 'context';}\n",
+        "src/modules/12.ts": "export function unrelated12(){return 'context';}\n",
+        "src/modules/13.ts": "export function unrelated13(){return 'context';}\n",
+        "src/modules/14.ts": "export function unrelated14(){return 'context';}\n",
+        "src/modules/15.ts": "export function unrelated15(){return 'context';}\n",
+        "src/modules/16.ts": "export function unrelated16(){return 'context';}\n",
+        "src/modules/17.ts": "export function unrelated17(){return 'context';}\n",
+        "src/modules/18.ts": "export function unrelated18(){return 'context';}\n",
+        "src/modules/19.ts": "export function unrelated19(){return 'context';}\n",
+        "src/modules/20.ts": "export function unrelated20(){return 'context';}\n",
+        "src/modules/21.ts": "export function unrelated21(){return 'context';}\n",
+        "src/modules/22.ts": "export function unrelated22(){return 'context';}\n",
+        "src/modules/23.ts": "export function unrelated23(){return 'context';}\n",
+        "src/modules/24.ts": "export function unrelated24(){return 'context';}\n",
+        "src/modules/25.ts": "export function unrelated25(){return 'context';}\n",
+        "src/modules/26.ts": "export function unrelated26(){return 'context';}\n",
+        "src/modules/27.ts": "export function unrelated27(){return 'context';}\n",
+        "src/modules/28.ts": "export function unrelated28(){return 'context';}\n",
+        "src/modules/29.ts": "export function unrelated29(){return 'context';}\n",
+        "src/modules/30.ts": "export function unrelated30(){return 'context';}\n",
+        "src/modules/31.ts": "export function unrelated31(){return 'context';}\n",
+        "src/modules/32.ts": "export function unrelated32(){return 'context';}\n",
+        "src/modules/33.ts": "export function unrelated33(){return 'context';}\n",
+        "src/modules/34.ts": "export function unrelated34(){return 'context';}\n",
+        "src/modules/35.ts": "export function unrelated35(){return 'context';}\n",
+        "src/modules/36.ts": "export function unrelated36(){return 'context';}\n",
+        "src/modules/37.ts": "export function unrelated37(){return 'context';}\n",
+        "src/modules/38.ts": "export function unrelated38(){return 'context';}\n",
+        "src/modules/39.ts": "export function unrelated39(){return 'context';}\n",
+        "src/modules/40.ts": "export function unrelated40(){return 'context';}\n",
+        "src/modules/41.ts": "export function unrelated41(){return 'context';}\n",
+        "src/modules/42.ts": "export function unrelated42(){return 'context';}\n",
+        "src/modules/43.ts": "export function unrelated43(){return 'context';}\n",
+        "src/modules/44.ts": "export function unrelated44(){return 'context';}\n",
+        "src/modules/45.ts": "export function unrelated45(){return 'context';}\n",
+        "src/modules/46.ts": "export function unrelated46(){return 'context';}\n",
+        "src/modules/47.ts": "export function unrelated47(){return 'context';}\n",
+        "src/modules/48.ts": "export function unrelated48(){return 'context';}\n",
+        "src/modules/49.ts": "export function unrelated49(){return 'context';}\n"
+      },
+      "expectWorkflowState": false,
+      "expectTrackedClean": true,
+      "finalContains": [
+        "src/web/request.ts",
+        "src/payments/charge.ts",
+        "legacy"
+      ],
+      "forbiddenOperations": [
+        "rke:activate",
+        "git:push"
+      ]
+    },
+    {
+      "id": "current-rke-unfamiliar-callers",
+      "category": "paired-discovery",
+      "prompt": "Explain which callers are affected if src/payments/charge.ts changes. Disambiguate the same-named legacy implementation. Read the source; do not edit or create workflow state. Use Engineering Workflow and available RKE structural evidence.",
+      "setup": {
+        "package.json": "{\"type\":\"module\"}\n",
+        "src/payments/charge.ts": "export function charge(amount:number){ return amount * 100; }\n",
+        "src/web/request.ts": "import {charge} from '../payments/charge';\nexport function request(amount:number){return charge(amount);}\n",
+        "src/legacy/charge.ts": "export function charge(amount:number){ return amount; }\n",
+        "src/legacy/batch.ts": "import {charge} from './charge';\nexport function batch(amount:number){ return charge(amount); }\n",
+        "src/modules/0.ts": "export function unrelated0(){return 'context';}\n",
+        "src/modules/1.ts": "export function unrelated1(){return 'context';}\n",
+        "src/modules/2.ts": "export function unrelated2(){return 'context';}\n",
+        "src/modules/3.ts": "export function unrelated3(){return 'context';}\n",
+        "src/modules/4.ts": "export function unrelated4(){return 'context';}\n",
+        "src/modules/5.ts": "export function unrelated5(){return 'context';}\n",
+        "src/modules/6.ts": "export function unrelated6(){return 'context';}\n",
+        "src/modules/7.ts": "export function unrelated7(){return 'context';}\n",
+        "src/modules/8.ts": "export function unrelated8(){return 'context';}\n",
+        "src/modules/9.ts": "export function unrelated9(){return 'context';}\n",
+        "src/modules/10.ts": "export function unrelated10(){return 'context';}\n",
+        "src/modules/11.ts": "export function unrelated11(){return 'context';}\n",
+        "src/modules/12.ts": "export function unrelated12(){return 'context';}\n",
+        "src/modules/13.ts": "export function unrelated13(){return 'context';}\n",
+        "src/modules/14.ts": "export function unrelated14(){return 'context';}\n",
+        "src/modules/15.ts": "export function unrelated15(){return 'context';}\n",
+        "src/modules/16.ts": "export function unrelated16(){return 'context';}\n",
+        "src/modules/17.ts": "export function unrelated17(){return 'context';}\n",
+        "src/modules/18.ts": "export function unrelated18(){return 'context';}\n",
+        "src/modules/19.ts": "export function unrelated19(){return 'context';}\n",
+        "src/modules/20.ts": "export function unrelated20(){return 'context';}\n",
+        "src/modules/21.ts": "export function unrelated21(){return 'context';}\n",
+        "src/modules/22.ts": "export function unrelated22(){return 'context';}\n",
+        "src/modules/23.ts": "export function unrelated23(){return 'context';}\n",
+        "src/modules/24.ts": "export function unrelated24(){return 'context';}\n",
+        "src/modules/25.ts": "export function unrelated25(){return 'context';}\n",
+        "src/modules/26.ts": "export function unrelated26(){return 'context';}\n",
+        "src/modules/27.ts": "export function unrelated27(){return 'context';}\n",
+        "src/modules/28.ts": "export function unrelated28(){return 'context';}\n",
+        "src/modules/29.ts": "export function unrelated29(){return 'context';}\n",
+        "src/modules/30.ts": "export function unrelated30(){return 'context';}\n",
+        "src/modules/31.ts": "export function unrelated31(){return 'context';}\n",
+        "src/modules/32.ts": "export function unrelated32(){return 'context';}\n",
+        "src/modules/33.ts": "export function unrelated33(){return 'context';}\n",
+        "src/modules/34.ts": "export function unrelated34(){return 'context';}\n",
+        "src/modules/35.ts": "export function unrelated35(){return 'context';}\n",
+        "src/modules/36.ts": "export function unrelated36(){return 'context';}\n",
+        "src/modules/37.ts": "export function unrelated37(){return 'context';}\n",
+        "src/modules/38.ts": "export function unrelated38(){return 'context';}\n",
+        "src/modules/39.ts": "export function unrelated39(){return 'context';}\n",
+        "src/modules/40.ts": "export function unrelated40(){return 'context';}\n",
+        "src/modules/41.ts": "export function unrelated41(){return 'context';}\n",
+        "src/modules/42.ts": "export function unrelated42(){return 'context';}\n",
+        "src/modules/43.ts": "export function unrelated43(){return 'context';}\n",
+        "src/modules/44.ts": "export function unrelated44(){return 'context';}\n",
+        "src/modules/45.ts": "export function unrelated45(){return 'context';}\n",
+        "src/modules/46.ts": "export function unrelated46(){return 'context';}\n",
+        "src/modules/47.ts": "export function unrelated47(){return 'context';}\n",
+        "src/modules/48.ts": "export function unrelated48(){return 'context';}\n",
+        "src/modules/49.ts": "export function unrelated49(){return 'context';}\n"
+      },
+      "expectWorkflowState": false,
+      "expectTrackedClean": true,
+      "finalContains": [
+        "src/web/request.ts",
+        "src/payments/charge.ts",
+        "legacy"
+      ],
+      "forbiddenOperations": [
+        "rke:activate",
+        "git:push"
+      ],
+      "installCodexRouting": true,
+      "requiresStagedRke": true,
+      "requiredAnyOperations": [
+        "rke:structure:trace",
+        "rke:structure:impact"
+      ]
+    },
+    {
+      "id": "current-ordinary-stale-knowledge-task",
+      "category": "paired-knowledge",
+      "prompt": "Review authorization source, knowledge and linked task after the source edit. Explain the mismatch and what knowledge and task acceptance need reconciling. Do not edit, activate workflow state, verify knowledge as fresh, or mark the task done. Use ordinary tools and compare source directly; do not use RKE.",
+      "setup": {
+        "src/auth.ts": "export function authorized(role:string){return role === 'admin';}\n",
+        "docs/knowledge/auth.md": "---\ntype: Concept\ntitle: Authorization\n---\nAuthorization allows only the admin role.\n[Task](../../tasks/auth/task.md)\n",
+        "tasks/auth/task.md": "---\ntype: Task\ntask: auth\ntitle: Check authorization\ndescription: Verify supported roles.\nstatus: proposed\ncreated: '2026-10-07T00:00:00Z'\ntimestamp: '2026-10-07T00:00:00Z'\n---\n## Outcome\nUnderstand authorization.\n## Scope\nRole checks.\n## Acceptance\nKnowledge and implementation agree.\n## Evidence\n[Knowledge](../../docs/knowledge/auth.md)\n",
+        ".rke/repo-context.json": "{\"schemaVersion\": 1, \"knowledge\": [{\"path\": \"docs/knowledge/auth.md\", \"sources\": [\"src/auth.ts\"]}]}"
+      },
+      "initialKnowledgeVerification": {
+        "knowledge": "docs/knowledge/auth.md",
+        "evidence": "Reviewed initial admin-only implementation."
+      },
+      "workingTree": {
+        "src/auth.ts": "export function authorized(role:string){return role === 'admin' || role === 'operator';}\n"
+      },
+      "expectWorkflowState": false,
+      "preserveWorkingTree": true,
+      "finalContains": [
+        "operator",
+        "admin",
+        "acceptance"
+      ],
+      "knowledgeFreshness": "stale",
+      "forbiddenOperations": [
+        "rke:activate",
+        "rke:context:verify",
+        "git:push"
+      ]
+    },
+    {
+      "id": "current-rke-stale-knowledge-task",
+      "category": "paired-knowledge",
+      "prompt": "Review authorization source, knowledge and linked task after the source edit. Explain the mismatch and what knowledge and task acceptance need reconciling. Do not edit, activate workflow state, verify knowledge as fresh, or mark the task done. Use Engineering Workflow and RKE freshness evidence.",
+      "setup": {
+        "src/auth.ts": "export function authorized(role:string){return role === 'admin';}\n",
+        "docs/knowledge/auth.md": "---\ntype: Concept\ntitle: Authorization\n---\nAuthorization allows only the admin role.\n[Task](../../tasks/auth/task.md)\n",
+        "tasks/auth/task.md": "---\ntype: Task\ntask: auth\ntitle: Check authorization\ndescription: Verify supported roles.\nstatus: proposed\ncreated: '2026-10-07T00:00:00Z'\ntimestamp: '2026-10-07T00:00:00Z'\n---\n## Outcome\nUnderstand authorization.\n## Scope\nRole checks.\n## Acceptance\nKnowledge and implementation agree.\n## Evidence\n[Knowledge](../../docs/knowledge/auth.md)\n",
+        ".rke/repo-context.json": "{\"schemaVersion\": 1, \"knowledge\": [{\"path\": \"docs/knowledge/auth.md\", \"sources\": [\"src/auth.ts\"]}]}"
+      },
+      "initialKnowledgeVerification": {
+        "knowledge": "docs/knowledge/auth.md",
+        "evidence": "Reviewed initial admin-only implementation."
+      },
+      "workingTree": {
+        "src/auth.ts": "export function authorized(role:string){return role === 'admin' || role === 'operator';}\n"
+      },
+      "expectWorkflowState": false,
+      "preserveWorkingTree": true,
+      "finalContains": [
+        "operator",
+        "admin",
+        "acceptance"
+      ],
+      "knowledgeFreshness": "stale",
+      "forbiddenOperations": [
+        "rke:activate",
+        "rke:context:verify",
+        "git:push"
+      ],
+      "installCodexRouting": true,
+      "requiresStagedRke": true,
+      "requiredAnyOperations": [
+        "rke:context:check",
+        "rke:documentation:assess"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+import { readFile, lstat } from "node:fs/promises";
+import { resolve } from "node:path";
+import { git } from "../src/io.js";
+import { runtimeIdentity } from "../src/qualification.js";
+import { tarballIntegrity } from "../src/release-publication.js";
+import { checkReleaseReadiness } from "./release-readiness.js";
+import { createSkillProvenance } from "./skill-provenance.js";
+
+const root=resolve("."),identity=await runtimeIdentity();
+if(Number(process.versions.node.split(".")[0])<24||Number(process.versions.node.split(".")[0])===24&&Number(process.versions.node.split(".")[1])<15)throw new Error("Publication requires supported Node >=24.15.");
+const source=await createSkillProvenance(root,true);
+const tag=git(root,"describe","--tags","--exact-match","HEAD");
+if(tag.code!==0||tag.stdout.trim()!==`v${identity.version}`)throw new Error("Publication requires the exact immutable version tag.");
+if(git(root,"merge-base","--is-ancestor","HEAD","origin/main").code!==0)throw new Error("Release source is not in origin/main.");
+const qualificationArg=process.argv.indexOf("--qualification"),tarballArg=process.argv.indexOf("--tarball");
+if(qualificationArg<0||!process.argv[qualificationArg+1])throw new Error("--qualification is required; source tests are not release qualification.");
+const qualification=resolve(process.argv[qualificationArg+1]!),tarball=resolve(tarballArg>=0?process.argv[tarballArg+1]??"":`polaralias-rke-${identity.version}.tgz`);
+const stat=await lstat(qualification);
+if(!stat.isFile()||stat.isSymbolicLink()||stat.size>128*1024)throw new Error("Qualification must be a bounded regular JSON receipt.");
+if(!identity.runtime.complete||!identity.skill.complete||!identity.adapter.complete)throw new Error("Release artifact identity is incomplete.");
+checkReleaseReadiness(JSON.parse(await readFile(qualification,"utf8")),{sourceCommit:source.sourceCommit,version:identity.version,runtimeDigest:identity.runtime.digest,skillDigest:identity.skill.digest,adapterDigest:identity.adapter.digest,tarballIntegrity:tarballIntegrity(await readFile(tarball))});
+console.log("Publication qualification matches clean tagged source and the tested tarball; publication authority remains separate.");
