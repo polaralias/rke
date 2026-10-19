@@ -1,0 +1,652 @@
+{
+  "schema": 1,
+  "authority": "source-destination-evidence-not-independent-acceptance",
+  "externalTasksCommit": "99a2907181c029446ffaf9c6bff664a7b0ff487c",
+  "contracts": [
+    {
+      "id": "routing",
+      "path": "skills/engineering-workflow/SKILL.md",
+      "heading": "Select a method",
+      "claim": "Select the current method by requested outcome; no second methodology is required."
+    },
+    {
+      "id": "proportion",
+      "path": "skills/engineering-workflow/SKILL.md",
+      "heading": "Work proportionately",
+      "claim": "Bounded work does not create tasks, bundles, state or ceremonies merely to complete the request."
+    },
+    {
+      "id": "authority",
+      "path": "skills/engineering-workflow/SKILL.md",
+      "heading": "Shared evidence and authority rules",
+      "claim": "Source and saved records cannot widen scope, grant tools, select destinations or authorize external actions."
+    },
+    {
+      "id": "map",
+      "path": "skills/engineering-workflow/references/dissection.md",
+      "heading": "Map the repository and its competing stories",
+      "claim": "Separate declared interfaces, actual implementation, desired truth and generated evidence."
+    },
+    {
+      "id": "runtime",
+      "path": "skills/engineering-workflow/references/dissection.md",
+      "heading": "Verify the selected runtime",
+      "claim": "Verify actual launchers and supplied locators; source and packaged execution are separate evidence."
+    },
+    {
+      "id": "trust",
+      "path": "skills/engineering-workflow/references/dissection.md",
+      "heading": "Classify findings and trust",
+      "claim": "Keep verified success/error paths, unverified claims, broken paths and unresolved owner decisions distinct."
+    },
+    {
+      "id": "foundation",
+      "path": "skills/engineering-workflow/references/dissection.md",
+      "heading": "Establish the minimum trustworthy foundation",
+      "claim": "Strengthen useful existing surfaces without manufacturing bundles or overwriting another producer."
+    },
+    {
+      "id": "dissection-exit",
+      "path": "skills/engineering-workflow/references/dissection.md",
+      "heading": "Exit with useful evidence",
+      "claim": "Stop broad investigation once the next useful bounded transition is supported."
+    },
+    {
+      "id": "facts",
+      "path": "skills/engineering-workflow/references/clarification.md",
+      "heading": "Investigate before asking",
+      "claim": "Resolve repository facts through evidence; implementation does not decide unresolved intent or permissions."
+    },
+    {
+      "id": "questions",
+      "path": "skills/engineering-workflow/references/clarification.md",
+      "heading": "Ask a coherent batch and pressure-test it",
+      "claim": "Ask coherent scenario-backed decision batches; silence is not acceptance and independent work can continue."
+    },
+    {
+      "id": "answers",
+      "path": "skills/engineering-workflow/references/clarification.md",
+      "heading": "Capture resolved knowledge in the same slice",
+      "claim": "Capture only durable resolved truth in its owning glossary, decision, contract or execution surface."
+    },
+    {
+      "id": "contract",
+      "path": "skills/engineering-workflow/references/design.md",
+      "heading": "Establish and decompose the outcome",
+      "claim": "Shape observable capability outcomes, scope, non-goals, constraints and dependencies before coding."
+    },
+    {
+      "id": "acceptance",
+      "path": "skills/engineering-workflow/references/design.md",
+      "heading": "Pressure-test the contract",
+      "claim": "Trace requirements and risks to observable scenarios, expected outcomes and verification."
+    },
+    {
+      "id": "packages",
+      "path": "skills/engineering-workflow/references/design.md",
+      "heading": "Add technical detail and work packages",
+      "claim": "Preserve acceptance-to-package trace; tracker presentation cannot define unresolved behaviour."
+    },
+    {
+      "id": "experiment",
+      "path": "skills/engineering-workflow/references/design.md",
+      "heading": "Control exploratory convergence",
+      "claim": "A decisive falsifier triggers immediate reconsideration; incidental failures do not consume the corrective limit."
+    },
+    {
+      "id": "boundary",
+      "path": "skills/engineering-workflow/references/delivery.md",
+      "heading": "Establish the working boundary",
+      "claim": "Preserve unrelated dirty work and inspect only consequential source, callers and relevant tests."
+    },
+    {
+      "id": "implementation",
+      "path": "skills/engineering-workflow/references/delivery.md",
+      "heading": "Make and verify the change",
+      "claim": "Verify the cause, preserve safety/compatibility, run proportionate checks and distinguish unrun evidence."
+    },
+    {
+      "id": "documentation",
+      "path": "skills/engineering-workflow/references/delivery.md",
+      "heading": "Carry the resulting truth forward",
+      "claim": "Review explicit and plausible unbound documentation; update owning truth or record a supported no-update reason."
+    },
+    {
+      "id": "graph",
+      "path": "skills/engineering-workflow/references/knowledge.md",
+      "heading": "Governed record relationships and metadata",
+      "claim": "Governed records retain meaningful resolved relationships, producer fields and distinct content-change metadata."
+    },
+    {
+      "id": "producer",
+      "path": "skills/engineering-workflow/references/knowledge.md",
+      "heading": "Find the current truth surfaces",
+      "claim": "Respect canonical/execution/generated boundaries and established independent producer ownership."
+    },
+    {
+      "id": "knowledge-scope",
+      "path": "skills/engineering-workflow/references/knowledge.md",
+      "heading": "Choose the smallest useful knowledge change",
+      "claim": "Maintain the requested canonical surface without inventing edits, execution work or a new task ledger."
+    },
+    {
+      "id": "promotion",
+      "path": "skills/engineering-workflow/references/knowledge.md",
+      "heading": "Author and promote deliberately",
+      "claim": "Promote verified durable truth and preserve evidence, compatible metadata and decision history."
+    },
+    {
+      "id": "supersession",
+      "path": "skills/engineering-workflow/references/knowledge.md",
+      "heading": "Author and promote deliberately",
+      "claim": "Keep current and superseded decision clauses separately readable and link successors.",
+      "paragraph": "For decisions,"
+    },
+    {
+      "id": "metadata",
+      "path": "skills/engineering-workflow/references/knowledge.md",
+      "heading": "Adopted OKF knowledge metadata",
+      "claim": "Use the adopted OKF profile; preserve independent producer reviews and separate content, observation and verification times."
+    },
+    {
+      "id": "streamline",
+      "path": "skills/engineering-workflow/references/knowledge.md",
+      "heading": "Streamline after promotion",
+      "claim": "Retain unique evidence/rationale and explicitly disposition duplicates without obscuring the current answer."
+    },
+    {
+      "id": "knowledge-checks",
+      "path": "skills/engineering-workflow/references/knowledge.md",
+      "heading": "Verify meaning, conformance, and findability separately",
+      "claim": "Check semantic truth, adopted-format conformance and realistic reader findability independently."
+    },
+    {
+      "id": "tasks",
+      "path": "skills/engineering-workflow/references/task-lifecycle.md",
+      "heading": "Establish a useful task",
+      "claim": "Keep repository task identity, accepted outcome and producer-owned schema independent of tracker presentation."
+    },
+    {
+      "id": "effort",
+      "path": "skills/engineering-workflow/references/task-lifecycle.md",
+      "heading": "Separate ownership and measures",
+      "claim": "Separate workstream ownership, active effort, elapsed time, estimates and points; reconcile interrupted timers."
+    },
+    {
+      "id": "task-evidence",
+      "path": "skills/engineering-workflow/references/task-lifecycle.md",
+      "heading": "Update evidence as work changes",
+      "claim": "Record evidence and required canonical promotion in the same slice; generated views do not prove completion."
+    },
+    {
+      "id": "tracker",
+      "path": "skills/engineering-workflow/references/task-lifecycle.md",
+      "heading": "Respect tracker authority and export boundaries",
+      "claim": "Resolve scoped tracker identity/defaults and field authority; inspect exact payloads and verify writes by read-back."
+    },
+    {
+      "id": "done",
+      "path": "skills/engineering-workflow/references/task-lifecycle.md",
+      "heading": "Reconcile completion",
+      "claim": "Required workstreams, validation, stopped effort and durable promotion govern completion rather than a merged commit."
+    },
+    {
+      "id": "alignment",
+      "path": "skills/engineering-workflow/references/alignment.md",
+      "heading": "Reconcile in this order",
+      "claim": "Discover task and knowledge lanes independently, provisionally reconcile tasks, promote knowledge, then finalize and validate tasks."
+    },
+    {
+      "id": "closure-report",
+      "path": "skills/engineering-workflow/references/alignment.md",
+      "heading": "Report a truthful result",
+      "claim": "Absent surfaces are legitimate dispositions; open obligations and external outcomes remain explicit."
+    },
+    {
+      "id": "explain",
+      "path": "skills/engineering-workflow/references/comprehension.md",
+      "heading": "Bound the question and reconstruct the path",
+      "claim": "Explain causal before/after paths, removals, state and failure effects from the actual bounded delta."
+    },
+    {
+      "id": "evidence",
+      "path": "skills/engineering-workflow/references/comprehension.md",
+      "heading": "Label evidence precisely",
+      "claim": "Code support, executed tests and observed runtime are different evidence classes."
+    },
+    {
+      "id": "explanation-layers",
+      "path": "skills/engineering-workflow/references/comprehension.md",
+      "heading": "Produce the useful layers",
+      "claim": "Keep compact commit context separate from user-facing causal explanation; questions never block completion."
+    },
+    {
+      "id": "followup",
+      "path": "skills/engineering-workflow/references/comprehension.md",
+      "heading": "Preserve and reconcile explanations when needed",
+      "claim": "Use safe optional local notes; verify follow-up claims and reopen only the affected method and reconciliation."
+    },
+    {
+      "id": "handoff-storage",
+      "path": "skills/engineering-workflow/references/handoff.md",
+      "heading": "Choose safe storage and one active stream",
+      "claim": "Use verified safe visibility and one active stream; preserve unique predecessor information before supersession."
+    },
+    {
+      "id": "handoff-depth",
+      "path": "skills/engineering-workflow/references/handoff.md",
+      "heading": "Choose useful depth",
+      "claim": "A max handoff carries restart-critical source-backed state, risks, evidence and safe next actions without dumping secrets."
+    },
+    {
+      "id": "handoff-authority",
+      "path": "skills/engineering-workflow/references/handoff.md",
+      "heading": "Preserve convergence and authority",
+      "claim": "Continuation preserves experiment constraints and evidence but never grants new authority."
+    },
+    {
+      "id": "handoff-hooks",
+      "path": "skills/engineering-workflow/references/handoff.md",
+      "heading": "Checkpoint and compaction",
+      "claim": "Automatic continuity requires verified host support; otherwise preserve a manual checkpoint/handoff and report the limit."
+    },
+    {
+      "id": "pickup-select",
+      "path": "skills/engineering-workflow/references/pickup.md",
+      "heading": "Select the right continuation",
+      "claim": "Select by real stream, manifest, status and visibility; duplicates and misplaced records are lifecycle drift."
+    },
+    {
+      "id": "pickup-verify",
+      "path": "skills/engineering-workflow/references/pickup.md",
+      "heading": "Rebuild current context",
+      "claim": "Recheck current source, runtime, decisions, expiry and missing references rather than trusting saved next actions."
+    },
+    {
+      "id": "pickup-act",
+      "path": "skills/engineering-workflow/references/pickup.md",
+      "heading": "Continue from verified state",
+      "claim": "Continue, correct or rediscover only as evidence warrants; no usable handoff is not a blanket blocker."
+    },
+    {
+      "id": "topology",
+      "path": "skills/engineering-workflow/references/coordination.md",
+      "heading": "Select the lightest safe topology",
+      "claim": "Choose one checkout, independent lanes or a useful linear stack; planning does not allocate worktrees."
+    },
+    {
+      "id": "ownership",
+      "path": "skills/engineering-workflow/references/coordination.md",
+      "heading": "Make ownership and dependencies explicit",
+      "claim": "Validate exact base, unique linked worktrees, acyclic dependencies and one writer for every shared path."
+    },
+    {
+      "id": "integration",
+      "path": "skills/engineering-workflow/references/coordination.md",
+      "heading": "Integrate from evidence",
+      "claim": "Inspect each lane and validate the combined tree; a lower-layer rewrite invalidates upper-layer receipts."
+    },
+    {
+      "id": "cleanup",
+      "path": "skills/engineering-workflow/references/coordination.md",
+      "heading": "Prove integration before cleanup",
+      "claim": "Bind durable integration and current clean owned worktree evidence to the exact tip before authorized removal."
+    },
+    {
+      "id": "public",
+      "path": "skills/engineering-workflow/references/publication.md",
+      "heading": "Public-readiness review",
+      "claim": "Verify packaged entrypoints, current public truth and bounded hygiene; review and scans are not publication authority."
+    },
+    {
+      "id": "scanner",
+      "path": "skills/engineering-workflow/references/publication.md",
+      "heading": "Public-readiness review",
+      "claim": "Unavailable required scanning is a reported coverage gap, not an excuse for silent installation or a clean-history claim.",
+      "paragraph": "Use independently verified scanning tooling"
+    },
+    {
+      "id": "publication",
+      "path": "skills/engineering-workflow/references/publication.md",
+      "heading": "Accepted-work tracker publication",
+      "claim": "Map stable packages to the verified destination without redesigning acceptance; preserve provider ownership and read-back."
+    },
+    {
+      "id": "identity",
+      "path": ".agents/skills/rke/references/artifact-qualification.md",
+      "heading": "Artifact qualification",
+      "claim": "Identify the actual runtime and both skill artifacts; matching versions do not establish live selection."
+    },
+    {
+      "id": "context",
+      "path": ".agents/skills/rke/references/repo-context-contract.md",
+      "heading": "Find",
+      "claim": "Bound lexical retrieval and inspect consequential source; ranking is navigation evidence."
+    },
+    {
+      "id": "context-boundary",
+      "path": ".agents/skills/rke/references/repo-context-contract.md",
+      "heading": "Repository and data boundary",
+      "claim": "Repository roots, exclusions and source material remain independent data/authority boundaries."
+    },
+    {
+      "id": "context-impact",
+      "path": ".agents/skills/rke/references/repo-context-contract.md",
+      "heading": "Impact",
+      "claim": "Use bounded changed-source evidence with explicit coverage limitations."
+    },
+    {
+      "id": "context-verify",
+      "path": ".agents/skills/rke/references/repo-context-contract.md",
+      "heading": "Verify",
+      "claim": "Recorded source hashes establish byte identity and review claims, not factual truth."
+    },
+    {
+      "id": "context-benchmark",
+      "path": ".agents/skills/rke/references/repo-context-contract.md",
+      "heading": "Retrieval benchmark",
+      "claim": "Benchmark mechanics and retrieval rank do not establish semantic or agent benefit."
+    },
+    {
+      "id": "state",
+      "path": ".agents/skills/rke/references/workflow-support.md",
+      "heading": "State model",
+      "claim": "Persistent state is compact optional coordination evidence with distinct task, knowledge and continuity ownership."
+    },
+    {
+      "id": "phase",
+      "path": ".agents/skills/rke/references/workflow-support.md",
+      "heading": "Phase selection",
+      "claim": "A phase is optional coordination; current evidence determines the engineering method."
+    },
+    {
+      "id": "start",
+      "path": ".agents/skills/rke/references/workflow-support.md",
+      "heading": "`start`",
+      "claim": "Session start is idempotent and preserves existing legitimate state."
+    },
+    {
+      "id": "modes",
+      "path": ".agents/skills/rke/references/workflow-support.md",
+      "heading": "Task modes",
+      "claim": "Task mode selects independent task support; none mode does not manufacture durable tracking."
+    },
+    {
+      "id": "gates",
+      "path": ".agents/skills/rke/references/workflow-support.md",
+      "heading": "Gates",
+      "claim": "Stored gates require evidence and cannot be cleared merely by generated claims."
+    },
+    {
+      "id": "close",
+      "path": ".agents/skills/rke/references/workflow-support.md",
+      "heading": "`closure assess`",
+      "claim": "Assess existing machine obligations without claiming engineering acceptance from a command."
+    },
+    {
+      "id": "bootstrap",
+      "path": ".agents/skills/rke/references/documentation-lifecycle.md",
+      "heading": "Inherited-repository bootstrap",
+      "claim": "Inventory existing foundation and binding gaps without auto-authoring standard documents."
+    },
+    {
+      "id": "assess",
+      "path": ".agents/skills/rke/references/documentation-lifecycle.md",
+      "heading": "Event-driven boundary",
+      "claim": "Conditional assessment supplies bindings and candidates; ordinary documentation judgement can use direct inspection."
+    },
+    {
+      "id": "apply",
+      "path": ".agents/skills/rke/references/documentation-lifecycle.md",
+      "heading": "Apply and quality gate",
+      "claim": "A selected receipt validates reviewed authored concepts, candidate coverage, findability and exact-delta freshness."
+    },
+    {
+      "id": "machine-close",
+      "path": ".agents/skills/rke/references/documentation-lifecycle.md",
+      "heading": "Closure",
+      "claim": "Selected persistent closure requires current receipts and exact-delta evidence; ordinary work need not activate state."
+    },
+    {
+      "id": "continuity",
+      "path": ".agents/skills/rke/references/continuity.md",
+      "heading": "Compaction-aware host support",
+      "claim": "The packaged helper does not back up transcripts, author max handoffs or restore automatically; fuller flows require verified independent host integration."
+    },
+    {
+      "id": "checkpoint",
+      "path": ".agents/skills/rke/references/continuity.md",
+      "heading": "Checkpoint",
+      "claim": "Persist compact evidence and convergence state; standard/max handoff mechanics do not establish editorial completeness."
+    },
+    {
+      "id": "resume",
+      "path": ".agents/skills/rke/references/continuity.md",
+      "heading": "Resume",
+      "claim": "Inspect handoff selection and reverify references, stream, visibility and authority before continuation."
+    },
+    {
+      "id": "runtime-cleanup",
+      "path": ".agents/skills/rke/references/coordination.md",
+      "heading": "Coordination runtime adapter",
+      "claim": "Automated cleanup supports ancestry only; retain rewritten tips even if a provider or rewrite record supports a separate assessment.",
+      "paragraph": "Distinguish ancestry proof"
+    },
+    {
+      "id": "host",
+      "path": ".agents/skills/rke/references/host-integration.md",
+      "heading": "Invocation model",
+      "claim": "Host adapters invoke shared operations without replacing engineering judgement or source verification."
+    },
+    {
+      "id": "host-install",
+      "path": ".agents/skills/rke/references/host-integration.md",
+      "heading": "Local installation",
+      "claim": "Preflight configuration ownership and preserve unrelated or modified host files."
+    },
+    {
+      "id": "host-context",
+      "path": ".agents/skills/rke/references/host-integration.md",
+      "heading": "Optional stateless context",
+      "claim": "Optional context helpers do not create workflow or canonical authority."
+    },
+    {
+      "id": "host-hooks",
+      "path": ".agents/skills/rke/references/host-integration.md",
+      "heading": "Installed hook boundaries",
+      "claim": "Installed hooks retain root/scope and declared bundle boundaries rather than adopting arbitrary notes."
+    },
+    {
+      "id": "structure",
+      "path": ".agents/skills/rke/references/structural-context.md",
+      "heading": "Public operations",
+      "claim": "Use scoped APIs/traces/impact for navigation with explicit unresolved evidence."
+    },
+    {
+      "id": "parser",
+      "path": ".agents/skills/rke/references/structural-context.md",
+      "heading": "Parser and resolution boundary",
+      "claim": "Static parser relationships, ambiguity and server evidence retain their provenance and limitations."
+    },
+    {
+      "id": "reviews",
+      "path": ".agents/skills/rke/references/structural-context.md",
+      "heading": "Agent-review fallback",
+      "claim": "Digest-bound review evidence is inference and cannot silently upgrade unsupported static coverage."
+    },
+    {
+      "id": "workspace",
+      "path": ".agents/skills/rke/references/workspace-federation.md",
+      "heading": "Selected workspace evidence",
+      "claim": "Explicit selected roots retain qualified identities, caller boundaries, snapshots and independent failures."
+    },
+    {
+      "id": "reader",
+      "path": ".agents/skills/rke/references/reader-workspace.md",
+      "heading": "Reader workspace",
+      "claim": "Reader projections retain source/canonical/inferred distinctions and explicit selection boundaries."
+    },
+    {
+      "id": "live-reader",
+      "path": ".agents/skills/rke/references/reader-workspace.md",
+      "heading": "Fixed-root live reading",
+      "claim": "Loopback sessions cannot retarget roots or widen scope; owner cleanup and snapshot changes stay explicit."
+    },
+    {
+      "id": "presentation",
+      "path": ".agents/skills/rke/references/reader-workspace.md",
+      "heading": "Code presentation",
+      "claim": "Highlighting and diagrams are presentation with bounded fallback, never semantic verification."
+    },
+    {
+      "id": "study",
+      "path": ".agents/skills/rke/references/agent-evaluation.md",
+      "heading": "Agent outcome qualification",
+      "claim": "Controlled outcome claims require frozen artifacts, independent graders and isolated observed trials."
+    },
+    {
+      "id": "application",
+      "path": ".agents/skills/rke/references/agent-evaluation.md",
+      "heading": "Workflow application and outcome evidence",
+      "claim": "Specified, reachable, applied and effective are separate qualification states."
+    },
+    {
+      "id": "coverage",
+      "path": ".agents/skills/rke/references/quality-coverage.md",
+      "heading": "Evaluation boundary",
+      "claim": "Generation, retrieval and rule-adherence measurements must retain independent evidence and limits."
+    },
+    {
+      "id": "tasks-adapter",
+      "path": ".agents/skills/rke/references/okf-tasks-adapter.md",
+      "heading": "Ownership",
+      "claim": "The independent Tasks producer owns schemas, CLI behavior and tracker mechanics."
+    },
+    {
+      "id": "tasks-validation",
+      "path": ".agents/skills/rke/references/okf-tasks-adapter.md",
+      "heading": "Validation boundary",
+      "claim": "Delegated strict validation is required where selected; missing tools cannot be replaced by invented conformance."
+    },
+    {
+      "id": "spec-bundle",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "3. Bundle structure",
+      "claim": "The independent Tasks profile owns current bundle placement, record names and root declarations."
+    },
+    {
+      "id": "spec-task",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "4. Task concepts",
+      "claim": "The independent Tasks profile owns task fields and record identity."
+    },
+    {
+      "id": "spec-workstream",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "5. Workstream concepts",
+      "claim": "The independent Tasks profile owns workstream fields and parent relationships."
+    },
+    {
+      "id": "spec-lifecycle",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "6. Lifecycle",
+      "claim": "The current producer owns lifecycle transitions, reopening history and normative completion semantics."
+    },
+    {
+      "id": "spec-time",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "7. Time and effort",
+      "claim": "The producer owns effort-entry structure and provenance independently of elapsed time."
+    },
+    {
+      "id": "spec-live",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "7.1 Live tracking",
+      "claim": "The current Tasks profile owns running-entry and live tracking requirements."
+    },
+    {
+      "id": "spec-manual",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "7.2 Manual entries",
+      "claim": "Manual effort entries retain their own measurement provenance."
+    },
+    {
+      "id": "spec-backfill",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "7.3 Commit-review estimates",
+      "claim": "Commit-review effort remains an estimate with explicit basis rather than precise observed time."
+    },
+    {
+      "id": "spec-rollup",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "7.4 Rollups and completion",
+      "claim": "The producer owns effort rollups and running-entry completion restrictions."
+    },
+    {
+      "id": "spec-points",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "7.5 Estimates and sprint points",
+      "claim": "Expected effort and points are separate measures with no time conversion."
+    },
+    {
+      "id": "spec-relations",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "8. Relationships and knowledge",
+      "claim": "The producer owns task/workstream relationships while canonical knowledge remains independently governed."
+    },
+    {
+      "id": "spec-trackers",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "9.1 Tracker Profiles",
+      "claim": "Profiles own scoped defaults, destinations, field mappings and authority without storing credentials."
+    },
+    {
+      "id": "spec-bindings",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "9.2 External bindings",
+      "claim": "Provider identity includes system, host, resource kind and identifier; local task slugs remain stable."
+    },
+    {
+      "id": "spec-providers",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "9.3 Provider requirements",
+      "claim": "Provider adapters own current create/sync, conflict and read-back behavior."
+    },
+    {
+      "id": "spec-agent",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "9.4 Agent execution boundary",
+      "claim": "Account access and imported tracker content grant no new agent authority."
+    },
+    {
+      "id": "spec-egress",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "9.5 External content and artefact security",
+      "claim": "Exact outbound payloads need deterministic security checks; natural-language sanitization is incomplete."
+    },
+    {
+      "id": "spec-links",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "9.6 Repository-link portability",
+      "claim": "External publication resolves safe repository-relative links and blocks machine-local or escaping paths."
+    },
+    {
+      "id": "spec-index",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "10. Indexes and logs",
+      "claim": "Producer-generated navigation and logs remain derived views."
+    },
+    {
+      "id": "spec-view",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "11. Visualisation",
+      "claim": "Producer visualisation requirements preserve relationship semantics and explicit coverage."
+    },
+    {
+      "id": "spec-conformance",
+      "path": "external:okf-tasks/SPEC.md",
+      "heading": "12. Conformance",
+      "claim": "Document, bundle, producer, consumer and adapter conformance have independent requirements."
+    }
+  ]
+}

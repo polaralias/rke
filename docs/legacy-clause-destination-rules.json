@@ -1,0 +1,507 @@
+{
+  "schema": 1,
+  "authority": "authored-source-review-selection-not-equivalence-grading",
+  "rules": [
+    {
+      "package": "*",
+      "sections": [
+        "Untrusted content boundary",
+        "Security boundary",
+        "Authority",
+        "Credential boundary"
+      ],
+      "contractIds": [
+        "authority",
+        "spec-agent",
+        "spec-egress"
+      ],
+      "rationale": "Authority remains with the user/host; quoted source instructions and account access cannot authorize egress, credentials, publication or expanded execution."
+    },
+    {
+      "package": "*",
+      "sections": [
+        "Durable repository links"
+      ],
+      "contractIds": [
+        "graph",
+        "spec-relations"
+      ],
+      "rationale": "The relationship outcome is preserved in conditional authoring guidance and the independent producer; indexes and transient records are not graph authority."
+    },
+    {
+      "package": "repo-task-lifecycle",
+      "sections": [
+        "1. Inspect the repository and select placement",
+        "Placement"
+      ],
+      "contractIds": [
+        "tasks",
+        "spec-bundle"
+      ],
+      "rationale": "Established placement is preserved; exact current bundle structure is delegated to the independently pinned producer rather than copied from an archived template."
+    },
+    {
+      "package": "repo-task-lifecycle",
+      "sections": [
+        "2. Create a task from an observable outcome",
+        "Readiness routing"
+      ],
+      "contractIds": [
+        "tasks",
+        "contract",
+        "acceptance"
+      ],
+      "rationale": "Task readiness depends on accepted observable behaviour; unresolved intent remains proposed and cannot be manufactured by task formatting."
+    },
+    {
+      "package": "repo-task-lifecycle",
+      "sections": [
+        "3. Estimate work without conflating measures",
+        "7.5 Estimates and sprint points"
+      ],
+      "contractIds": [
+        "effort",
+        "spec-points"
+      ],
+      "rationale": "Estimates, active effort, elapsed time and points retain distinct meanings; current field vocabulary belongs to the producer."
+    },
+    {
+      "package": "repo-task-lifecycle",
+      "sections": [
+        "4. Add separable workstreams",
+        "Workstream and concurrency routing",
+        "5. Workstream concepts"
+      ],
+      "contractIds": [
+        "effort",
+        "spec-workstream",
+        "ownership"
+      ],
+      "rationale": "Required independently owned workstreams contribute to parent completion; task records do not allocate physical worktrees or permit overlapping writers."
+    },
+    {
+      "package": "repo-task-lifecycle",
+      "sections": [
+        "5. Track active and historical effort",
+        "Continuity and time loop",
+        "7. Time and effort",
+        "7.1 Live tracking",
+        "7.2 Manual entries",
+        "7.3 Commit-review estimates",
+        "7.4 Rollups and completion"
+      ],
+      "contractIds": [
+        "effort",
+        "spec-time",
+        "spec-live",
+        "spec-manual",
+        "spec-backfill",
+        "spec-rollup"
+      ],
+      "rationale": "Preserve active-versus-elapsed time and measurement provenance, stop/reconcile interrupted timers, and leave exact entry/rollup rules with the current producer."
+    },
+    {
+      "package": "repo-task-lifecycle",
+      "sections": [
+        "6. Update lifecycle and evidence with material work",
+        "Evidence axes",
+        "6. Lifecycle"
+      ],
+      "contractIds": [
+        "task-evidence",
+        "spec-lifecycle"
+      ],
+      "rationale": "A recorded Git revision does not establish validation, deployment or completion; current transitions and reopening history are producer-owned."
+    },
+    {
+      "package": "repo-task-lifecycle",
+      "sections": [
+        "7. Configure and use first-class Tracker Profiles",
+        "Tracker synchronisation loop",
+        "17. Project-default tracker destination",
+        "9. External trackers and synchronisation",
+        "9.1 Tracker Profiles",
+        "9.2 External bindings",
+        "9.3 Provider requirements"
+      ],
+      "contractIds": [
+        "tracker",
+        "spec-trackers",
+        "spec-bindings",
+        "spec-providers"
+      ],
+      "rationale": "Use scoped profile identity, defaults, conflicts, field authority and read-back. Historical field spellings are not silently treated as the current producer schema."
+    },
+    {
+      "package": "repo-task-lifecycle",
+      "sections": [
+        "8. Prepare the exact external payload",
+        "9.4 Agent execution boundary",
+        "9.5 External content and artefact security",
+        "9.6 Repository-link portability"
+      ],
+      "contractIds": [
+        "tracker",
+        "spec-agent",
+        "spec-egress",
+        "spec-links"
+      ],
+      "rationale": "Inspect the exact external payload and resolve portable repository links; machine-local paths, secrets and source-selected destinations cannot pass through on textual reassurance alone."
+    },
+    {
+      "package": "repo-task-lifecycle",
+      "sections": [
+        "9. Reconcile completion and knowledge promotion",
+        "Knowledge promotion loop"
+      ],
+      "contractIds": [
+        "done",
+        "alignment",
+        "spec-lifecycle",
+        "spec-rollup"
+      ],
+      "rationale": "Completion follows provisional task reconciliation, durable promotion and final acceptance checks; incomplete workstreams, timers and required evidence remain obligations."
+    },
+    {
+      "package": "repo-task-lifecycle",
+      "sections": [
+        "CLI setup",
+        "Compatibility",
+        "Ownership and routing",
+        "Source-of-truth boundaries"
+      ],
+      "contractIds": [
+        "tasks",
+        "tasks-adapter",
+        "tasks-validation"
+      ],
+      "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap."
+    },
+    {
+      "package": "repo-task-lifecycle",
+      "sections": [
+        "3. Bundle structure",
+        "3.1 Navigation prominence extension"
+      ],
+      "contractIds": [
+        "tasks",
+        "spec-bundle"
+      ],
+      "rationale": "The current external bundle contract is the precise owner; historical layout literals require comparison against that contract, not automatic acceptance."
+    },
+    {
+      "package": "repo-task-lifecycle",
+      "sections": [
+        "4. Task concepts"
+      ],
+      "contractIds": [
+        "tasks",
+        "spec-task"
+      ],
+      "rationale": "Current normative task fields are delegated to the actual producer contract with source-bound evidence."
+    },
+    {
+      "package": "repo-task-lifecycle",
+      "sections": [
+        "8. Relationships and knowledge"
+      ],
+      "contractIds": [
+        "graph",
+        "spec-relations"
+      ],
+      "rationale": "Preserve meaningful task/workstream/knowledge relationships without merging their independent ownership or treating generated indexes as edges."
+    },
+    {
+      "package": "repo-task-lifecycle",
+      "sections": [
+        "10. Indexes and logs"
+      ],
+      "contractIds": [
+        "task-evidence",
+        "spec-index"
+      ],
+      "rationale": "Generated indexes and logs remain views; their current syntax and freshness mechanics are producer-owned."
+    },
+    {
+      "package": "repo-task-lifecycle",
+      "sections": [
+        "11. Visualisation"
+      ],
+      "contractIds": [
+        "spec-view",
+        "knowledge-checks"
+      ],
+      "rationale": "Producer visualisations remain derived evidence with declared coverage; a pretty view cannot hide an orphan or assert task/knowledge truth."
+    },
+    {
+      "package": "repo-task-lifecycle",
+      "sections": [
+        "12. Conformance",
+        "12.1 Document conformance",
+        "12.2 Bundle conformance",
+        "12.3 Producer conformance",
+        "12.4 Consumer conformance",
+        "12.5 Synchronisation adapter conformance"
+      ],
+      "contractIds": [
+        "tasks-validation",
+        "spec-conformance"
+      ],
+      "rationale": "Current document, bundle, producer, consumer and adapter validation are separate normative contracts, not a generic successful-check claim."
+    },
+    {
+      "package": "repo-knowledge-engineering",
+      "sections": [
+        "Decision lifecycle",
+        "Current decision",
+        "Superseded clauses"
+      ],
+      "contractIds": [
+        "supersession"
+      ],
+      "rationale": "Partial supersession preserves current clauses and history while linking the specific replacement; a newer note is not authority to erase a decision."
+    },
+    {
+      "package": "repo-knowledge-engineering",
+      "sections": [
+        "Existing OpenWiki detection",
+        "Required pause and choice",
+        "While direction is unresolved",
+        "After the user chooses",
+        "2. Choose the knowledge format and ownership model"
+      ],
+      "contractIds": [
+        "producer",
+        "foundation"
+      ],
+      "rationale": "Existing producer ownership is preserved; migration needs established scope and independent useful investigation can continue while ownership remains unresolved."
+    },
+    {
+      "package": "repo-knowledge-engineering",
+      "sections": [
+        "5. Run a bounded cross-artefact truth check",
+        "4. Decide what must stay aligned"
+      ],
+      "contractIds": [
+        "knowledge-scope",
+        "facts",
+        "knowledge-checks"
+      ],
+      "rationale": "Compare accepted truth, implementation and verification without making a universal source winner; code does not decide unresolved product intent."
+    },
+    {
+      "package": "repo-knowledge-engineering",
+      "sections": [
+        "7. Update knowledge in the same slice as the work",
+        "8. Promote new truth",
+        "Link knowledge maintenance to execution truth"
+      ],
+      "contractIds": [
+        "promotion",
+        "task-evidence",
+        "documentation"
+      ],
+      "rationale": "Promote verified enduring conclusions in the same slice, link execution evidence and allow a reviewed no-update result rather than manufacturing knowledge."
+    },
+    {
+      "package": "repo-knowledge-engineering",
+      "sections": [
+        "9. Streamline the affected knowledge surface",
+        "6. Streamline",
+        "Streamlining and disposition"
+      ],
+      "contractIds": [
+        "streamline"
+      ],
+      "rationale": "Deletion or archival follows explicit unique-truth/evidence accounting; duplicate presentation alone is not permission to discard unresolved history."
+    },
+    {
+      "package": "repo-knowledge-engineering",
+      "sections": [
+        "10. Validate the knowledge bundle",
+        "Validation",
+        "12. Finish with a trustworthy and findable next-step surface"
+      ],
+      "contractIds": [
+        "knowledge-checks",
+        "metadata"
+      ],
+      "rationale": "Semantic truth, format conformance and findability are checked separately; source hashes and reader rank cannot establish factual correctness."
+    },
+    {
+      "package": "repo-knowledge-engineering",
+      "sections": [
+        "Repository-knowledge extensions",
+        "Required format",
+        "For verified-working or verified-limited, add verified_at and a non-empty verified_against list.",
+        "Citations and evidence",
+        "Temporal reading and drift"
+      ],
+      "contractIds": [
+        "metadata",
+        "evidence"
+      ],
+      "rationale": "Preserve adopted metadata and distinguish content change, source-byte freshness, observation and review; historical profile details are not silently migrated or independently accepted."
+    },
+    {
+      "package": "repo-knowledge-engineering",
+      "sections": [
+        "Visualisation concepts",
+        "Source and generation",
+        "Reading the view"
+      ],
+      "contractIds": [
+        "knowledge-checks",
+        "producer"
+      ],
+      "rationale": "Durable visuals identify canonical inputs, provenance, renderer and coverage; presentation and timestamp order do not establish semantic validity."
+    },
+    {
+      "package": "repo-knowledge-engineering",
+      "sections": [
+        "6. Preserve knowledge boundaries",
+        "Task and Workstream boundary",
+        "Adoption boundary",
+        "Reserved files"
+      ],
+      "contractIds": [
+        "producer",
+        "graph"
+      ],
+      "rationale": "Keep execution, continuation, generated and producer-owned surfaces outside canonical authoring boundaries unless deliberately adopted."
+    },
+    {
+      "package": "worktree-task-coordinator",
+      "sections": [
+        "1. Reconcile managed state before allocating more",
+        "2. Confirm the delivery topology",
+        "3. Inspect the repository before mutation",
+        "Delivery topology"
+      ],
+      "contractIds": [
+        "topology",
+        "ownership"
+      ],
+      "rationale": "Reuse suitable owned isolation, inspect actual per-worktree state and distinguish a useful linear stack from independent siblings."
+    },
+    {
+      "package": "worktree-task-coordinator",
+      "sections": [
+        "4. Write and validate the manifest",
+        "5. Create and assign worktrees",
+        "Manifest placement",
+        "Container and branch rules",
+        "Path ownership"
+      ],
+      "contractIds": [
+        "ownership"
+      ],
+      "rationale": "Bind actual base and destination, validate unique linked-worktree paths/dependencies and assign shared files to one writer; manifests grant no authority."
+    },
+    {
+      "package": "worktree-task-coordinator",
+      "sections": [
+        "6. Monitor without collapsing isolation",
+        "7. Reconcile in dependency order",
+        "Integration order",
+        "Validation classes"
+      ],
+      "contractIds": [
+        "integration"
+      ],
+      "rationale": "Inspect each lane and validate the integrated tree, including shared-resource serialization and refreshed upper-layer evidence after rewrites."
+    },
+    {
+      "package": "worktree-task-coordinator",
+      "sections": [
+        "8. Record integration evidence",
+        "Integration evidence"
+      ],
+      "contractIds": [
+        "cleanup",
+        "runtime-cleanup"
+      ],
+      "rationale": "The method retains exact-tip ancestry/provider/rewrite-chain assessment; automated runtime deletion is deliberately restricted to ancestry proof."
+    },
+    {
+      "package": "worktree-task-coordinator",
+      "sections": [
+        "9. Close and clean up",
+        "Cleanup evidence"
+      ],
+      "contractIds": [
+        "cleanup",
+        "runtime-cleanup"
+      ],
+      "rationale": "Recheck clean owned current tips, durable destination and current authority immediately before removal. Rewritten or advanced tips cannot be cleared by the automated ancestry-only path."
+    },
+    {
+      "package": "local-handoff",
+      "sections": [
+        "Modes",
+        "4. Choose the depth and write the continuation context",
+        "5. Use this structure",
+        "5b. Max-verbosity expansion",
+        "Max-Verbosity Guardrails"
+      ],
+      "contractIds": [
+        "handoff-depth",
+        "handoff-authority",
+        "checkpoint"
+      ],
+      "rationale": "Retain restart-critical inline evidence and uncertainty in a max handoff; runtime headings or checkpoint storage alone do not prove editorial completeness."
+    },
+    {
+      "package": "local-handoff",
+      "sections": [
+        "1. Resolve the target working area",
+        "2. Ensure local storage exists",
+        "3. Name the handoff deterministically"
+      ],
+      "contractIds": [
+        "handoff-storage"
+      ],
+      "rationale": "Verify actual visibility and stream ownership, preserve unique predecessors and keep handoffs outside task/knowledge/producer bundles."
+    },
+    {
+      "package": "local-pickup",
+      "sections": [
+        "1. Find the right handoff",
+        "Fallbacks"
+      ],
+      "contractIds": [
+        "pickup-select",
+        "pickup-act",
+        "resume"
+      ],
+      "rationale": "Select current stream evidence, report duplicate/misplaced records and rebuild from canonical truth if no valid handoff exists."
+    },
+    {
+      "package": "local-pickup",
+      "sections": [
+        "2. Read the canonical context",
+        "3. Verify the handoff against current state",
+        "4. Rebuild the immediate work context"
+      ],
+      "contractIds": [
+        "pickup-verify",
+        "resume"
+      ],
+      "rationale": "Revalidate saved references, runtime claims, permissions and experiment constraints; missing permission authority cannot be replaced by current implementation."
+    },
+    {
+      "package": "repo-session-alignment",
+      "sections": [
+        "Workflow",
+        "Process",
+        "Reconciliation order",
+        "Knowledge and task sequence"
+      ],
+      "contractIds": [
+        "alignment",
+        "closure-report"
+      ],
+      "rationale": "Task and knowledge lanes remain independent and absent lanes need no bootstrap; required promotion precedes final task acceptance."
+    }
+  ]
+}

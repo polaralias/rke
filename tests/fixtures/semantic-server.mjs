@@ -1,0 +1,12 @@
+import { pathToFileURL, fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+let buffer=Buffer.alloc(0),sourceUri;
+const send=payload=>{const body=JSON.stringify(payload);process.stdout.write(`Content-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`);};
+process.stdin.on("data",chunk=>{buffer=Buffer.concat([buffer,chunk]);for(;;){const split=buffer.indexOf("\r\n\r\n");if(split<0)return;const length=Number(/Content-Length:\s*(\d+)/i.exec(buffer.subarray(0,split).toString())[1]);if(buffer.length<split+4+length)return;const message=JSON.parse(buffer.subarray(split+4,split+4+length).toString());buffer=buffer.subarray(split+4+length);
+  if(message.method==="textDocument/didOpen")sourceUri=message.params.textDocument.uri;
+  if(message.id===undefined)continue;
+  if(message.method==="initialize")send({jsonrpc:"2.0",id:message.id,result:{capabilities:{callHierarchyProvider:true}}});
+  else if(message.method==="textDocument/prepareCallHierarchy")send({jsonrpc:"2.0",id:message.id,result:[{name:"caller",uri:sourceUri,kind:12,range:{start:{line:0,character:0},end:{line:1,character:0}},selectionRange:{start:{line:0,character:16},end:{line:0,character:22}}}]});
+  else if(message.method==="callHierarchy/outgoingCalls")send({jsonrpc:"2.0",id:message.id,result:[{to:{name:"helper",uri:pathToFileURL(join(dirname(fileURLToPath(sourceUri)),"helper.ts")).href,kind:12,selectionRange:{start:{line:0,character:16},end:{line:0,character:22}}},fromRanges:[]},{to:{name:"outside",uri:"file:///outside.ts"},fromRanges:[]}]});
+  else send({jsonrpc:"2.0",id:message.id,result:null});
+}});

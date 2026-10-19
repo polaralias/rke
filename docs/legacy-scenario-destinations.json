@@ -1,0 +1,1252 @@
+{
+  "schema": 1,
+  "authority": "authored-source-mapping-not-behavioural-proof",
+  "cases": {
+    "engineering-workflow-orchestrator:3": {
+      "contractIds": [
+        "routing",
+        "proportion"
+      ]
+    },
+    "engineering-workflow-orchestrator:9": {
+      "contractIds": [
+        "handoff-hooks",
+        "continuity",
+        "resume"
+      ],
+      "preservation": {
+        "status": "conditional-integration-not-bundled",
+        "originalOutcome": "A verified host flow can connect pre-compaction capture, transcript backup, a richer handoff, manifest and short restart supplement.",
+        "currentBoundary": "Only the compact checkpoint helper is packaged. Transcript backup, background authoring and post-compaction restoration require separately verified host integration; manual handoff/pickup remains supported.",
+        "unproven": "No automatic transcript-backup/subagent/manifest/restoration flow is claimed implemented or qualified."
+      }
+    },
+    "engineering-workflow-orchestrator:18": {
+      "contractIds": [
+        "pickup-select",
+        "pickup-act"
+      ]
+    },
+    "engineering-workflow-orchestrator:24": {
+      "contractIds": [
+        "pickup-verify",
+        "phase"
+      ]
+    },
+    "engineering-workflow-orchestrator:30": {
+      "contractIds": [
+        "tasks",
+        "ownership",
+        "alignment"
+      ]
+    },
+    "engineering-workflow-orchestrator:37": {
+      "contractIds": [
+        "state",
+        "authority"
+      ]
+    },
+    "engineering-workflow-orchestrator:44": {
+      "contractIds": [
+        "alignment",
+        "closure-report"
+      ]
+    },
+    "engineering-workflow-orchestrator:52": {
+      "contractIds": [
+        "packages",
+        "topology",
+        "integration"
+      ]
+    },
+    "engineering-workflow-orchestrator:60": {
+      "contractIds": [
+        "integration",
+        "cleanup",
+        "alignment"
+      ]
+    },
+    "engineering-workflow-orchestrator:67": {
+      "contractIds": [
+        "explain",
+        "explanation-layers",
+        "alignment"
+      ],
+      "preservation": {
+        "status": "outcome-retained-output-ritual-retired",
+        "originalOutcome": "Give a causal explanation and safe optional local record without waiting on questions.",
+        "currentBoundary": "Questions are invited when helpful; a mandatory invitation or fixed signature is not required. A local note remains optional and safety-checked.",
+        "unproven": "Absence of an invitation sentence is not evidence that comprehension failed."
+      }
+    },
+    "engineering-workflow-orchestrator:75": {
+      "contractIds": [
+        "followup",
+        "documentation",
+        "alignment"
+      ]
+    },
+    "engineering-workflow-orchestrator:83": {
+      "contractIds": [
+        "authority"
+      ]
+    },
+    "repo-dissection:3": {
+      "contractIds": [
+        "map",
+        "dissection-exit"
+      ]
+    },
+    "repo-dissection:10": {
+      "contractIds": [
+        "runtime",
+        "trust"
+      ]
+    },
+    "repo-dissection:16": {
+      "contractIds": [
+        "runtime"
+      ]
+    },
+    "repo-dissection:22": {
+      "contractIds": [
+        "dissection-exit"
+      ]
+    },
+    "repo-dissection:28": {
+      "contractIds": [
+        "foundation",
+        "metadata"
+      ]
+    },
+    "repo-dissection:36": {
+      "contractIds": [
+        "producer",
+        "foundation"
+      ]
+    },
+    "repo-dissection:43": {
+      "contractIds": [
+        "metadata"
+      ]
+    },
+    "repo-dissection:48": {
+      "contractIds": [
+        "authority"
+      ]
+    },
+    "query-to-knowledge:3": {
+      "contractIds": [
+        "questions",
+        "answers"
+      ]
+    },
+    "query-to-knowledge:10": {
+      "contractIds": [
+        "facts"
+      ]
+    },
+    "query-to-knowledge:16": {
+      "contractIds": [
+        "facts",
+        "questions"
+      ]
+    },
+    "query-to-knowledge:22": {
+      "contractIds": [
+        "packages",
+        "answers"
+      ]
+    },
+    "query-to-knowledge:28": {
+      "contractIds": [
+        "answers",
+        "promotion"
+      ]
+    },
+    "query-to-knowledge:36": {
+      "contractIds": [
+        "facts",
+        "promotion"
+      ]
+    },
+    "query-to-knowledge:43": {
+      "contractIds": [
+        "answers",
+        "producer"
+      ]
+    },
+    "query-to-knowledge:48": {
+      "contractIds": [
+        "authority"
+      ]
+    },
+    "repo-knowledge-engineering:3": {
+      "contractIds": [
+        "graph"
+      ]
+    },
+    "repo-knowledge-engineering:15": {
+      "contractIds": [
+        "knowledge-scope",
+        "knowledge-checks"
+      ]
+    },
+    "repo-knowledge-engineering:22": {
+      "contractIds": [
+        "knowledge-scope",
+        "producer"
+      ]
+    },
+    "repo-knowledge-engineering:28": {
+      "contractIds": [
+        "facts",
+        "promotion"
+      ]
+    },
+    "repo-knowledge-engineering:34": {
+      "contractIds": [
+        "public",
+        "tracker"
+      ]
+    },
+    "repo-knowledge-engineering:40": {
+      "contractIds": [
+        "knowledge-scope",
+        "runtime"
+      ]
+    },
+    "repo-knowledge-engineering:47": {
+      "contractIds": [
+        "knowledge-scope",
+        "contract"
+      ]
+    },
+    "repo-knowledge-engineering:55": {
+      "contractIds": [
+        "knowledge-scope",
+        "proportion"
+      ]
+    },
+    "repo-knowledge-engineering:62": {
+      "contractIds": [
+        "knowledge-scope",
+        "packages"
+      ]
+    },
+    "repo-knowledge-engineering:68": {
+      "contractIds": [
+        "knowledge-scope",
+        "knowledge-checks"
+      ]
+    },
+    "repo-knowledge-engineering:75": {
+      "contractIds": [
+        "producer",
+        "tracker"
+      ]
+    },
+    "repo-knowledge-engineering:82": {
+      "contractIds": [
+        "tasks",
+        "producer"
+      ]
+    },
+    "repo-knowledge-engineering:89": {
+      "contractIds": [
+        "foundation",
+        "metadata"
+      ]
+    },
+    "repo-knowledge-engineering:98": {
+      "contractIds": [
+        "producer",
+        "metadata"
+      ]
+    },
+    "repo-knowledge-engineering:105": {
+      "contractIds": [
+        "metadata"
+      ]
+    },
+    "repo-knowledge-engineering:112": {
+      "contractIds": [
+        "producer"
+      ]
+    },
+    "repo-knowledge-engineering:119": {
+      "contractIds": [
+        "task-evidence",
+        "promotion"
+      ]
+    },
+    "repo-knowledge-engineering:131": {
+      "contractIds": [
+        "producer"
+      ]
+    },
+    "repo-knowledge-engineering:137": {
+      "contractIds": [
+        "knowledge-checks",
+        "spec-view"
+      ]
+    },
+    "repo-knowledge-engineering:146": {
+      "contractIds": [
+        "documentation",
+        "promotion"
+      ]
+    },
+    "repo-knowledge-engineering:156": {
+      "contractIds": [
+        "streamline",
+        "knowledge-checks"
+      ]
+    },
+    "repo-knowledge-engineering:167": {
+      "contractIds": [
+        "streamline"
+      ]
+    },
+    "repo-knowledge-engineering:176": {
+      "contractIds": [
+        "metadata",
+        "evidence"
+      ]
+    },
+    "repo-knowledge-engineering:185": {
+      "contractIds": [
+        "supersession"
+      ]
+    },
+    "repo-knowledge-engineering:195": {
+      "contractIds": [
+        "handoff-storage",
+        "producer"
+      ]
+    },
+    "repo-knowledge-engineering:204": {
+      "contractIds": [
+        "authority"
+      ]
+    },
+    "repo-knowledge-engineering:214": {
+      "contractIds": [
+        "followup",
+        "documentation",
+        "promotion"
+      ]
+    },
+    "doc-driven-development:3": {
+      "contractIds": [
+        "contract"
+      ]
+    },
+    "doc-driven-development:10": {
+      "contractIds": [
+        "packages"
+      ]
+    },
+    "doc-driven-development:17": {
+      "contractIds": [
+        "acceptance",
+        "packages"
+      ]
+    },
+    "doc-driven-development:24": {
+      "contractIds": [
+        "facts",
+        "questions"
+      ]
+    },
+    "doc-driven-development:31": {
+      "contractIds": [
+        "contract",
+        "producer"
+      ]
+    },
+    "doc-driven-development:37": {
+      "contractIds": [
+        "packages",
+        "publication"
+      ]
+    },
+    "doc-driven-development:44": {
+      "contractIds": [
+        "publication",
+        "packages"
+      ]
+    },
+    "doc-driven-development:50": {
+      "contractIds": [
+        "packages"
+      ]
+    },
+    "doc-driven-development:56": {
+      "contractIds": [
+        "tasks",
+        "task-evidence"
+      ]
+    },
+    "doc-driven-development:63": {
+      "contractIds": [
+        "packages",
+        "topology"
+      ]
+    },
+    "doc-driven-development:71": {
+      "contractIds": [
+        "packages",
+        "topology"
+      ]
+    },
+    "doc-driven-development:76": {
+      "contractIds": [
+        "authority"
+      ]
+    },
+    "repo-task-lifecycle:3": {
+      "contractIds": [
+        "tasks",
+        "graph",
+        "tasks-adapter",
+        "spec-relations"
+      ],
+      "preservation": {
+        "status": "independent-producer-current-contract",
+        "originalOutcome": "Authoritative CLI setup and strict relationship validation remain available.",
+        "currentBoundary": "Use the current independent Tasks CLI/specification; the archived bundled helper is not an installed EWF fallback.",
+        "unproven": "Missing CLI must remain an explicit validation gap, not a fabricated fallback pass."
+      }
+    },
+    "repo-task-lifecycle:16": {
+      "contractIds": [
+        "tasks",
+        "spec-bundle"
+      ]
+    },
+    "repo-task-lifecycle:27": {
+      "contractIds": [
+        "tasks",
+        "spec-bundle"
+      ]
+    },
+    "repo-task-lifecycle:37": {
+      "contractIds": [
+        "tasks"
+      ]
+    },
+    "repo-task-lifecycle:47": {
+      "contractIds": [
+        "tasks",
+        "facts",
+        "acceptance"
+      ]
+    },
+    "repo-task-lifecycle:58": {
+      "contractIds": [
+        "effort",
+        "spec-workstream",
+        "ownership"
+      ]
+    },
+    "repo-task-lifecycle:68": {
+      "contractIds": [
+        "effort",
+        "spec-live",
+        "spec-rollup"
+      ]
+    },
+    "repo-task-lifecycle:79": {
+      "contractIds": [
+        "effort",
+        "spec-time",
+        "spec-manual"
+      ]
+    },
+    "repo-task-lifecycle:89": {
+      "contractIds": [
+        "effort",
+        "spec-backfill"
+      ]
+    },
+    "repo-task-lifecycle:100": {
+      "contractIds": [
+        "effort",
+        "spec-points"
+      ]
+    },
+    "repo-task-lifecycle:110": {
+      "contractIds": [
+        "done",
+        "spec-lifecycle",
+        "spec-rollup"
+      ]
+    },
+    "repo-task-lifecycle:120": {
+      "contractIds": [
+        "tracker",
+        "spec-trackers",
+        "spec-bindings",
+        "spec-providers"
+      ]
+    },
+    "repo-task-lifecycle:133": {
+      "contractIds": [
+        "tracker",
+        "spec-links"
+      ]
+    },
+    "repo-task-lifecycle:144": {
+      "contractIds": [
+        "tracker",
+        "spec-egress"
+      ]
+    },
+    "repo-task-lifecycle:155": {
+      "contractIds": [
+        "authority",
+        "spec-agent",
+        "spec-egress"
+      ]
+    },
+    "repo-task-lifecycle:166": {
+      "contractIds": [
+        "effort",
+        "task-evidence",
+        "handoff-storage",
+        "pickup-verify"
+      ]
+    },
+    "repo-task-lifecycle:177": {
+      "contractIds": [
+        "graph",
+        "spec-conformance"
+      ]
+    },
+    "repo-task-lifecycle:187": {
+      "contractIds": [
+        "tracker",
+        "spec-trackers"
+      ]
+    },
+    "repo-task-lifecycle:199": {
+      "contractIds": [
+        "tasks-adapter",
+        "tasks-validation"
+      ],
+      "preservation": {
+        "status": "independent-producer-current-contract",
+        "originalOutcome": "Installed CLI behavior is tested against the actual current producer.",
+        "currentBoundary": "Schemas, command syntax and validation belong to the independent producer. Pinned external section evidence is supplied for review.",
+        "unproven": "A version string or archived helper does not qualify the installed producer."
+      }
+    },
+    "repo-task-lifecycle:209": {
+      "contractIds": [
+        "spec-view",
+        "reader"
+      ]
+    },
+    "repo-task-lifecycle:232": {
+      "contractIds": [
+        "knowledge-checks",
+        "spec-view"
+      ]
+    },
+    "repo-task-lifecycle:242": {
+      "contractIds": [
+        "knowledge-checks",
+        "evidence"
+      ]
+    },
+    "worktree-task-coordinator:3": {
+      "contractIds": [
+        "topology",
+        "ownership"
+      ]
+    },
+    "worktree-task-coordinator:10": {
+      "contractIds": [
+        "ownership"
+      ]
+    },
+    "worktree-task-coordinator:16": {
+      "contractIds": [
+        "authority",
+        "cleanup"
+      ]
+    },
+    "worktree-task-coordinator:22": {
+      "contractIds": [
+        "integration"
+      ]
+    },
+    "worktree-task-coordinator:29": {
+      "contractIds": [
+        "cleanup"
+      ]
+    },
+    "worktree-task-coordinator:35": {
+      "contractIds": [
+        "topology",
+        "integration",
+        "cleanup"
+      ]
+    },
+    "worktree-task-coordinator:43": {
+      "contractIds": [
+        "cleanup",
+        "runtime-cleanup"
+      ],
+      "preservation": {
+        "status": "method-retained-runtime-narrowed",
+        "originalOutcome": "Exact rewritten-history integration proof may permit an authorized clean local branch deletion.",
+        "currentBoundary": "The method retains verified rewrite-chain/provider proof under established authority; automated runtime cleanup accepts ancestry proof only and retains rewritten tips.",
+        "unproven": "Do not count a squash/rebase case as a passing automated cleanup path."
+      }
+    },
+    "worktree-task-coordinator:50": {
+      "contractIds": [
+        "cleanup",
+        "runtime-cleanup"
+      ]
+    },
+    "worktree-task-coordinator:57": {
+      "contractIds": [
+        "topology",
+        "ownership",
+        "integration"
+      ]
+    },
+    "worktree-task-coordinator:65": {
+      "contractIds": [
+        "topology",
+        "packages"
+      ]
+    },
+    "worktree-task-coordinator:71": {
+      "contractIds": [
+        "integration",
+        "cleanup"
+      ]
+    },
+    "worktree-task-coordinator:78": {
+      "contractIds": [
+        "integration",
+        "cleanup"
+      ]
+    },
+    "worktree-task-coordinator:85": {
+      "contractIds": [
+        "ownership"
+      ]
+    },
+    "worktree-task-coordinator:92": {
+      "contractIds": [
+        "integration"
+      ]
+    },
+    "worktree-task-coordinator:98": {
+      "contractIds": [
+        "authority"
+      ]
+    },
+    "repo-change-comprehension:3": {
+      "contractIds": [
+        "explain",
+        "explanation-layers"
+      ]
+    },
+    "repo-change-comprehension:14": {
+      "contractIds": [
+        "explain"
+      ]
+    },
+    "repo-change-comprehension:24": {
+      "contractIds": [
+        "proportion",
+        "explanation-layers"
+      ]
+    },
+    "repo-change-comprehension:33": {
+      "contractIds": [
+        "evidence"
+      ]
+    },
+    "repo-change-comprehension:42": {
+      "contractIds": [
+        "explanation-layers"
+      ]
+    },
+    "repo-change-comprehension:52": {
+      "contractIds": [
+        "followup"
+      ]
+    },
+    "repo-change-comprehension:62": {
+      "contractIds": [
+        "followup"
+      ]
+    },
+    "repo-change-comprehension:72": {
+      "contractIds": [
+        "followup",
+        "documentation"
+      ]
+    },
+    "repo-change-comprehension:82": {
+      "contractIds": [
+        "followup",
+        "implementation"
+      ]
+    },
+    "repo-change-comprehension:92": {
+      "contractIds": [
+        "boundary",
+        "explain"
+      ]
+    },
+    "repo-change-comprehension:101": {
+      "contractIds": [
+        "authority"
+      ]
+    },
+    "repo-change-comprehension:111": {
+      "contractIds": [
+        "followup",
+        "facts"
+      ]
+    },
+    "repo-session-alignment:3": {
+      "contractIds": [
+        "alignment"
+      ]
+    },
+    "repo-session-alignment:12": {
+      "contractIds": [
+        "alignment",
+        "documentation"
+      ]
+    },
+    "repo-session-alignment:19": {
+      "contractIds": [
+        "alignment",
+        "closure-report"
+      ]
+    },
+    "repo-session-alignment:25": {
+      "contractIds": [
+        "alignment",
+        "producer"
+      ]
+    },
+    "repo-session-alignment:32": {
+      "contractIds": [
+        "task-evidence",
+        "done",
+        "alignment"
+      ]
+    },
+    "repo-session-alignment:38": {
+      "contractIds": [
+        "closure-report",
+        "handoff-storage"
+      ]
+    },
+    "repo-session-alignment:45": {
+      "contractIds": [
+        "tracker",
+        "publication"
+      ]
+    },
+    "repo-session-alignment:52": {
+      "contractIds": [
+        "authority"
+      ]
+    },
+    "repo-session-alignment:59": {
+      "contractIds": [
+        "boundary",
+        "alignment"
+      ]
+    },
+    "repo-session-alignment:65": {
+      "contractIds": [
+        "closure-report",
+        "proportion"
+      ]
+    },
+    "repo-session-alignment:72": {
+      "contractIds": [
+        "graph",
+        "metadata",
+        "task-evidence"
+      ]
+    },
+    "repo-session-alignment:79": {
+      "contractIds": [
+        "explain",
+        "alignment"
+      ]
+    },
+    "repo-session-alignment:87": {
+      "contractIds": [
+        "followup",
+        "alignment"
+      ]
+    },
+    "local-handoff:3": {
+      "contractIds": [
+        "handoff-depth",
+        "handoff-storage"
+      ]
+    },
+    "local-handoff:10": {
+      "contractIds": [
+        "handoff-storage"
+      ]
+    },
+    "local-handoff:17": {
+      "contractIds": [
+        "handoff-depth"
+      ]
+    },
+    "local-handoff:22": {
+      "contractIds": [
+        "alignment",
+        "handoff-depth"
+      ]
+    },
+    "local-handoff:31": {
+      "contractIds": [
+        "handoff-depth",
+        "handoff-authority"
+      ]
+    },
+    "local-handoff:39": {
+      "contractIds": [
+        "handoff-hooks",
+        "continuity",
+        "checkpoint"
+      ],
+      "preservation": {
+        "status": "conditional-integration-not-bundled",
+        "originalOutcome": "A hook can leave a source-backed max handoff non-interactively.",
+        "currentBoundary": "Hooks checkpoint compact state. Max handoff quality remains authored method work; automatic host orchestration is conditional and not supplied by the helper.",
+        "unproven": "Generated headings and saved checkpoint state do not establish a complete automatic max handoff."
+      }
+    },
+    "local-handoff:46": {
+      "contractIds": [
+        "handoff-storage"
+      ]
+    },
+    "local-handoff:52": {
+      "contractIds": [
+        "handoff-storage"
+      ]
+    },
+    "local-handoff:62": {
+      "contractIds": [
+        "handoff-storage"
+      ]
+    },
+    "local-handoff:70": {
+      "contractIds": [
+        "handoff-storage",
+        "pickup-verify"
+      ]
+    },
+    "local-handoff:78": {
+      "contractIds": [
+        "handoff-authority",
+        "authority"
+      ]
+    },
+    "local-handoff:84": {
+      "contractIds": [
+        "proportion",
+        "handoff-depth"
+      ]
+    },
+    "local-handoff:89": {
+      "contractIds": [
+        "authority"
+      ]
+    },
+    "local-pickup:3": {
+      "contractIds": [
+        "pickup-verify",
+        "pickup-act"
+      ]
+    },
+    "local-pickup:10": {
+      "contractIds": [
+        "pickup-select"
+      ]
+    },
+    "local-pickup:16": {
+      "contractIds": [
+        "pickup-verify",
+        "pickup-act"
+      ]
+    },
+    "local-pickup:22": {
+      "contractIds": [
+        "pickup-select",
+        "resume"
+      ]
+    },
+    "local-pickup:29": {
+      "contractIds": [
+        "pickup-select",
+        "resume"
+      ]
+    },
+    "local-pickup:35": {
+      "contractIds": [
+        "pickup-verify"
+      ]
+    },
+    "local-pickup:41": {
+      "contractIds": [
+        "pickup-select"
+      ]
+    },
+    "local-pickup:49": {
+      "contractIds": [
+        "pickup-verify"
+      ]
+    },
+    "local-pickup:57": {
+      "contractIds": [
+        "pickup-select"
+      ]
+    },
+    "local-pickup:65": {
+      "contractIds": [
+        "pickup-select",
+        "handoff-storage"
+      ]
+    },
+    "local-pickup:73": {
+      "contractIds": [
+        "pickup-act",
+        "map"
+      ]
+    },
+    "local-pickup:79": {
+      "contractIds": [
+        "pickup-verify",
+        "pickup-act"
+      ]
+    },
+    "local-pickup:84": {
+      "contractIds": [
+        "authority"
+      ]
+    },
+    "repo-publish-finaliser:3": {
+      "contractIds": [
+        "public"
+      ]
+    },
+    "repo-publish-finaliser:10": {
+      "contractIds": [
+        "scanner"
+      ]
+    },
+    "repo-publish-finaliser:17": {
+      "contractIds": [
+        "public",
+        "streamline"
+      ]
+    },
+    "repo-publish-finaliser:23": {
+      "contractIds": [
+        "public",
+        "tracker"
+      ]
+    },
+    "repo-publish-finaliser:29": {
+      "contractIds": [
+        "knowledge-checks",
+        "public"
+      ]
+    },
+    "repo-publish-finaliser:35": {
+      "contractIds": [
+        "public"
+      ]
+    },
+    "repo-publish-finaliser:42": {
+      "contractIds": [
+        "public"
+      ]
+    },
+    "repo-publish-finaliser:48": {
+      "contractIds": [
+        "public"
+      ]
+    },
+    "repo-publish-finaliser:54": {
+      "contractIds": [
+        "public"
+      ]
+    },
+    "repo-publish-finaliser:61": {
+      "contractIds": [
+        "public"
+      ],
+      "preservation": {
+        "status": "specific-editorial-default-not-prescribed",
+        "originalOutcome": "Use an existing suitable README image where it improves the requested public presentation.",
+        "currentBoundary": "The public-readiness method retains README judgement; it does not prescribe a separate banner-discovery routine. The explicit user request still governs its requested image.",
+        "unproven": "The narrower generic guidance is not independent acceptance of the former presentation default."
+      }
+    },
+    "repo-publish-finaliser:66": {
+      "contractIds": [
+        "authority"
+      ]
+    },
+    "tracker-publisher:3": {
+      "contractIds": [
+        "publication",
+        "tracker"
+      ]
+    },
+    "tracker-publisher:10": {
+      "contractIds": [
+        "publication"
+      ]
+    },
+    "tracker-publisher:16": {
+      "contractIds": [
+        "publication",
+        "tracker"
+      ]
+    },
+    "tracker-publisher:22": {
+      "contractIds": [
+        "publication",
+        "acceptance"
+      ]
+    },
+    "tracker-publisher:28": {
+      "contractIds": [
+        "tasks"
+      ]
+    },
+    "tracker-publisher:34": {
+      "contractIds": [
+        "tracker",
+        "spec-bindings"
+      ]
+    },
+    "tracker-publisher:40": {
+      "contractIds": [
+        "authority"
+      ]
+    },
+    "test-plan-writer:10": {
+      "contractIds": [
+        "proportion"
+      ]
+    },
+    "pre-separation-ewf:3": {
+      "contractIds": [
+        "identity",
+        "boundary",
+        "proportion"
+      ]
+    },
+    "pre-separation-ewf:10": {
+      "contractIds": [
+        "routing",
+        "proportion"
+      ]
+    },
+    "pre-separation-ewf:29": {
+      "contractIds": [
+        "phase",
+        "routing"
+      ]
+    },
+    "pre-separation-ewf:39": {
+      "contractIds": [
+        "map",
+        "runtime",
+        "contract",
+        "proportion"
+      ]
+    },
+    "pre-separation-ewf:59": {
+      "contractIds": [
+        "facts",
+        "questions",
+        "answers"
+      ]
+    },
+    "pre-separation-ewf:80": {
+      "contractIds": [
+        "start",
+        "state"
+      ]
+    },
+    "pre-separation-ewf:97": {
+      "contractIds": [
+        "modes",
+        "tasks",
+        "proportion"
+      ]
+    },
+    "pre-separation-ewf:126": {
+      "contractIds": [
+        "gates",
+        "close",
+        "alignment"
+      ]
+    },
+    "pre-separation-ewf:154": {
+      "contractIds": [
+        "host-hooks",
+        "continuity",
+        "authority"
+      ]
+    },
+    "pre-separation-ewf:172": {
+      "contractIds": [
+        "metadata",
+        "streamline",
+        "supersession"
+      ]
+    },
+    "pre-separation-ewf:209": {
+      "contractIds": [
+        "proportion",
+        "state"
+      ]
+    },
+    "pre-separation-ewf:219": {
+      "contractIds": [
+        "context",
+        "context-impact",
+        "context-verify"
+      ]
+    },
+    "pre-separation-ewf:247": {
+      "contractIds": [
+        "proportion",
+        "start"
+      ]
+    },
+    "pre-separation-ewf:259": {
+      "contractIds": [
+        "context-boundary",
+        "context-benchmark"
+      ]
+    },
+    "pre-separation-ewf:270": {
+      "contractIds": [
+        "host",
+        "authority"
+      ]
+    },
+    "pre-separation-ewf:292": {
+      "contractIds": [
+        "assess",
+        "apply",
+        "context-verify"
+      ]
+    },
+    "pre-separation-ewf:312": {
+      "contractIds": [
+        "metadata",
+        "bootstrap",
+        "apply"
+      ]
+    },
+    "pre-separation-ewf:335": {
+      "contractIds": [
+        "documentation",
+        "assess",
+        "machine-close"
+      ]
+    },
+    "pre-separation-ewf:366": {
+      "contractIds": [
+        "host-install",
+        "host-context",
+        "host-hooks"
+      ]
+    },
+    "pre-separation-ewf:413": {
+      "contractIds": [
+        "experiment",
+        "handoff-authority",
+        "checkpoint"
+      ]
+    },
+    "pre-separation-ewf:518": {
+      "contractIds": [
+        "alignment",
+        "effort",
+        "cleanup",
+        "publication",
+        "explain"
+      ]
+    },
+    "pre-separation-ewf:646": {
+      "contractIds": [
+        "application",
+        "study",
+        "coverage"
+      ]
+    },
+    "pre-separation-ewf:654": {
+      "contractIds": [
+        "structure",
+        "parser",
+        "reviews"
+      ]
+    },
+    "pre-separation-ewf:668": {
+      "contractIds": [
+        "study",
+        "coverage"
+      ]
+    },
+    "pre-separation-ewf:681": {
+      "contractIds": [
+        "workspace",
+        "context-impact"
+      ]
+    },
+    "pre-separation-ewf:696": {
+      "contractIds": [
+        "parser",
+        "structure"
+      ]
+    },
+    "pre-separation-ewf:710": {
+      "contractIds": [
+        "host-install",
+        "host-hooks"
+      ]
+    },
+    "pre-separation-ewf:726": {
+      "contractIds": [
+        "reader",
+        "workspace"
+      ]
+    },
+    "pre-separation-ewf:739": {
+      "contractIds": [
+        "live-reader",
+        "presentation"
+      ]
+    }
+  }
+}

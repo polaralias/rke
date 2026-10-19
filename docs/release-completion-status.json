@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 3,
+  "status": "initial-development",
+  "authority": "initial-candidate-declaration-not-a-release-receipt",
+  "releaseApproved": false,
+  "runtimeVersion": "0.1.0",
+  "skillVersion": "6.2.1",
+  "adapterVersion": "1.2.1",
+  "tasksSourceCommit": "99a2907181c029446ffaf9c6bff664a7b0ff487c",
+  "gates": [
+    {
+      "id": "G0",
+      "status": "open",
+      "reason": "Independent methodology preservation acceptance remains pending."
+    },
+    {
+      "id": "G1",
+      "status": "open",
+      "reason": "Current repository-intelligence journeys need independent outcome qualification."
+    },
+    {
+      "id": "G2",
+      "status": "open",
+      "reason": "Supported-language and representative-project qualification remains pending."
+    },
+    {
+      "id": "G3",
+      "status": "open",
+      "reason": "Live host selection and installed-system composition remain pending."
+    },
+    {
+      "id": "G4",
+      "status": "open",
+      "reason": "Current reader browser and human utility qualification remains pending."
+    },
+    {
+      "id": "G5",
+      "status": "open",
+      "reason": "Controlled effectiveness and cost evaluation remains pending."
+    },
+    {
+      "id": "G6",
+      "status": "open",
+      "reason": "Exact committed artifact, supported hosted CI and packed installation need qualification."
+    }
+  ]
+}

@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "baseline": {
+    "version": "0.1.0",
+    "source": "repository-intelligence-acceptance",
+    "review": "independently-authored-requirements"
+  },
+  "scenarios": [
+    {
+      "id": "PAR-01",
+      "owner": "retrieval",
+      "prompt": "Where is invoice rounding implemented?",
+      "positive": "Invoice and rounding sources rank within five with locations.",
+      "adversarial": "Unrelated same-name prose cannot establish responsibility.",
+      "tests": [
+        "targeted-parity.test.ts",
+        "engine.test.ts"
+      ],
+      "status": "partial",
+      "qualification": "held-out-agent"
+    },
+    {
+      "id": "PAR-02",
+      "owner": "structure",
+      "prompt": "Show invoice API and callers of rounding.",
+      "positive": "Qualified definitions and caller identity are preserved.",
+      "adversarial": "A shadowed parameter named round stays unresolved.",
+      "tests": [
+        "targeted-parity.test.ts",
+        "language-fidelity.test.ts"
+      ],
+      "status": "partial",
+      "qualification": "language-and-project"
+    },
+    {
+      "id": "PAR-03",
+      "owner": "structure",
+      "prompt": "What consumers can this change affect?",
+      "positive": "Qualified dependency evidence reaches the relevant callers.",
+      "adversarial": "Dynamic calls remain candidates, not certain edges.",
+      "tests": [
+        "language-fidelity.test.ts",
+        "workspace.test.ts"
+      ],
+      "status": "partial",
+      "qualification": "installed-agent"
+    },
+    {
+      "id": "PAR-04",
+      "owner": "freshness",
+      "prompt": "Query after editing, renaming and deleting the implementation.",
+      "positive": "The next query reflects source changes.",
+      "adversarial": "Deleted symbols cannot survive as current evidence.",
+      "tests": [
+        "targeted-parity.test.ts",
+        "engine.test.ts",
+        "explanations.test.ts"
+      ],
+      "status": "partial",
+      "qualification": "host-refresh"
+    },
+    {
+      "id": "PAR-05",
+      "owner": "explanations",
+      "prompt": "Explain how these subsystems cooperate.",
+      "positive": "Endpoint evidence or explicit connected integration quotes are accepted as inferred.",
+      "adversarial": "A/B relation supported only by unrelated C is refused.",
+      "tests": [
+        "explanations.test.ts",
+        "reader-code.test.ts"
+      ],
+      "status": "partial",
+      "qualification": "consuming-agent"
+    },
+    {
+      "id": "PAR-06",
+      "owner": "EWF-hosts",
+      "prompt": "Fix this named file, then explain the change.",
+      "positive": "Correct proportionate EWF selection and source-backed RCC.",
+      "adversarial": "Missing RKE does not refuse ordinary engineering or invent state.",
+      "tests": [
+        "host-lifecycle.test.ts",
+        "legacy-parity.test.ts"
+      ],
+      "status": "partial",
+      "qualification": "live-host-and-agent"
+    },
+    {
+      "id": "PAR-07",
+      "owner": "workspace",
+      "prompt": "Find the same symbol across my selected repositories.",
+      "positive": "Each result retains its root identity and revision.",
+      "adversarial": "Denied or drifted roots cannot become clean empty success.",
+      "tests": [
+        "workspace.test.ts",
+        "root-boundary.test.ts"
+      ],
+      "status": "partial",
+      "qualification": "multi-root-agent"
+    },
+    {
+      "id": "PAR-08",
+      "owner": "reader",
+      "prompt": "Compare old and current code and follow its evidence.",
+      "positive": "Source location, comparison and historical identity survive navigation.",
+      "adversarial": "Hostile markup is inert and offline reader requests no remote resources.",
+      "tests": [
+        "reader.test.ts",
+        "reader-changes.test.ts",
+        "reader-live.test.ts"
+      ],
+      "status": "partial",
+      "qualification": "browser-and-human"
+    },
+    {
+      "id": "PAR-09",
+      "owner": "OKF",
+      "prompt": "Promote this reviewed conclusion and reconcile its source freshness.",
+      "positive": "Conformance, bindings and reviewed promotion retain independent evidence.",
+      "adversarial": "An inferred cache cannot mark canonical knowledge verified.",
+      "tests": [
+        "claim-bindings.test.ts",
+        "operations.test.ts"
+      ],
+      "status": "partial",
+      "qualification": "agent-composition"
+    },
+    {
+      "id": "PAR-10",
+      "owner": "OKF-Tasks",
+      "prompt": "Optionally track, validate and reconcile this engineering task.",
+      "positive": "Real strict validation, effort closure and provider readback execute.",
+      "adversarial": "None mode never calls Tasks; preview and revision conflict never write.",
+      "tests": [
+        "legacy-parity.contract.ts",
+        "security.test.ts"
+      ],
+      "status": "partial",
+      "qualification": "coordinated-ecosystem"
+    }
+  ]
+}

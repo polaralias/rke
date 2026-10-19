@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "cases": [
+    {
+      "id": "typescript-ordinary-extension",
+      "category": "typescript-ordinary",
+      "prompt": "Add a pause action through the existing action-registration route. Preserve the single dispatcher, add a focused test, run `node --test tests/actions.test.mjs`, and report the extension point and evidence. Use ordinary repository tools for this comparison; do not use RKE or create workflow state.",
+      "setup": {
+        "package.json": "{\"type\":\"module\"}\n",
+        "src/registry.mjs": "const handlers = new Map();\nexport function register(name, handler) { handlers.set(name, handler); }\nexport function dispatch(name, payload) { return handlers.get(name)?.(payload) ?? null; }\n",
+        "src/actions/resume.mjs": "import { register } from '../registry.mjs';\nregister('resume', payload => ({ status: 'resumed', id: payload.id }));\n",
+        "src/index.mjs": "import './actions/resume.mjs';\nexport { dispatch } from './registry.mjs';\n",
+        "tests/actions.test.mjs": "import { test } from 'node:test';\nimport { strict as assert } from 'node:assert';\nimport { dispatch } from '../src/index.mjs';\ntest('resume action', () => assert.deepEqual(dispatch('resume', { id: 1 }), { status: 'resumed', id: 1 }));\n"
+      },
+      "expectWorkflowState": false,
+      "filesContain": {"src/actions/pause.mjs": "pause", "src/index.mjs": "pause", "tests/actions.test.mjs": "pause"},
+      "finalContains": ["pause", "registry", "test"],
+      "requiredOperationExitCodes": {"test": [0]},
+      "forbiddenOperations": ["rke:activate", "git:push"]
+    },
+    {
+      "id": "typescript-rke-extension",
+      "category": "typescript-rke",
+      "prompt": "Use Engineering Workflow and the installed RKE runtime to add a pause action through the existing action-registration route. Preserve the single dispatcher, add a focused test, run `node --test tests/actions.test.mjs`, and report the extension point and evidence. This is a local implementation slice; report remaining gates without performing a full closure.",
+      "installCodexRouting": true,
+      "requiresStagedRke": true,
+      "setup": {
+        "package.json": "{\"type\":\"module\"}\n",
+        "src/registry.mjs": "const handlers = new Map();\nexport function register(name, handler) { handlers.set(name, handler); }\nexport function dispatch(name, payload) { return handlers.get(name)?.(payload) ?? null; }\n",
+        "src/actions/resume.mjs": "import { register } from '../registry.mjs';\nregister('resume', payload => ({ status: 'resumed', id: payload.id }));\n",
+        "src/index.mjs": "import './actions/resume.mjs';\nexport { dispatch } from './registry.mjs';\n",
+        "tests/actions.test.mjs": "import { test } from 'node:test';\nimport { strict as assert } from 'node:assert';\nimport { dispatch } from '../src/index.mjs';\ntest('resume action', () => assert.deepEqual(dispatch('resume', { id: 1 }), { status: 'resumed', id: 1 }));\n"
+      },
+      "expectWorkflowState": true,
+      "mustActivateBefore": ["src/actions/pause.mjs", "src/index.mjs", "tests/actions.test.mjs"],
+      "filesContain": {"src/actions/pause.mjs": "pause", "src/index.mjs": "pause", "tests/actions.test.mjs": "pause"},
+      "finalContains": ["pause", "dispatch", "test", "engineering-workflow was used in this response."],
+      "requiredOperations": ["rke:activate"],
+      "requiredOperationExitCodes": {"test": [0]},
+      "forbiddenOperations": ["git:push"]
+    },
+    {
+      "id": "python-ordinary-dynamic-route",
+      "category": "python-ordinary",
+      "prompt": "Plan how to add a restart command through the existing Python service. Identify the actual dispatch and handler extension points, the focused test to change, and any relationship the source cannot prove statically. Do not edit. Use ordinary repository tools for this comparison; do not use RKE or create workflow state.",
+      "setup": {
+        "README.md": "# Device service\n\nCommands are dispatched by name.\n",
+        "src/api.py": "from . import handlers\n\ndef run(command, payload):\n    selected = getattr(handlers, command, None)\n    return selected(payload) if selected else None\n",
+        "src/handlers.py": "def start(payload):\n    return {'state': 'started', 'id': payload['id']}\n\ndef stop(payload):\n    return {'state': 'stopped', 'id': payload['id']}\n",
+        "tests/test_api.py": "from src.api import run\n\ndef test_start():\n    assert run('start', {'id': 1}) == {'state': 'started', 'id': 1}\n"
+      },
+      "expectWorkflowState": false,
+      "expectTrackedClean": true,
+      "finalContains": ["src/api.py", "src/handlers.py", "tests/test_api.py", "getattr"],
+      "finalAnyContains": ["unresolved", "cannot prove", "cannot establish", "cannot resolve"],
+      "forbiddenOperations": ["rke:activate", "git:push"]
+    },
+    {
+      "id": "python-rke-dynamic-route",
+      "category": "python-rke",
+      "prompt": "Use Engineering Workflow and the installed RKE runtime to plan a restart command through the existing Python service. Identify the actual dispatch and handler extension points, the focused test to change, and any relationship the source cannot prove statically. Do not edit or close the workflow.",
+      "installCodexRouting": true,
+      "requiresStagedRke": true,
+      "setup": {
+        "README.md": "# Device service\n\nCommands are dispatched by name.\n",
+        "src/api.py": "from . import handlers\n\ndef run(command, payload):\n    selected = getattr(handlers, command, None)\n    return selected(payload) if selected else None\n",
+        "src/handlers.py": "def start(payload):\n    return {'state': 'started', 'id': payload['id']}\n\ndef stop(payload):\n    return {'state': 'stopped', 'id': payload['id']}\n",
+        "tests/test_api.py": "from src.api import run\n\ndef test_start():\n    assert run('start', {'id': 1}) == {'state': 'started', 'id': 1}\n"
+      },
+      "expectWorkflowState": true,
+      "statePhase": "design",
+      "expectTrackedClean": true,
+      "finalContains": ["src/api.py", "src/handlers.py", "tests/test_api.py", "getattr", "engineering-workflow was used in this response."],
+      "finalAnyContains": ["unresolved", "cannot prove", "cannot establish", "cannot resolve"],
+      "requiredOperations": ["rke:activate"],
+      "requiredAnyOperations": ["rke:context:find", "rke:structure:file-api"],
+      "forbiddenOperations": ["git:push"]
+    },
+    {
+      "id": "php-ordinary-dynamic-dispatch",
+      "category": "php-ordinary",
+      "prompt": "Plan where a refund handler belongs in this PHP service. Name the existing router and handler registration, the test that should be extended, and the uncertainty from dynamic dispatch. Do not edit or claim to have executed PHP. Use ordinary repository tools for this comparison; do not use RKE or create workflow state.",
+      "setup": {
+        "README.md": "# Payment service\n\nThe router invokes a named handler from the registered table.\n",
+        "src/router.php": "<?php\nrequire_once __DIR__ . '/handlers.php';\nfunction handle_request($name, $payload) {\n    global $handlers;\n    return isset($handlers[$name]) ? $handlers[$name]($payload) : null;\n}\n",
+        "src/handlers.php": "<?php\n$handlers = [\n    'capture' => fn($payload) => ['status' => 'captured', 'id' => $payload['id']],\n];\n",
+        "tests/router.php": "<?php\nrequire_once __DIR__ . '/../src/router.php';\nassert(handle_request('capture', ['id' => 1])['status'] === 'captured');\n"
+      },
+      "expectWorkflowState": false,
+      "expectTrackedClean": true,
+      "finalContains": ["src/router.php", "src/handlers.php", "tests/router.php", "dynamic"],
+      "finalAnyContains": ["unresolved", "cannot prove", "cannot establish", "cannot resolve"],
+      "forbiddenOperations": ["rke:activate", "git:push"]
+    },
+    {
+      "id": "php-rke-dynamic-dispatch",
+      "category": "php-rke",
+      "prompt": "Use Engineering Workflow and the installed RKE runtime to plan where a refund handler belongs in this PHP service. Name the existing router and handler registration, the test that should be extended, and the uncertainty from dynamic dispatch. Do not edit, close the workflow or claim to have executed PHP.",
+      "installCodexRouting": true,
+      "requiresStagedRke": true,
+      "setup": {
+        "README.md": "# Payment service\n\nThe router invokes a named handler from the registered table.\n",
+        "src/router.php": "<?php\nrequire_once __DIR__ . '/handlers.php';\nfunction handle_request($name, $payload) {\n    global $handlers;\n    return isset($handlers[$name]) ? $handlers[$name]($payload) : null;\n}\n",
+        "src/handlers.php": "<?php\n$handlers = [\n    'capture' => fn($payload) => ['status' => 'captured', 'id' => $payload['id']],\n];\n",
+        "tests/router.php": "<?php\nrequire_once __DIR__ . '/../src/router.php';\nassert(handle_request('capture', ['id' => 1])['status'] === 'captured');\n"
+      },
+      "expectWorkflowState": true,
+      "statePhase": "design",
+      "expectTrackedClean": true,
+      "finalContains": ["src/router.php", "src/handlers.php", "tests/router.php", "dynamic", "engineering-workflow was used in this response."],
+      "finalAnyContains": ["unresolved", "cannot prove", "cannot establish", "cannot resolve"],
+      "requiredOperations": ["rke:activate"],
+      "requiredAnyOperations": ["rke:context:find", "rke:structure:file-api"],
+      "forbiddenOperations": ["git:push"]
+    }
+  ]
+}
