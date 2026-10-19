@@ -2,6 +2,19 @@
 
 RKE is the deterministic repository runtime. `engineering-workflow` owns independent engineering methodology; the `rke` skill owns optional runtime support for those methods.
 
+## Engineering skills
+
+For material repository engineering, read and apply the repository's [Engineering Workflow skill](skills/engineering-workflow/SKILL.md), selecting the method that fits the task. Read the separate [RKE skill](.agents/skills/rke/SKILL.md) when runtime operations are requested, useful, or required by repository policy. Installation alone does not require runtime use. Read the selected skill's complete entry point and only the relevant references.
+
+Both canonical skills are already present in this checkout; use these local sources when contributing. For installation into another project or a supported agent host, use the same Skills CLI convention as the [Polaralias catalogue](https://github.com/polaralias/skills):
+
+```sh
+npx skills add polaralias/rke --skill engineering-workflow
+npx skills add polaralias/rke --skill rke
+```
+
+Add `--global` for a user-wide installation. The catalogue provides synchronized mirrors using the same commands with `polaralias/skills` as the repository. Install from either source, rather than keeping duplicate installations. Skill installation supplies agent instructions; install the optional runtime separately with `npm install --global @polaralias/rke`. See [README.md](README.md#install) for installation and host setup.
+
 ## Project rules
 
 - Keep CLI and MCP as thin adapters over `src/operations.ts`; domain behaviour may not be implemented in only one transport.

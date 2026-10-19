@@ -50,6 +50,8 @@ npx skills add polaralias/rke --global --skill engineering-workflow
 npx skills add polaralias/rke --global --skill rke
 ```
 
+The [Polaralias skills catalogue](https://github.com/polaralias/skills) offers synchronized mirrors with the same `npx skills add polaralias/skills --skill <name>` convention. Choose either repository as the skill installation source. Contributors can read the canonical skills already in this checkout; [AGENTS.md](AGENTS.md#engineering-skills) and [CLAUDE.md](CLAUDE.md) route both hosts to those sources.
+
 The runtime and two independently versioned skills have separate installation surfaces: the Node package supplies stable executables; the skill installer places agent instructions where each supported host discovers them.
 
 Installed commands:
