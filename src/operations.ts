@@ -1,3 +1,6 @@
+import { git } from "./io.js";
+import { loadManagedWorkspace, withManagedWorkspace, manageWorkspace, ignoreLocalState, authorizedMember, authorizeWorkspaceOwner } from "./managed-workspaces.js";
+import { routeWorkspaceOperation, workspaceSupport } from "./workspace-dispatch.js";
 
 import { RkeError } from "./errors.js";
 import { rootIdentity, withRootIdentity, withDataBoundaries } from "./root-identity.js";
@@ -48,6 +51,14 @@ async function readerProjection(root:string,args:Record<string,unknown>){
   return engine(root,e=>projectReader(root,{...request,bundle:args.bundle as string|undefined},e));
 }
 const definitions:Array<[string,JsonObject,boolean,boolean,Handler]> = [
+  ["repo_state_ignore",schema({}),false,true,r=>ignoreLocalState(r)],
+  ["workspace_create",schema({name:string,directory:string,members:{type:"array",items:{type:"object",properties:{alias:string,path:string,scopes:optionalStrings},required:["alias","path"],additionalProperties:false},minItems:2,maxItems:8}},["name","members"]),false,false,(r,a,c)=>manageWorkspace(r,"create",a,c??{})],
+  ["workspace_list",schema({}),true,true,(r,a,c)=>manageWorkspace(r,"list",a,c??{})],
+  ["workspace_inspect",schema({id:string},["id"]),true,true,(r,a,c)=>manageWorkspace(r,"inspect",a,c??{})],
+  ["workspace_resolve",schema({path:string}),true,true,(r,a,c)=>manageWorkspace(r,"resolve",a,c??{})],
+  ["workspace_update",schema({id:string,name:string,revision:{type:"integer",minimum:0},members:{type:"array",items:{type:"object",properties:{alias:string,path:string,scopes:optionalStrings},required:["alias","path"],additionalProperties:false},minItems:2,maxItems:8}},["id","revision","members"]),false,false,(r,a,c)=>manageWorkspace(r,"update",a,c??{})],
+  ["workspace_retire",schema({id:string,revision:{type:"integer",minimum:0}},["id","revision"]),false,false,(r,a,c)=>manageWorkspace(r,"retire",a,c??{})],
+
   ["workspace_view_serve",schema(workspaceViewSelection,["manifest","selectedRepository","selection"]),true,false,(r,a,c)=>startReaderLive(r,a,c??{},true,async(owner,args,authority)=>{const outcome=await projectWorkspaceReader(owner,args,authority,engine),projection=outcome.payload.projection as ReaderProjection|null;if(!projection)throw new RkeError("reader_selection_unavailable","Live primary evidence is unavailable.",3);return projection;})],
   ["workspace_view_project",schema(workspaceViewSelection,["manifest","selectedRepository","selection"]),true,true,(r,a,c)=>projectWorkspaceReader(r,a,c??{},engine)],
   ["workspace_view_export",schema({...workspaceViewSelection,output:string,expectedDigest:string},["manifest","selectedRepository","selection"]),false,false,async(r,a,c)=>{if(a.output&&safeRelative(String(a.output))===safeRelative(String(a.manifest)))throw new RkeError("reader_output_invalid","Reader export must preserve its workspace manifest.",2);const outcome=await projectWorkspaceReader(r,a,c??{},engine);const projection=outcome.payload.projection as ReaderProjection|null;if(!projection)return outcome;return ok({result:"workspace-reader-exported",...await exportReader(r,projection,value(a,"output",".engineering-workflow/cache/workspace-reader.html"),a.expectedDigest as string|undefined),coverage:projection.coverage,workspace:projection.workspace},outcome.exitCode);} ],
@@ -66,14 +77,14 @@ const definitions:Array<[string,JsonObject,boolean,boolean,Handler]> = [
   ["workflow_start",schema({phase:{type:"string",default:"understand"},capabilities:optionalStrings,gates:optionalStrings,taskMode:{type:"string",default:"none"},newCycle:{type:"boolean",default:false}}),false,true,(r,a)=>workflow.start(r,value(a,"phase","understand"),value(a,"capabilities",[]),value(a,"gates",[]),value(a,"taskMode","none"),value(a,"newCycle",false))],
   ["workflow_checkpoint",schema({summary:string,nextAction:string},["summary","nextAction"]),false,false,(r,a)=>workflow.checkpoint(r,value(a,"summary"),value(a,"nextAction"))],
   ["workflow_resume",schema({}),true,true,(r)=>workflow.resume(r)],
-  ["workflow_close",schema({base:string}),false,false,(r,a)=>workflow.close(r,value(a,"base","HEAD"))],
+  ["workflow_close",schema({base:string,bases:{type:"object"}}),false,false,(r,a)=>workflow.close(r,value(a,"base","HEAD"))],
   ["workflow_gate_add",schema({gates:strings},["gates"]),false,true,(r,a)=>workflow.addGates(r,stringsValue(a,"gates"))],
   ["workflow_gate_resolve",schema({gate:string,evidence:string},["gate","evidence"]),false,false,(r,a)=>workflow.resolveGate(r,value(a,"gate"),value(a,"evidence"))],
   ["workflow_journey_enter",schema({journey:{type:"string",enum:["understand","design","close"]}},["journey"]),false,false,(r,a)=>workflow.enterJourney(r,value(a,"journey"))],
   ["workflow_task_configure",schema({mode:{type:"string",enum:["none","lightweight","full"]},taskRef:string,bundle:{type:"string",default:"tasks"},force:{type:"boolean",default:false}},["mode"]),false,false,(r,a)=>workflow.configureTasks(r,value(a,"mode"),value(a,"taskRef",null),value(a,"bundle","tasks"),value(a,"force",false))],
   ["workflow_task_check",schema({}),true,true,(r)=>workflow.checkTasks(r)],
   ["workflow_capability_enable",schema({capability:{type:"string",enum:["query-to-knowledge","parallel-delivery","publication"]}},["capability"]),false,true,(r,a)=>workflow.enableCapability(r,value(a,"capability"))],
-  ["workflow_closure_assess",schema({base:string}),true,true,(r,a)=>workflow.closureAssessment(r,value(a,"base","HEAD"))],
+  ["workflow_closure_assess",schema({base:string,bases:{type:"object"}}),true,true,(r,a)=>workflow.closureAssessment(r,value(a,"base","HEAD"))],
   ["repo_host_recipe",schema({host:{type:"string",enum:["codex","claude","gemini","cursor","copilot","windsurf","kiro","git"]},base:{type:"string",default:"main"}},["host"]),true,true,(r,a)=>surfaces.hostRecipe(r,value(a,"host"),value(a,"base","main"))],
   ["repo_host_install",schema({host:{type:"string",enum:["codex","claude","gemini","cursor","copilot","windsurf","kiro","git"]},base:string,force:{type:"boolean",default:false},postEdit:{type:"boolean"},contextHooks:{type:"boolean"},dryRun:{type:"boolean",default:false}},["host"]),false,true,(r,a)=>changeHost(r,value(a,"host"),"install",a)],
   ["repo_host_inspect",schema({host:{type:"string",enum:["codex","claude","gemini","cursor","copilot","windsurf","kiro","git"]}},["host"]),true,true,(r,a)=>inspectHost(r,value(a,"host"))],
@@ -191,11 +202,13 @@ const DESCRIPTIONS:Record<string,string>={
   repo_structure_benchmark:"Run a repository-local structural corpus against file API, trace and impact. Reports expected-string evidence only.",
 };
 function description(name:string):string{
+  if(name==="repo_state_ignore")return "Add repository-local runtime state ignore entries, preserving existing rules and tracked files.";
+  if(["workspace_create","workspace_list","workspace_inspect","workspace_resolve","workspace_update","workspace_retire"].includes(name))return "Manage named user-area multi-repository workspaces. Membership never grants caller filesystem authority.";
   const result=DESCRIPTIONS[name];
   if(!result)throw new Error(`Missing MCP discovery description for ${name}`);
   return result;
 }
-export const OPERATIONS:OperationDefinition[]=definitions.map(([name,inputSchema,readOnly,idempotent,handler])=>({name,title:name.replaceAll("_"," "),description:description(name),inputSchema,readOnly,idempotent,handler}));
+export const OPERATIONS:OperationDefinition[]=definitions.map(([name,inputSchema,readOnly,idempotent,handler])=>({name,title:name.replaceAll("_"," "),description:description(name)+` Managed workspace support: ${workspaceSupport(name)}.`,inputSchema,readOnly,idempotent,handler}));
 export const OPERATION_BY_NAME=new Map(OPERATIONS.map(operation=>[operation.name,operation]));
 
 function validate(value:unknown,schemaValue:Record<string,unknown>,path="arguments"):void{
@@ -225,4 +238,18 @@ function validate(value:unknown,schemaValue:Record<string,unknown>,path="argumen
   }
   if(Array.isArray(schemaValue.enum)&&!schemaValue.enum.includes(value))throw new RkeError("invalid_operation_arguments",`${path} must be one of: ${schemaValue.enum.join(", ")}.`);
 }
-export async function invokeOperation(root:string,name:string,args:unknown,context:OperationContext={}):Promise<OperationOutcome>{const operation=OPERATION_BY_NAME.get(name);if(!operation)throw new RkeError("unknown_operation",`Unknown operation: ${name}`);validate(args,operation.inputSchema);return withDataBoundaries([root,...context.allowedRoots??[],...context.fixedRoot?[context.fixedRoot]:[]],()=>withRootIdentity(root,rootIdentity(root),()=>operation.handler(root,args as Record<string,unknown>,context)));}
+export async function invokeOperation(root:string,name:string,args:unknown,context:OperationContext={}):Promise<OperationOutcome>{
+  const operation=OPERATION_BY_NAME.get(name);if(!operation)throw new RkeError("unknown_operation",`Unknown operation: ${name}`);
+  const registered=!context.workspaceMemberDispatch?loadManagedWorkspace(root):undefined;
+  const workspace=registered&&(context.selectedWorkspace===registered.id||git(root,"rev-parse","--is-inside-work-tree").code!==0)?registered:undefined;
+  if(workspace)authorizeWorkspaceOwner(workspace.root,context);
+  if(context.member&&!workspace&&!context.workspaceMemberDispatch)throw new RkeError("workspace_member_required","A member requires a selected managed workspace.",3);
+  const request=workspace&&name.startsWith("workspace_")&&workspaceSupport(name)==="aggregate"?{manifest:"workspace.json",...(args as Record<string,unknown>)}:args;
+  validate(request,operation.inputSchema);
+  if(!workspace&&(request as Record<string,unknown>).bases!==undefined)throw new RkeError("workspace_bases_invalid","Per-member bases require a managed workspace.",2);
+  const authority:OperationContext=workspace?{...context,validateWorkspaceRoot:(alias,path,scopes)=>{context.validateWorkspaceRoot?.(alias,path,scopes);const member=authorizedMember(workspace,alias,context);if(path!==member.path)throw new RkeError("workspace_root_changed","A selected member differs from its registered identity.",3);}}:context;
+  const run=()=>withDataBoundaries([root,...context.allowedRoots??[],...context.fixedRoot?[context.fixedRoot]:[]],()=>withRootIdentity(root,rootIdentity(root),()=>operation.handler(root,request as Record<string,unknown>,authority)));
+  if(workspace&&workspaceSupport(name)==="management")return run();
+  if(workspace&&!context.workspaceOwnerDispatch)return withManagedWorkspace(workspace,()=>routeWorkspaceOperation(root,name,request as Record<string,unknown>,authority,invokeOperation,run),authority);
+  return run();
+}

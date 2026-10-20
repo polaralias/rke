@@ -1,6 +1,8 @@
 export interface CliRoute { operation:string; positionals?:string[] }
 
 export const CLI_ROUTES:Record<string,CliRoute>={
+  "state ignore":{operation:"repo_state_ignore"},
+  "workspace create":{operation:"workspace_create"},"workspace list":{operation:"workspace_list"},"workspace inspect":{operation:"workspace_inspect"},"workspace resolve":{operation:"workspace_resolve"},"workspace update":{operation:"workspace_update"},"workspace retire":{operation:"workspace_retire"},
   "view project":{operation:"repo_view_project"},
   "view export":{operation:"repo_view_export"},
   "view serve":{operation:"repo_view_serve"},

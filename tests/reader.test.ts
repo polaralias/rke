@@ -16,6 +16,10 @@ import type { ExplanationPacket } from "../src/derived-explanations.js";
 import { readerBrowser } from "./reader-browser-fixture.js";
 
 function projection(body="## Purpose\n\nRead the evidence."):ReaderProjection{return{schemaVersion:1,repository:"Owned reader fixture",revision:"a".repeat(64),selection:{primary:"docs/system.md",comparison:null},records:[{id:"docs/system.md",path:"docs/system.md",title:"System",type:"Concept",body,digest:"b".repeat(64),provenance:"canonical",freshness:"unverified",truncated:false,details:[]}],relationships:[],coverage:{omittedRecords:0,omittedRelationships:0,excludedRecords:0,bodyBytes:Buffer.byteLength(body),complete:true}};}
+
+test("exported reader identifies the structure generator separately from knowledge provenance",()=>{
+  const html=renderReader(projection());assert.match(html,/<meta name="generator" content="Generated structure by RKE \(@polaralias\/rke/);assert.match(html,/href="https:\/\/github.com\/polaralias\/rke"/);assert.match(html,/Knowledge retains its recorded authorship and verification/);
+});
 test("directional reader neighbourhood expands on demand and preserves selection state and reading positions",()=>{
   const value=projection(),selected=value.records[0]!;
   selected.repository="alpha";selected.id="alpha::"+selected.path;value.selection.primary=selected.id;

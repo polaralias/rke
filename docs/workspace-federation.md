@@ -2,7 +2,7 @@
 
 Workspace operations aggregate independently owned repository engines. They do not merge canonical knowledge, task execution state, workflow receipts or SQLite databases. A workspace manifest selects aliases and locations; caller/host authorization is supplied separately. Find, map, bounded multi-root neighbourhoods, source-bound dependency declarations and base/snapshot-bound change impact are implemented. Executed qualification is recorded separately in the progress ledger.
 
-Store a schema-1 JSON manifest in the selected owner repository:
+A [named managed workspace](managed-workspaces.md) can own the same manifest in the user area. Existing repository-owned manifests remain supported. Store a schema-1 JSON manifest in the selected owner:
 
 ```json
 {
@@ -14,7 +14,7 @@ Store a schema-1 JSON manifest in the selected owner repository:
 }
 ```
 
-Aliases are unique stable lowercase names, at most 48 characters. The manifest is a regular eligible repository-local file of at most 64 KiB. It declares one to eight repositories, each with at most twenty relative directory/file scopes. Locations may be relative to the owner or absolute; each must identify its own initialized Git top level. A subdirectory in an existing repository is not another root. Explicit nested repositories and initialized submodules use their own Git visibility; no sibling scan, cloning, submodule initialization or traversal into undeclared embedded repositories occurs.
+Aliases are unique stable lowercase names, at most 48 characters. The manifest is a regular eligible owner-local file of at most 64 KiB. It declares one to eight repositories, each with at most twenty relative directory/file scopes. Locations may be relative to the owner or absolute; each must identify its own initialized Git top level. A subdirectory in an existing repository is not another root. Explicit nested repositories and initialized submodules use their own Git visibility; no sibling scan, cloning, submodule initialization or traversal into undeclared embedded repositories occurs.
 
 ```text
 rke workspace find "invoice" --manifest workspace.json --source-only --root <owner> --allow-root <permitted-directory>
@@ -22,7 +22,7 @@ rke workspace map --manifest workspace.json --repositories service --root <owner
 rke workspace neighborhood --manifest workspace.json --selected-repository service --path src/service.ts --symbol calculateInvoice --root <owner> --allow-root <service> --allow-root <client>
 ```
 
-`--allow-root` is a repeatable caller option, outside operation arguments. With no explicit allow-root, workspace queries are confined to the owner and its descendants. Manifest declarations cannot widen that boundary. `--repositories` narrows the manifest by alias. MCP receives the same authorization from server startup `--allow-root`; its `repository` argument identifies the manifest owner. A fixed-root compatibility server additionally confines workspace roots to that fixed root. Supplying `allowedRoots` as a tool argument is refused.
+`--allow-root` is a repeatable caller option, outside operation arguments. With no explicit allow-root, workspace queries are confined to the owner and its descendants. Manifest declarations cannot widen that boundary. `--repositories` narrows the manifest by alias. MCP receives the same authorization from server startup `--allow-root`; its `repository` argument identifies the manifest owner; named managed owners can also be selected with the `workspace` ID. A fixed-root compatibility server additionally confines workspace roots to that fixed root. Supplying `allowedRoots` as a tool argument is refused.
 
 Authorization checks lexical containment before inspecting a declared target, then canonical containment and Git ownership before cache access. It revalidates roots before querying and after aggregation. Duplicate aliases or malformed schema fail the invocation; aliases resolving to the same physical root, denied/unavailable roots and missing seeds are explicit per-root failures. Failure responses contain aliases and bounded status codes, not child exception paths, Git stderr or source data.
 

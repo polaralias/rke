@@ -1,6 +1,6 @@
 # Source-side preservation destinations
 
-This audit belongs to repository review and qualification, outside the installed EWF package. EWF 6.2.1 uses only its current method names. It contains no retired skill names, aliases, package history or migration table. The optional current `rke` adapter integration remains independent support. The [historical crosswalk](engineering-compatibility.md) and [pinned original clauses](legacy-source-clause-inventory.json) preserve provenance without becoming EWF instructions.
+This audit belongs to repository review and qualification, outside the installed EWF package. EWF 6.3.0 uses only its current method names. It contains no retired skill names, aliases, package history or migration table. The optional current `rke` adapter integration remains independent support. The [historical crosswalk](engineering-compatibility.md) and [pinned original clauses](legacy-source-clause-inventory.json) preserve provenance without becoming EWF instructions.
 
 ## What the mapping establishes
 

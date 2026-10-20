@@ -1,3 +1,4 @@
+import { ensureGeneratedProvenance, identifyGeneratedPath } from "./generated-provenance.js";
 import { DatabaseSync } from "node:sqlite";
 import { existsSync, readFileSync } from "node:fs";
 import { mkdir, readFile, readdir, rename, stat } from "node:fs/promises";
@@ -66,6 +67,8 @@ export class RepositoryEngine {
     const normalized = resolve(root);
     const databasePath = repositoryPath(normalized, CACHE_PATH);
     await mkdir(dirname(databasePath), { recursive: true });
+    await identifyGeneratedPath(databasePath);
+    await ensureGeneratedProvenance(dirname(databasePath));
     const parser=await SourceParser.create();
     let db:DatabaseSync|undefined;
     try{assertRootIdentity(normalized,identity);db=new DatabaseSync(databasePath);db.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys=ON; PRAGMA temp_store=MEMORY;");const engine=new RepositoryEngine(normalized,db,parser,identity);engine.migrate();return engine;}

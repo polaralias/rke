@@ -1,3 +1,4 @@
+import { identifyGeneratedPath } from "./generated-provenance.js";
 import { createHash } from "node:crypto";
 import { lstatSync, readFileSync } from "node:fs";
 import { mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
@@ -24,6 +25,7 @@ export async function readJsonOr<T>(path: string, fallback: T): Promise<T> {
 export async function atomicWrite(path: string, value: string): Promise<void> {
   assertRootScope();
   await mkdir(dirname(path), { recursive: true });
+  await identifyGeneratedPath(path);
   assertRootScope();
   const temporary = `${path}.${process.pid}.${Date.now()}.tmp`;
   await writeFile(temporary, value, "utf8");
@@ -75,7 +77,7 @@ export function gitDelta(root:string,base:string,excludedPaths:readonly string[]
   return{code:0,stdout:`${tracked.stdout}${untrackedSection}`,stderr:tracked.stderr};
 }
 
-export function gitChangedPaths(root:string,base:string,includeOnlyUntracked=false):string[]{const paths=new Set<string>();if(!includeOnlyUntracked){const tracked=git(root,"diff","--no-ext-diff","--no-textconv","--no-renames","--name-only","-z",base,"--");if(tracked.code)throw new Error(tracked.stderr.trim()||`Unable to diff ${base}`);for(const path of tracked.stdout.split("\0").filter(Boolean))paths.add(path.replaceAll("\\","/"));}const untracked=git(root,"ls-files","-z","--others","--exclude-standard");if(untracked.code)throw new Error(untracked.stderr.trim()||"Unable to enumerate untracked files");for(const path of untracked.stdout.split("\0").filter(Boolean)){const normalized=path.replaceAll("\\","/");if(normalized!==".rke/repo-context.json"&&!normalized.startsWith(".engineering-workflow/"))paths.add(normalized);}return[...paths].sort();}
+export function gitChangedPaths(root:string,base:string,includeOnlyUntracked=false):string[]{const paths=new Set<string>();if(!includeOnlyUntracked){const tracked=git(root,"diff","--no-ext-diff","--no-textconv","--no-renames","--name-only","-z",base,"--");if(tracked.code)throw new Error(tracked.stderr.trim()||`Unable to diff ${base}`);for(const path of tracked.stdout.split("\0").filter(Boolean))paths.add(path.replaceAll("\\","/"));}const untracked=git(root,"ls-files","-z","--others","--exclude-standard");if(untracked.code)throw new Error(untracked.stderr.trim()||"Unable to enumerate untracked files");for(const path of untracked.stdout.split("\0").filter(Boolean)){const normalized=path.replaceAll("\\","/");if(!normalized.endsWith("RKE_GENERATED.json")&&normalized!==".rke/repo-context.json"&&!normalized.startsWith(".engineering-workflow/"))paths.add(normalized);}return[...paths].sort();}
 
 export function utcNow(): string { return new Date().toISOString(); }
 
