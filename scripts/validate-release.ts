@@ -35,11 +35,11 @@ const publishWorkflow=await readFile(".github/workflows/publish-release.yml","ut
 assert.match(publishWorkflow,/npm run test:legacy-parity/);
 assert.match(publishWorkflow,/git merge-base --is-ancestor HEAD origin\/main/);
 assert.match(publishWorkflow,/node dist\/scripts\/validate-publication\.js/);
-const release=YAML.parse(publishWorkflow) as {permissions:Record<string,string>;jobs:Record<string,{needs?:string;permissions:Record<string,string>;steps:{uses?:string;run?:string}[]}>};
+const release=YAML.parse(publishWorkflow) as {permissions:Record<string,string>;jobs:Record<string,{needs?:string|string[];permissions:Record<string,string>;steps:{uses?:string;run?:string}[]}>};
 assert.deepEqual(release.permissions,{contents:"read"});
 assert.deepEqual(release.jobs.verify!.permissions,{contents:"read"});
 assert.equal(release.jobs["publish-npm"]!.needs,"verify");
-assert.equal(release.jobs["publish-github"]!.needs,"publish-npm");
+assert.deepEqual(release.jobs["publish-github"]!.needs,["verify","publish-npm"]);
 const verified=release.jobs.verify!.steps;
 assert.ok(verified.findIndex(s=>s.run?.includes("validate-publication.js"))<verified.findIndex(s=>s.uses?.startsWith("actions/upload-artifact@")),"qualification must precede artifact handoff");
 for(const name of ["publish-npm","publish-github"]){
