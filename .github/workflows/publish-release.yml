@@ -148,7 +148,7 @@ jobs:
 
   publish-github:
     name: publish-github
-    needs: publish-npm
+    needs: [verify, publish-npm]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

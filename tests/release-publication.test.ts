@@ -16,7 +16,7 @@ test("release retry accepts only the exact previously published tarball",()=>{
   assert.throws(()=>publicationDecision(503,undefined,integrity),/HTTP 503/);
 });
 
-interface WorkflowJob {needs?:string;permissions:Record<string,string>;env?:Record<string,string>;steps:{name?:string;uses?:string;run?:string;env?:Record<string,string>}[]}
+interface WorkflowJob {needs?:string|string[];permissions:Record<string,string>;env?:Record<string,string>;steps:{name?:string;uses?:string;run?:string;env?:Record<string,string>}[]}
 async function releaseWorkflow(){return YAML.parse(await readFile(".github/workflows/publish-release.yml","utf8")) as {permissions:Record<string,string>;jobs:Record<string,WorkflowJob>};}
 
 test("release verification has read-only authority and publishers consume its artifact without source checkout",async()=>{
@@ -24,7 +24,7 @@ test("release verification has read-only authority and publishers consume its ar
   assert.deepEqual(workflow.permissions,{contents:"read"});
   assert.deepEqual(workflow.jobs.verify!.permissions,{contents:"read"});
   assert.equal(workflow.jobs["publish-npm"]!.needs,"verify");
-  assert.equal(workflow.jobs["publish-github"]!.needs,"publish-npm");
+  assert.deepEqual(workflow.jobs["publish-github"]!.needs,["verify","publish-npm"]);
   const steps=workflow.jobs.verify!.steps;
   assert.ok(steps.findIndex(s=>s.run?.includes("validate-publication.js"))<steps.findIndex(s=>s.uses?.startsWith("actions/upload-artifact@")));
   for(const name of ["publish-npm","publish-github"]){
@@ -85,6 +85,10 @@ test("credentialed npm publisher refuses substituted artifacts and registry conf
 
 test("manual publication accepts only a version tag and preserves tag identity through release creation",async()=>{
   const workflow=await releaseWorkflow();
+  for(const [name,job] of Object.entries(workflow.jobs)){
+    const dependencies=new Set(Array.isArray(job.needs)?job.needs:job.needs?[job.needs]:[]);
+    for(const reference of JSON.stringify(job).matchAll(/needs\.([a-z][a-z0-9-]*)\.outputs/g))assert.ok(dependencies.has(reference[1]!),`${name} consumes outputs without a direct job dependency`);
+  }
   const target=workflow.jobs.verify!.steps.find(s=>s.name==="Select immutable release tag")!;
   const body=/<<'NODE'\n([\s\S]+)\nNODE\s*$/.exec(target.run!)![1]!.replace(/^import .+;\n/gm,"");
   const execute=new Function("appendFileSync","process",body);
