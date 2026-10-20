@@ -2,7 +2,7 @@
   "schema": 1,
   "authority": "implementation-source-review-not-independent-semantic-acceptance",
   "sourceInventorySha256": "a6eb87a429a556f1db0f5a63735482cfae0cbd7319bcfdd35bdfe3fd5206760f",
-  "scenarioCorpusSha256": "577a5a130a748422439b24a4965592f7c26f8af534f622fee488010b8221a763",
+  "scenarioCorpusSha256": "e17a81d1f31475b0123f81efa3ee0b3675fa21453d38a5d08adcda0b4675bdf1",
   "reviewedClauses": 483,
   "unreviewedClauses": 671,
   "records": [

@@ -13,6 +13,7 @@ export function isExcludedPath(path: string): boolean {
   const parts = path.replaceAll("\\", "/").toLowerCase().split("/");
   const name = parts.at(-1) ?? "";
   if (parts.some((part) => EXCLUDED_SEGMENTS.has(part) || SENSITIVE_SEGMENTS.has(part))) return true;
+  if (name==="rke_generated.json") return true;
   if (SENSITIVE_NAMES.has(name) || name.startsWith(".env.") || /^(?:credentials|secrets?)(?:\.[^/]*)?$/.test(name) || /\.(?:key|p12|pem|pfx|tfstate)$/.test(name)) return true;
   const joined = parts.join("/");
   return joined.endsWith(".docker/config.json") || joined.endsWith(".kube/config") || joined.includes(".config/gcloud/");

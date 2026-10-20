@@ -7,6 +7,13 @@
     "repository-boundary"
   ],
   "operations": [
+    "repo_state_ignore",
+    "workspace_create",
+    "workspace_list",
+    "workspace_inspect",
+    "workspace_resolve",
+    "workspace_update",
+    "workspace_retire",
     "workspace_view_serve",
     "workspace_view_project",
     "workspace_view_export",

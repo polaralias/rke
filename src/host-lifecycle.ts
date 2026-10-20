@@ -1,3 +1,4 @@
+import { GENERATED_BY } from "./generated-provenance.js";
 import { lstat, readFile, realpath, unlink, chmod } from "node:fs/promises";
 import { dirname, isAbsolute } from "node:path";
 import { atomicWrite, git, sha256, withFileLock } from "./io.js";
@@ -37,7 +38,7 @@ function hooks(root:string,scope=hostGitScope(root)):string|null{const value=git
 function inheritedHooks(root:string):string|null{const value=git(root,"config","--get","core.hooksPath");if(value.code===1)return null;if(value.code)fail("host_hooks_path_invalid");const path=value.stdout.trim();if(path.length>4096||containsSecret(path))fail("host_hooks_path_invalid");return path;}
 function pinnedOptions(options:HostOptions,record:Owned):HostOptions{const result={...options};if(record.rootIdentity)result.rootIdentity=record.rootIdentity;else delete result.rootIdentity;return result;}
 function resources(root:string,host:string,options:HostOptions,launcher=hostLauncher()):Resource[]{
-  const profile=HOSTS[host],result:Resource[]=[{id:"git-hook",path:".githooks/pre-push",mode:"file",pointer:[],value:`#!/bin/sh\n${HOOK_MARKER}\nexec ${shellQuote(launcher.node.replaceAll("\\","/"))} ${shellQuote(launcherScript(launcher,"hooks/pre-push.js").replaceAll("\\","/"))} --root ${shellQuote(root.replaceAll("\\","/"))} --base ${shellQuote(options.base)}${options.rootIdentity?` --root-identity ${shellQuote(options.rootIdentity)} --git-hook-context`:""}\n`}];
+  const profile=HOSTS[host],result:Resource[]=[{id:"git-hook",path:".githooks/pre-push",mode:"file",pointer:[],value:`#!/bin/sh\n${HOOK_MARKER}\n# ${GENERATED_BY}\nexec ${shellQuote(launcher.node.replaceAll("\\","/"))} ${shellQuote(launcherScript(launcher,"hooks/pre-push.js").replaceAll("\\","/"))} --root ${shellQuote(root.replaceAll("\\","/"))} --base ${shellQuote(options.base)}${options.rootIdentity?` --root-identity ${shellQuote(options.rootIdentity)} --git-hook-context`:""}\n`}];
   if(profile){result.push({id:`routing:${profile.routing}`,path:profile.routing,mode:"block",pointer:[],value:ROUTING_BLOCK});if(profile.mcp){const key=profile.key??"mcpServers";result.push({id:`mcp:${profile.mcp}`,path:profile.mcp,mode:"json",pointer:[key,"rke"],value:mcpEntry(root,key,launcher,options.rootIdentity)});}}
   const add=(event:string,tool:string,matcher?:string)=>result.push({id:`hook:${event}`,path:".claude/settings.json",mode:"array",pointer:["hooks",event],value:{...matcher?{matcher}:{},hooks:[{type:"command",command:launcher.node,args:[launcherScript(launcher,tool==="rke-post-edit"?"hooks/post-edit.js":"hooks/context.js"),"--root",root,...options.rootIdentity?["--root-identity",options.rootIdentity]:[]],timeout:30}]}});
   if(options.postEdit)add("PostToolUse","rke-post-edit","Edit|Write|MultiEdit");
@@ -74,16 +75,17 @@ function priorLauncher(root:string,host:string,options:HostOptions,resource:Reso
   if(resource.mode==="json"&&object(current)&&Array.isArray(current.args)){node=current.command;script=current.args[0];}
   if(resource.mode==="array"&&object(current)&&Array.isArray(current.hooks)&&object(current.hooks[0])&&Array.isArray(current.hooks[0].args)){node=current.hooks[0].command;script=current.hooks[0].args[0];}
   if(resource.mode==="file"&&typeof current==="string"){
+    current=current.replace(`# ${GENERATED_BY}\n`,"");
     const prefix=`#!/bin/sh\n${HOOK_MARKER}\nexec `,suffix=` --root ${shellQuote(root.replaceAll("\\","/"))} --base ${shellQuote(options.base)}${options.rootIdentity?` --root-identity ${shellQuote(options.rootIdentity)} --git-hook-context`:""}\n`;
-    if(current.startsWith(prefix)&&current.endsWith(suffix)){
-      const words=/^'((?:[^']|'"'"')*)' '((?:[^']|'"'"')*)'$/.exec(current.slice(prefix.length,-suffix.length));
+    if((current as string).startsWith(prefix)&&(current as string).endsWith(suffix)){
+      const words=/^'((?:[^']|'"'"')*)' '((?:[^']|'"'"')*)'$/.exec((current as string).slice(prefix.length,-suffix.length));
       if(words){node=words[1]!.replaceAll("'\"'\"'","'");script=words[2]!.replaceAll("'\"'\"'","'");}
     }
   }
   if(typeof node!=="string"||typeof script!=="string"||!isAbsolute(node)||!isAbsolute(script)||node.length>4096||script.length>4096||node.includes("\0")||script.includes("\0")||containsSecret(node)||containsSecret(script))return;
   const launcher={node,directory:resource.mode==="json"?dirname(script):dirname(dirname(script))};
   const expected=resources(root,host,options,launcher).find(item=>item.id===resource.id);
-  return expected&&digest(expected.value)===digest(current)?launcher:undefined;
+  return expected&&(resource.mode==="file"&&typeof expected.value==="string"?digest(expected.value.replace(`# ${GENERATED_BY}\n`,"")):digest(expected.value))===digest(current)?launcher:undefined;
 }
 async function load(root:string):Promise<{ledger:Ledger;raw:string|null}>{
   const raw=await file(root,LEDGER),rootDigest=sha256(root),identity=rootIdentity(root);
@@ -118,7 +120,7 @@ function safeCurrent(root:string,resource:Resource,current:unknown,record:Owned)
   if(record.launcher){const optionsOwner=record.owners[0];if(!optionsOwner)return false;
     if(resource.mode==="json")return digest(current)===digest(mcpEntry(root,resource.pointer[0],record.launcher,record.rootIdentity));
     if(resource.mode==="array")return ownedHook(current,root,record.launcher,record.rootIdentity);
-    if(resource.mode==="file")return current===resource.value;
+    if(resource.mode==="file")return current===resource.value||typeof current==="string"&&typeof resource.value==="string"&&current.replace(`# ${GENERATED_BY}\n`,"")===resource.value.replace(`# ${GENERATED_BY}\n`,"");
   }
   if(resource.mode==="json")return managedMcpEntry(current)&&object(current)&&(current.command==="rke-mcp"||Array.isArray(current.args)&&current.args[2]===root);
   if(resource.mode==="array")return ownedHook(current,root);

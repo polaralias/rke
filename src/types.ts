@@ -9,6 +9,11 @@ export interface OperationOutcome {
 
 /** Host/caller authorization, never accepted from operation arguments or repository data. */
 export interface OperationContext {
+  member?: string;
+  workspaceMemberDispatch?: boolean;
+  workspaceOwnerDispatch?: boolean;
+  selectedWorkspace?: string;
+  requireOwnerAuthorization?: boolean;
   allowedRoots?: readonly string[];
   fixedRoot?: string | undefined;
   canonicalRoots?: boolean;

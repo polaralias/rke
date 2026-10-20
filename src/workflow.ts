@@ -1,3 +1,4 @@
+import { managedWorkspace } from "./managed-workspaces.js";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
@@ -148,7 +149,8 @@ export async function closureAssessment(root:string,base="HEAD"):Promise<Operati
   if(errors.length)return outcome({result:"invalid-state",state_path:statePath(root),verification:{valid:false,errors},state},2);
   const gates=state?.outstanding_gates??[];
   let documentation:{status:string;issues:string[]};
-  if(state)documentation=await receiptStatus(root,base,"documentation-receipt.json");
+  if(managedWorkspace()?.root===root)documentation={status:"workspace-owner-member-checks-required",issues:[]};
+  else if(state)documentation=await receiptStatus(root,base,"documentation-receipt.json");
   else{
     const {documentationAssess}=await import("./surfaces.js"),assessment=await documentationAssess(root,base);
     documentation={status:"stateless-assessed",issues:assessment.exitCode===2?["documentation-assessment-invalid"]:[]};

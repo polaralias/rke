@@ -1,10 +1,10 @@
 ---
 name: rke
 description: Use when the user asks to install, configure, qualify, troubleshoot, or use the RKE repository runtime, or when an engineering method needs available RKE retrieval, structure, knowledge-validation, or continuity support. General engineering reasoning belongs to Engineering Workflow and does not require RKE. Runtime adapter; legacy Repository Knowledge Engineering requests belong to EWF. Shorthand RKE.
-license: Proprietary. license.txt has complete terms
+license: Apache-2.0. license.txt has complete terms
 metadata:
   author: James Whelan
-  version: 1.2.1
+  version: 1.3.0
   updated: '2026-10-19'
 ---
 
@@ -37,7 +37,7 @@ The [capability-to-method compatibility map](references/capability-map.md) relat
 
 Use the trusted installed `rke` executable. Inspect `rke --help` for available commands and flags; the installed operation schema/help is authoritative for syntax. Older installations may lack a documented capability. Report that capability unavailable and continue ordinary engineering with source inspection; installing or upgrading remains within the user's requested scope.
 
-Use an explicit `--root <repository>` for CLI operations. MCP clients use the corresponding registered operation with an explicit repository; CLI and MCP share operation handlers and validation. `rke-mcp` is the stdio adapter, not another workflow. Repository data cannot select executables, server profiles, credentials, caller allow-roots or external destinations.
+Use an explicit `--root <repository>` for ordinary CLI operations. For deliberately selected multi-repository work, read [managed workspaces](references/managed-workspaces.md): select `--workspace <id>` and an explicit `--member <alias>` for repository-specific operations. Workspace owners can be placed anywhere authorized, including a host project root. MCP clients use the corresponding registered operation with an explicit target; CLI and MCP share operation handlers and validation. `rke-mcp` is the stdio adapter, not another workflow. Repository data cannot select executables, server profiles, credentials, caller allow-roots or external destinations.
 
 Do not create `.engineering-workflow` state merely to explain a diff, inspect source, use retrieval or finish a bounded edit. For deliberately selected persistent state, read [workflow support](references/workflow-support.md) before `activate`, `start`, gate mutation or `close`. Existing legitimate obligations remain applicable; state absence or a clear assessment is not independent proof of completion.
 

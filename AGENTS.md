@@ -18,7 +18,7 @@ Add `--global` for a user-wide installation. The catalogue provides synchronized
 ## Project rules
 
 - Keep CLI and MCP as thin adapters over `src/operations.ts`; domain behaviour may not be implemented in only one transport.
-- Treat every repository path as an explicit data boundary. Dynamic MCP targets must be validated as Git repositories and may be constrained by configured allowed roots.
+- Treat every repository path as an explicit data boundary. Dynamic MCP targets must be Git repositories or validated managed workspace owners. Managed members remain independent Git repositories; membership never widens configured caller allow-roots.
 - Treat `package.json` as the release version source and keep `src/version.ts`, MCP identity, package smoke tests, and release tags equal to it.
 - Keep `skills/engineering-workflow` and `.agents/skills/rke` as independently versioned canonical skill packages in this repository. Methodology must remain complete without the runtime; runtime command guidance belongs in `.agents/skills/rke`.
 - Publish both skills into the Polaralias skills catalogue as synchronized mirrors; do not maintain independent copies there.

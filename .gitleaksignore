@@ -1,0 +1,8 @@
+# Exact synthetic security fixtures reviewed for initial publication.
+# No credential is present; keep new findings visible instead of excluding test files.
+# Private-key discovery sentinel and dummy private_fixture API keys.
+620987a00d43c02e4cd6a14bf4bf8909888df0d9:tests/documentation-discovery.test.ts:private-key:310
+620987a00d43c02e4cd6a14bf4bf8909888df0d9:tests/explanations.test.ts:generic-api-key:147
+620987a00d43c02e4cd6a14bf4bf8909888df0d9:tests/explanations.test.ts:generic-api-key:149
+620987a00d43c02e4cd6a14bf4bf8909888df0d9:tests/explanations.test.ts:generic-api-key:151
+620987a00d43c02e4cd6a14bf4bf8909888df0d9:tests/security.test.ts:generic-api-key:14

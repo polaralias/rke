@@ -130,6 +130,17 @@ test("every public operation has an executable success and malformed-input failu
   await call("workflow_closure_assess",{base:"HEAD"});
   await call("workflow_close",{base:"HEAD"});
 
+  // Management is caller-authorized local state, isolated from the user's registry.
+  const previousHome=process.env.RKE_USER_HOME,managedHome=await mkdtemp(join(tmpdir(),"rke-public-managed-"));process.env.RKE_USER_HOME=managedHome;
+  t.after(()=>{if(previousHome===undefined)delete process.env.RKE_USER_HOME;else process.env.RKE_USER_HOME=previousHome;});
+  const peer=await mkdtemp(join(tmpdir(),"rke-public-peer-"));assert.equal(spawnSync("git",["init"],{cwd:peer}).status,0);
+  const members=[{alias:"primary",path:root},{alias:"peer",path:peer}],authority={allowedRoots:[root,peer]};
+  const managedCall=async(name:string,args:Record<string,unknown>={})=>{const result=await invokeOperation(root,name,args,authority);assert.equal(result.exitCode,0,JSON.stringify(result.payload));observed.add(name);return result;};
+  const created=await managedCall("workspace_create",{name:"Public management contract",members}),owner=created.payload.workspace as {id:string};
+  await managedCall("workspace_list");await managedCall("workspace_resolve");await managedCall("workspace_inspect",{id:owner.id});
+  await managedCall("workspace_update",{id:owner.id,revision:0,name:"Renamed contract",members});await managedCall("workspace_retire",{id:owner.id,revision:1});
+  await call("repo_state_ignore",{});
+
   assert.deepEqual([...observed].sort(),OPERATIONS.map(operation=>operation.name).sort());
   for(const operation of OPERATIONS)await assert.rejects(()=>invokeOperation(root,operation.name,{unexpected:true}),/required|unsupported properties/);
 });

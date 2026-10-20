@@ -15,7 +15,7 @@ test("release retry accepts only the exact previously published tarball",()=>{
   assert.throws(()=>publicationDecision(503,undefined,integrity),/HTTP 503/);
 });
 
-interface WorkflowJob {needs?:string;permissions:Record<string,string>;steps:{name?:string;uses?:string;run?:string}[]}
+interface WorkflowJob {needs?:string;permissions:Record<string,string>;env?:Record<string,string>;steps:{name?:string;uses?:string;run?:string;env?:Record<string,string>}[]}
 async function releaseWorkflow(){return YAML.parse(await readFile(".github/workflows/publish-release.yml","utf8")) as {permissions:Record<string,string>;jobs:Record<string,WorkflowJob>};}
 
 test("release verification has read-only authority and publishers consume its artifact without source checkout",async()=>{
@@ -46,6 +46,17 @@ test("required CI gate rejects failed, skipped and cancelled verification jobs",
     new Function("process",body)({env:{RESULTS:JSON.stringify(results)},exit:(code:number)=>{exit=code;}});
     assert.equal(exit,status==="success"?undefined:1);
   }
+});
+
+test("the initial npm credential is exposed only to the artifact publisher",async()=>{
+  const workflow=await releaseWorkflow();
+  const credentialSteps=Object.entries(workflow.jobs).flatMap(([job,value])=>{
+    assert.equal(value.env?.NODE_AUTH_TOKEN,undefined,"publish authentication must not be job-wide");
+    return value.steps.filter(step=>step.env?.NODE_AUTH_TOKEN!==undefined).map(step=>({job,name:step.name,token:step.env!.NODE_AUTH_TOKEN}));
+  });
+  assert.deepEqual(credentialSteps,[{job:"publish-npm",name:"Publish or verify the exact tested tarball",token:"${{ secrets.NPM_BOOTSTRAP_TOKEN }}"}]);
+  assert.ok(!JSON.stringify(workflow.jobs.verify).includes("NPM_BOOTSTRAP_TOKEN"));
+  assert.ok(!JSON.stringify(workflow.jobs["publish-github"]).includes("NPM_BOOTSTRAP_TOKEN"));
 });
 
 test("credentialed npm publisher refuses substituted artifacts and registry conflicts, and disables lifecycle scripts",async()=>{

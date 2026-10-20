@@ -1,3 +1,5 @@
+import { GENERATED_COMMENT } from "./generated-provenance.js";
+import { managedWorkspace, workspaceAuthority, authorizedMember, snapshotDigest } from "./managed-workspaces.js";
 import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir, rm, stat, unlink } from "node:fs/promises";
@@ -46,12 +48,14 @@ export async function writeHandoff(root:string,args:Record<string,unknown>):Prom
   const raw=[String(args.topic),String(args.summary),String(args.nextAction),...((args.references as string[]|undefined)??[]),...((args.verification as string[]|undefined)??[]),...((args.risks as string[]|undefined)??[]),...((args.changes as string[]|undefined)??[])];
   if(containsSecret(raw.join("\n")))return out({result:"handoff-rejected",error:"content resembles a secret"},2);
   const topic=handoffLine(String(args.topic)),summary=handoffLine(String(args.summary)),next=handoffLine(String(args.nextAction));
-  const visibility=String(args.visibility??"local"),mode=String(args.mode??"standard");
+  const visibility=String(args.visibility??"local"),mode=String(args.mode??"standard"),workspace=managedWorkspace()?.root===root?managedWorkspace():undefined;
+  if(workspace&&visibility!=="local")return out({result:"handoff-visibility-invalid",error:"User-area workspace handoffs are private; choose a repository member for shared handoffs."},3);
+  const workspaceSnapshot=workspace?snapshotDigest(workspace,workspaceAuthority()):undefined;
   const directory=String(args.directory??(visibility==="local"?"local-docs/handoff":".rke/handoffs"));
   const dir=repositoryPath(root,safeRelative(directory));await mkdir(dir,{recursive:true});
   const name=`${new Date().toISOString().replace(/[-:.]/g,"")}-${slug(topic)}-${randomBytes(4).toString("hex")}.md`,path=join(dir,name);
   const rel=relativePosix(root,path),ignored=git(root,"check-ignore","-q","--",rel).code===0,tracked=git(root,"ls-files","--error-unmatch","--",rel).code===0;
-  if((visibility==="local"&&(!ignored||tracked))||(visibility==="shared"&&ignored))return out({result:"handoff-visibility-invalid",path:rel,error:visibility==="local"?"Local handoffs must be ignored and untracked.":"Shared handoffs must be commit-capable."},3);
+  if(!workspace&&((visibility==="local"&&(!ignored||tracked))||(visibility==="shared"&&ignored)))return out({result:"handoff-visibility-invalid",path:rel,error:visibility==="local"?"Local handoffs must be ignored and untracked.":"Shared handoffs must be commit-capable."},3);
   const branch=git(root,"branch","--show-current").stdout.trim()||"unknown",head=git(root,"rev-parse","HEAD").stdout.trim()||"unknown";
   const references=handoffBullets((args.references as string[]|undefined)??[]);
   const verification=handoffBullets((args.verification as string[]|undefined)??[]);
@@ -61,16 +65,17 @@ export async function writeHandoff(root:string,args:Record<string,unknown>):Prom
   const workflowPath=join(root,".engineering-workflow","state.json"),workflowState=existsSync(workflowPath)?await readJsonOr<Record<string,unknown>>(workflowPath,{}):{};
   const gates=Array.isArray(workflowState.outstanding_gates)?workflowState.outstanding_gates as string[]:[];
   const backbone=mode==="max"?`## Current State\n\n${summary}\n\n## Verification State\n\n${verification}\n\nGit branch and HEAD were observed at write time. Runtime and acceptance evidence must be rechecked from their owning surfaces.\n\n## Workflow State\n\nPhase: ${String(workflowState.primary_phase??"not activated")}; outstanding gates: ${gates.join(", ")||"none recorded"}.\n\n## Changes Made\n\n${suppliedChanges.length?`${handoffBullets(suppliedChanges)}\n`:""}${changed.length?changed.map(item=>`- Git status: ${handoffLine(item)}`).join("\n"):"No uncommitted paths observed."}\n\n## Open Issues Or Risks\n\n${risks}\n\n${gates.length?`Outstanding gates: ${gates.join(", ")}.`:"No outstanding workflow gates observed; recheck task, knowledge, and Git truth independently."}\n\n`:"## Verification State\n\nRe-verify repository, runtime, and workflow truth before mutation.\n\n";
-  const body=`# Handoff: ${topic}\n\n**As of:** ${utcNow()}; branch \`${branch}\`; commit \`${head}\`\n**Status:** active\n**Review after:** ${new Date(Date.now()+14*86400000).toISOString().slice(0,10)}\n**Mode:** ${mode}\n**Visibility:** ${visibility}\n\n## Session Goal\n\n${summary}\n\n${backbone}## Canonical References\n\n${references}\n\n## Suggested Next Step\n\n${next}\n`;
+  const body=`# Handoff: ${topic}\n\n${GENERATED_COMMENT}\n\n**As of:** ${utcNow()}; branch \`${branch}\`; commit \`${head}\`\n**Status:** active\n**Review after:** ${new Date(Date.now()+14*86400000).toISOString().slice(0,10)}\n**Mode:** ${mode}\n**Visibility:** ${visibility}\n\n## Session Goal\n\n${summary}\n\n${backbone}## Canonical References\n\n${references}\n\n## Suggested Next Step\n\n${next}\n`;
   if(containsSecret(body))return out({result:"handoff-rejected",error:"rendered content resembles a secret"},2);
   const superseded:string[]=[];
   await withFileLock(join(dir,".handoff-index"),async()=>{
     for(const oldName of await readdir(dir)){if(!oldName.endsWith(".md"))continue;const oldPath=join(dir,oldName),old=await readFile(oldPath,"utf8");if(old.startsWith(`# Handoff: ${topic}\n`)&&/^\*\*Status:\*\* active$/m.test(old)){await atomicWrite(oldPath,old.replace(/^\*\*Status:\*\* active$/m,"**Status:** superseded"));superseded.push(relativePosix(root,oldPath));}}
-    await atomicWrite(path,body);
+    await atomicWrite(path,workspace?body.replace(/; branch `[^`]+`; commit `[^`]+`/,`; workspace \`${workspace.id}\`\n**Workspace snapshot:** ${workspaceSnapshot}`).replace("Git branch and HEAD were observed at write time.","Repository identities and working deltas were observed at write time; no workspace Git commit exists.").replace("No uncommitted paths observed.","Member changes are captured in the workspace snapshot; inspect each repository for details."):body);
   });
   return out({result:"handoff-written",path:rel,visibility,commitRequired:visibility==="shared",superseded,asOf:utcNow()});
 }
 export async function inspectHandoff(root:string,args:Record<string,unknown>):Promise<OperationOutcome>{
+  const workspace=managedWorkspace()?.root===root?managedWorkspace():undefined;
   const visibility=String(args.visibility??"auto");let candidates:string[]=[];
   if(args.path)candidates=[repositoryPath(root,safeRelative(String(args.path)))];
   else for(const dir of args.directory?[String(args.directory)]:visibility==="local"?["local-docs/handoff"]:visibility==="shared"?[".rke/handoffs"]:["local-docs/handoff",".rke/handoffs"]){const target=repositoryPath(root,safeRelative(dir));if(existsSync(target))for(const name of await readdir(target))if(name.endsWith(".md"))candidates.push(join(target,name));}
@@ -83,13 +88,15 @@ export async function inspectHandoff(root:string,args:Record<string,unknown>):Pr
   const [path,text]=active[0]!,reviewAfter=text.match(/^\*\*Review after:\*\* (\d{4}-\d{2}-\d{2})$/m)?.[1];
   const rel=relativePosix(root,path),actual=text.match(/^\*\*Visibility:\*\* (local|shared)$/m)?.[1]??(rel.startsWith(".rke/handoffs/")?"shared":"local");
   const ignored=git(root,"check-ignore","-q","--",rel).code===0,tracked=git(root,"ls-files","--error-unmatch","--",rel).code===0;
-  if((actual==="local"&&(!ignored||tracked))||(actual==="shared"&&(ignored||!tracked)))return out({result:"handoff-visibility-invalid",path:rel,visibility:actual,reason:actual==="shared"&&!tracked?"pending-commit":"storage-mismatch"},3);
+  if(workspace?actual!=="local":((actual==="local"&&(!ignored||tracked))||(actual==="shared"&&(ignored||!tracked))))return out({result:"handoff-visibility-invalid",path:rel,visibility:actual,reason:actual==="shared"&&!tracked?"pending-commit":"storage-mismatch"},3);
   const recorded=text.match(/^\*\*As of:\*\* [^\n]*branch `([^`]+)`; commit `([^`]+)`$/m),currentBranch=git(root,"branch","--show-current").stdout.trim(),currentHead=git(root,"rev-parse","HEAD").stdout.trim();
-  const drift=[...(reviewAfter&&reviewAfter<new Date().toISOString().slice(0,10)?["review-expired"]:[]),...(recorded&&recorded[1]!==currentBranch?["branch-changed"]:[]),...(recorded&&recorded[2]!==currentHead?["head-changed"]:[])];
+  const recordedWorkspace=text.match(/^\*\*Workspace snapshot:\*\* ([a-f0-9]{64})$/m)?.[1];
+  const workspaceDrift=workspace&&recordedWorkspace!==snapshotDigest(workspace,workspaceAuthority());
+  const drift=[...(workspaceDrift?["workspace-inputs-changed"]:[]),...(reviewAfter&&reviewAfter<new Date().toISOString().slice(0,10)?["review-expired"]:[]),...(recorded&&recorded[1]!==currentBranch?["branch-changed"]:[]),...(recorded&&recorded[2]!==currentHead?["head-changed"]:[])];
   const referenceSection=text.match(/^## Canonical References\s+([\s\S]*?)(?=\n## |$)/m)?.[1]??"";
   const references=referenceSection.split(/\r?\n/).map(line=>line.match(/^- (.+)$/)?.[1]?.trim()).filter((item):item is string=>Boolean(item)&&item!=="None recorded.").map(item=>{
     if(/^https?:\/\//i.test(item))return{reference:item,status:"external-unverified"};
-    try{const candidate=safeRelative(item);return{reference:item,status:existsSync(repositoryPath(root,candidate))?"exists":"missing"};}catch{return{reference:item,status:"unresolved"};}
+    try{const memberRef=workspace?item.match(/^@([a-z][a-z0-9-]{0,47})\/(.+)$/):null;const candidate=safeRelative(memberRef?memberRef[2]!:item),source=memberRef?authorizedMember(workspace!,memberRef[1]!,workspaceAuthority()).path:root;return{reference:item,status:existsSync(repositoryPath(source,candidate))?"exists":"missing"};}catch{return{reference:item,status:"unresolved"};}
   });
   if(references.some(item=>item.status==="missing"))drift.push("reference-missing");
   const nextAction=text.match(/^## Suggested Next Step\s+([\s\S]*?)(?=\n## |$)/m)?.[1]?.trim()??null;
@@ -126,7 +133,26 @@ export async function publicationScan(root:string):Promise<OperationOutcome>{
 
 async function repositoryFiles(root:string):Promise<string[]>{const listed=git(root,"ls-files","-z","--cached","--others","--exclude-standard");if(listed.code===0)return listed.stdout.split("\0").filter(Boolean).map(path=>path.replaceAll("\\","/")).sort();return walk(root);}
 function normalizedSources(sources:unknown):string[]{if(!Array.isArray(sources))return[];return sources.map(source=>safeRelative(String(source))).filter((source,index,all)=>all.indexOf(source)===index);}
-async function identitiesForEntry(root:string,item:KnowledgeEntry):Promise<SourceIdentity[]>{const knowledge=safeRelative(String(item.path??""));const patterns=normalizedSources(item.sources);const matches=new Set<string>();for(const path of await repositoryFiles(root))if(patterns.some(pattern=>minimatch(path,pattern,{dot:true})))matches.add(path);if(knowledge)matches.add(knowledge);const identities:SourceIdentity[]=[];for(const path of [...matches].sort((a,b)=>a.localeCompare(b))){const target=repositoryPath(root,path);if(existsSync(target)&&(await stat(target)).isFile())identities.push({path,sha256:sha256(await readFile(target))});}return identities;}
+async function identitiesForEntry(root:string,item:KnowledgeEntry):Promise<SourceIdentity[]>{
+  const knowledge=safeRelative(String(item.path??"")),patterns=normalizedSources(item.sources),identities:SourceIdentity[]=[];
+  const workspace=managedWorkspace()?.root===root?managedWorkspace():undefined;
+  const local=patterns.filter(pattern=>!pattern.startsWith("@"));
+  for(const path of [...new Set([...(await repositoryFiles(root)).filter(path=>local.some(pattern=>minimatch(path,pattern,{dot:true}))),knowledge])].sort()){
+    const target=repositoryPath(root,path);if(existsSync(target)&&(await stat(target)).isFile())identities.push({path,sha256:sha256(await readFile(target))});
+  }
+  const qualified=patterns.filter(pattern=>pattern.startsWith("@"));
+  if(qualified.length&&!workspace)throw new RkeError("workspace_binding_requires_owner","Qualified member sources require their managed workspace owner.",3);
+  const aliases=[...new Set(qualified.map(pattern=>pattern.match(/^@([a-z][a-z0-9-]{0,47})\/(.+)$/)?.[1]??""))];
+  for(const alias of aliases){if(!alias)throw new RkeError("workspace_binding_invalid","Use @member/relative-pattern for a member source.",3);const member=authorizedMember(workspace!,alias,workspaceAuthority()),selected=qualified.filter(pattern=>pattern.startsWith(`@${alias}/`)).map(pattern=>pattern.slice(alias.length+2));
+    const first=identities.length;
+    identities.push({path:`@${alias}`,sha256:sha256(member.identity)});
+    for(const path of await repositoryFiles(member.path))if(selected.some(pattern=>minimatch(path,pattern,{dot:true}))&&(!member.scopes.length||member.scopes.some(scope=>path===scope||path.startsWith(`${scope}/`)))){
+      const target=repositoryPath(member.path,safeRelative(path));if(existsSync(target)&&(await stat(target)).isFile())identities.push({path:`@${alias}/${path}`,sha256:sha256(await readFile(target))});
+    }
+    if(identities.length===first+1)identities.pop();
+  }
+  return identities.sort((a,b)=>a.path.localeCompare(b.path));
+}
 function normalizedIdentities(receipt:VerificationReceipt|undefined):SourceIdentity[]|undefined{if(receipt?.sourceIdentities)return receipt.sourceIdentities.map(item=>({path:safeRelative(String(item.path)),sha256:String(item.sha256)})).sort((a,b)=>a.path.localeCompare(b.path));if(receipt?.sourceHashes)return Object.entries(receipt.sourceHashes).map(([path,digest])=>({path:safeRelative(path),sha256:digest})).sort((a,b)=>a.path.localeCompare(b.path));return undefined;}
 function sameIdentities(left:SourceIdentity[]|undefined,right:SourceIdentity[]):boolean{return !!left&&left.length===right.length&&left.every((item,index)=>item.path===right[index]?.path&&item.sha256===right[index]?.sha256);}
 export async function contextCheck(root:string,manifest?:unknown):Promise<OperationOutcome>{const loaded=await loadManifest(root,manifest);const entries=loaded.data.knowledge??[];const freshPaths:string[]=[];const stale:string[]=[];const unverified:string[]=[];const missing:string[]=[];for(const item of entries){const path=String(item.path??"");const recorded=normalizedIdentities(item.verified);if(!path||!existsSync(repositoryPath(root,safeRelative(path))))missing.push(path);else if(!recorded)unverified.push(path);else if(!sameIdentities(recorded,await identitiesForEntry(root,item)))stale.push(path);else freshPaths.push(path);}return out({result:"context-checked",manifest:loaded.path,fresh:!stale.length&&!unverified.length&&!missing.length,freshPaths,stale,unverified,missing,knowledgeCount:entries.length,revision:Number(loaded.data.revision??0)},stale.length||unverified.length||missing.length?3:0);}
@@ -195,7 +221,7 @@ export async function buildIndexes(root:string,bundle:string,force=false):Promis
   for(const directory of ordered){
     const direct=concepts.filter(concept=>relative(directory,concept.path).replaceAll("\\","/").split("/").length===1);
     const children=ordered.filter(other=>other!==directory&&relative(directory,other).replaceAll("\\","/").split("/").length===1&&other.startsWith(`${directory}/`));
-    const lines=[...(directory===rel?["---",`okf_version: ${JSON.stringify(declaredVersion)}`,"---",""]:[]),marker,""];
+    const lines=[...(directory===rel?["---",`okf_version: ${JSON.stringify(declaredVersion)}`,"---",""]:[]),marker,GENERATED_COMMENT,""];
     if(direct.length){lines.push("# Concepts","");for(const concept of direct)lines.push(`- [${typeof concept.title==="string"&&concept.title.trim()||basename(concept.path,".md")}](${basename(concept.path)}) - ${typeof concept.description==="string"&&concept.description.trim()||"No description provided."}`);lines.push("");}
     if(children.length){lines.push("# Directories","");for(const child of children){const name=basename(child);lines.push(`- [${name.replaceAll(/[-_]/g," ")}](${name}/) - Knowledge concepts in the ${name} group.`);}lines.push("");}
     if(!direct.length&&!children.length)lines.push("# Knowledge Bundle","","No concepts are recorded yet.","");
