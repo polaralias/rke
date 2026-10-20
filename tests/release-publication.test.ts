@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import YAML from "yaml";
+import { resolve } from "node:path";
 
 import { publicationDecision, tarballIntegrity } from "../src/release-publication.js";
 
@@ -64,19 +65,36 @@ test("credentialed npm publisher refuses substituted artifacts and registry conf
   const run=workflow.jobs["publish-npm"]!.steps.find(s=>s.name==="Publish or verify the exact tested tarball")!.run!;
   const body=/<<'NODE'\n([\s\S]+)\nNODE\s*$/.exec(run)![1]!.replace(/^import .+;\n/gm,"");
   const AsyncFunction=Object.getPrototypeOf(async()=>{}).constructor as new(...args:string[])=>(...args:unknown[])=>Promise<void>;
-  const execute=new AsyncFunction("readFileSync","createHash","spawnSync","fetch","process","console",body);
+  const execute=new AsyncFunction("readFileSync","createHash","resolve","spawnSync","fetch","process","console",body);
   const bytes=Buffer.from("verified package"),integrity=tarballIntegrity(bytes);
   const exercise=async(status:number,published:unknown,expected=integrity,version="0.1.0")=>{
     const calls:unknown[][]=[];
-    await execute(()=>bytes,createHash,(...args:unknown[])=>{calls.push(args);return{status:0};},async()=>({status,json:async()=>({dist:{integrity:published}})}),{env:{RELEASE_VERSION:version,RELEASE_INTEGRITY:expected}},{log:()=>{}});
+    await execute(()=>bytes,createHash,resolve,(...args:unknown[])=>{calls.push(args);return{status:0};},async()=>({status,json:async()=>({dist:{integrity:published}})}),{env:{RELEASE_VERSION:version,RELEASE_INTEGRITY:expected}},{log:()=>{}});
     return calls;
   };
   const published=await exercise(404,undefined);
-  assert.deepEqual(published[0]!.slice(0,2),["npm",["publish","dist/polaralias-rke-0.1.0.tgz","--provenance","--access","public","--ignore-scripts"]]);
+  assert.deepEqual(published[0]!.slice(0,2),["npm",["publish",resolve("dist","polaralias-rke-0.1.0.tgz"),"--provenance","--access","public","--ignore-scripts"]]);
   assert.equal((await exercise(200,integrity)).length,0);
   await assert.rejects(exercise(200,"sha512-other"),/different or missing/);
   await assert.rejects(exercise(200,undefined),/different or missing/);
   await assert.rejects(exercise(503,undefined),/HTTP 503/);
   await assert.rejects(exercise(404,undefined,"sha512-substituted"),/integrity changed/);
   await assert.rejects(exercise(404,undefined,integrity,"../other"),/Invalid release version/);
+});
+
+
+test("manual publication accepts only a version tag and preserves tag identity through release creation",async()=>{
+  const workflow=await releaseWorkflow();
+  const target=workflow.jobs.verify!.steps.find(s=>s.name==="Select immutable release tag")!;
+  const body=/<<'NODE'\n([\s\S]+)\nNODE\s*$/.exec(target.run!)![1]!.replace(/^import .+;\n/gm,"");
+  const execute=new Function("appendFileSync","process",body);
+  for(const tag of ["v0.1.0","main","refs/heads/main","v0.1.0\nother=x","v0.1.0\n","../private",""]){
+    const written:string[]=[];
+    const invoke=()=>execute((_path:string,value:string)=>written.push(value),{env:{RELEASE_TAG:tag,GITHUB_OUTPUT:"output"}});
+    if(tag==="v0.1.0"){invoke();assert.deepEqual(written,["tag=v0.1.0\n"]);}
+    else {assert.throws(invoke,/version tag/);assert.deepEqual(written,[]);}
+  }
+  const raw=await readFile(".github/workflows/publish-release.yml","utf8");
+  assert.match(raw,/ref: refs\/tags\/\$\{\{ steps\.target\.outputs\.tag \}\}/);
+  assert.match(raw,/RELEASE_TAG: \$\{\{ needs\.verify\.outputs\.tag \}\}/);
 });
