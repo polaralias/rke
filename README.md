@@ -1,5 +1,7 @@
 # RKE
 
+**Developer preview:** v0.1.0 is intended for early use and feedback. Release requires CI, reproducible builds, package installation and hygiene checks. Independent agent outcomes, host composition, reader utility and effectiveness remain unqualified; this preview does not claim those outcomes are proven.
+
 Repository Knowledge Engineering is an installable local runtime for retrieving repository evidence, tracking knowledge freshness, and preserving optional engineering continuity across agent sessions.
 
 The `engineering-workflow` skill supplies the engineering methodology: accepted behaviour and durable repository knowledge guide implementation, while source, tests and runtime evidence verify that documentation remains true. RKE supplies deterministic retrieval, validation, freshness, and safety operations when useful or required by repository policy.

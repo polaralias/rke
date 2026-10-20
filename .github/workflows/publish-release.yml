@@ -100,6 +100,8 @@ jobs:
         env:
           RELEASE_VERSION: ${{ needs.verify.outputs.version }}
           RELEASE_INTEGRITY: ${{ needs.verify.outputs.integrity }}
+          # Initial publication only: remove this environment secret after npm OIDC trust is configured.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_BOOTSTRAP_TOKEN }}
         run: |
           node --input-type=module <<'NODE'
           import { readFileSync } from 'node:fs';
