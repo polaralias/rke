@@ -27,6 +27,10 @@ jobs:
           repository: polaralias/okf-tasks
           ref: 99a2907181c029446ffaf9c6bff664a7b0ff487c
           path: .rke-external/okf-tasks
+        env:
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: "false"
       - uses: actions/setup-node@v6
         with:
           node-version: "24.15.0"
@@ -38,3 +42,4 @@ jobs:
       - run: python -m pip install ./.rke-external/okf-tasks
       - run: npm ci
       - run: npm run test:legacy-parity
+      - run: npm run test:okf-parity -- .rke-external/okf-tasks

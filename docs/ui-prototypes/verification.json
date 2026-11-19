@@ -1,0 +1,260 @@
+{
+  "result": "passed",
+  "checks": [
+    "30 desktop/tablet/mobile layouts",
+    "all ten page screenshots",
+    "task preview",
+    "state preview",
+    "task search and empty results",
+    "focus mode",
+    "wording comparison",
+    "text size",
+    "motion pause/replay",
+    "reduced motion",
+    "index screenshots and preview",
+    "no external requests",
+    "no runtime exceptions"
+  ],
+  "layouts": [
+    {
+      "design": "still",
+      "page": "kanban",
+      "width": 1440,
+      "client": 1425,
+      "scroll": 1425,
+      "font": "loaded"
+    },
+    {
+      "design": "still",
+      "page": "kanban",
+      "width": 1024,
+      "client": 1009,
+      "scroll": 1009,
+      "font": "loaded"
+    },
+    {
+      "design": "still",
+      "page": "kanban",
+      "width": 390,
+      "client": 390,
+      "scroll": 390,
+      "font": "loaded"
+    },
+    {
+      "design": "still",
+      "page": "reader",
+      "width": 1440,
+      "client": 1425,
+      "scroll": 1425,
+      "font": "loaded"
+    },
+    {
+      "design": "still",
+      "page": "reader",
+      "width": 1024,
+      "client": 1009,
+      "scroll": 1009,
+      "font": "loaded"
+    },
+    {
+      "design": "still",
+      "page": "reader",
+      "width": 390,
+      "client": 390,
+      "scroll": 390,
+      "font": "loaded"
+    },
+    {
+      "design": "folio",
+      "page": "kanban",
+      "width": 1440,
+      "client": 1425,
+      "scroll": 1425,
+      "font": "loaded"
+    },
+    {
+      "design": "folio",
+      "page": "kanban",
+      "width": 1024,
+      "client": 1009,
+      "scroll": 1009,
+      "font": "loaded"
+    },
+    {
+      "design": "folio",
+      "page": "kanban",
+      "width": 390,
+      "client": 390,
+      "scroll": 390,
+      "font": "loaded"
+    },
+    {
+      "design": "folio",
+      "page": "reader",
+      "width": 1440,
+      "client": 1425,
+      "scroll": 1425,
+      "font": "loaded"
+    },
+    {
+      "design": "folio",
+      "page": "reader",
+      "width": 1024,
+      "client": 1009,
+      "scroll": 1009,
+      "font": "loaded"
+    },
+    {
+      "design": "folio",
+      "page": "reader",
+      "width": 390,
+      "client": 390,
+      "scroll": 390,
+      "font": "loaded"
+    },
+    {
+      "design": "signal",
+      "page": "kanban",
+      "width": 1440,
+      "client": 1425,
+      "scroll": 1425,
+      "font": "loaded"
+    },
+    {
+      "design": "signal",
+      "page": "kanban",
+      "width": 1024,
+      "client": 1009,
+      "scroll": 1009,
+      "font": "loaded"
+    },
+    {
+      "design": "signal",
+      "page": "kanban",
+      "width": 390,
+      "client": 390,
+      "scroll": 390,
+      "font": "loaded"
+    },
+    {
+      "design": "signal",
+      "page": "reader",
+      "width": 1440,
+      "client": 1425,
+      "scroll": 1425,
+      "font": "loaded"
+    },
+    {
+      "design": "signal",
+      "page": "reader",
+      "width": 1024,
+      "client": 1009,
+      "scroll": 1009,
+      "font": "loaded"
+    },
+    {
+      "design": "signal",
+      "page": "reader",
+      "width": 390,
+      "client": 390,
+      "scroll": 390,
+      "font": "loaded"
+    },
+    {
+      "design": "lens",
+      "page": "kanban",
+      "width": 1440,
+      "client": 1425,
+      "scroll": 1425,
+      "font": "loaded"
+    },
+    {
+      "design": "lens",
+      "page": "kanban",
+      "width": 1024,
+      "client": 1009,
+      "scroll": 1009,
+      "font": "loaded"
+    },
+    {
+      "design": "lens",
+      "page": "kanban",
+      "width": 390,
+      "client": 390,
+      "scroll": 390,
+      "font": "loaded"
+    },
+    {
+      "design": "lens",
+      "page": "reader",
+      "width": 1440,
+      "client": 1425,
+      "scroll": 1425,
+      "font": "loaded"
+    },
+    {
+      "design": "lens",
+      "page": "reader",
+      "width": 1024,
+      "client": 1009,
+      "scroll": 1009,
+      "font": "loaded"
+    },
+    {
+      "design": "lens",
+      "page": "reader",
+      "width": 390,
+      "client": 390,
+      "scroll": 390,
+      "font": "loaded"
+    },
+    {
+      "design": "current",
+      "page": "kanban",
+      "width": 1440,
+      "client": 1425,
+      "scroll": 1425,
+      "font": "loaded"
+    },
+    {
+      "design": "current",
+      "page": "kanban",
+      "width": 1024,
+      "client": 1009,
+      "scroll": 1009,
+      "font": "loaded"
+    },
+    {
+      "design": "current",
+      "page": "kanban",
+      "width": 390,
+      "client": 390,
+      "scroll": 390,
+      "font": "loaded"
+    },
+    {
+      "design": "current",
+      "page": "reader",
+      "width": 1440,
+      "client": 1425,
+      "scroll": 1425,
+      "font": "loaded"
+    },
+    {
+      "design": "current",
+      "page": "reader",
+      "width": 1024,
+      "client": 1009,
+      "scroll": 1009,
+      "font": "loaded"
+    },
+    {
+      "design": "current",
+      "page": "reader",
+      "width": 390,
+      "client": 390,
+      "scroll": 390,
+      "font": "loaded"
+    }
+  ]
+}

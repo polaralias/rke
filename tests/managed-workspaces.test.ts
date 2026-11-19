@@ -1,4 +1,6 @@
 import { routeWorkspaceOperation } from "../src/workspace-dispatch.js";
+import fs from "node:fs";
+import { syncBuiltinESMExports } from "node:module";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { mkdtemp, mkdir, readFile, writeFile, rename } from "node:fs/promises";
@@ -6,10 +8,24 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { invokeOperation, releaseRepository } from "../src/operations.js";
-import { selectManagedWorkspace, withManagedWorkspace, type ManagedWorkspace } from "../src/managed-workspaces.js";
+import { selectManagedWorkspace, snapshotDigest, withManagedWorkspace, type ManagedWorkspace } from "../src/managed-workspaces.js";
 
 async function fixture(){const base=await mkdtemp(join(tmpdir(),"rke-managed-")),home=join(base,"user");process.env.RKE_USER_HOME=home;const roots=[join(base,"alpha"),join(base,"beta")];for(const root of roots){await mkdir(root);for(const args of [["init"],["config","user.name","Fixture"],["config","user.email","fixture@example.invalid"]])assert.equal(spawnSync("git",args,{cwd:root}).status,0);await writeFile(join(root,"shared.ts"),'export function calculateInvoice() { return 1; }\n');spawnSync("git",["add","."],{cwd:root});spawnSync("git",["commit","-m","fixture"],{cwd:root});}
 const context={allowedRoots:roots},members=roots.map((path,index)=>({alias:index?"beta":"alpha",path}));const created=await invokeOperation(roots[0]!,"workspace_create",{name:"Invoice review",members},context),workspace=created.payload.workspace as ManagedWorkspace;return{base,roots,context,members,workspace,call:(name:string,args:Record<string,unknown>={},extra={})=>invokeOperation(workspace.root,name,args,{...context,...extra})};}
+
+test("streamed member snapshots reject physical replacement during an awaited content read",async()=>{
+  const f=await fixture(),member=f.roots[0]!,probe=join(member,"probe.txt"),replacement=join(f.base,"replacement-git");
+  await writeFile(probe,"Untracked member input.");fs.cpSync(join(member,".git"),replacement,{recursive:true});
+  const original=fs.createReadStream;let changed=false;
+  fs.createReadStream=((...args:Parameters<typeof original>)=>{
+    const stream=original(...args);
+    if(fs.realpathSync.native(String(args[0]))===fs.realpathSync.native(probe))stream.once("data",()=>{changed=true;fs.renameSync(join(member,".git"),join(f.base,"original-git"));fs.renameSync(replacement,join(member,".git"));});
+    return stream;
+  }) as typeof original;
+  syncBuiltinESMExports();
+  try{const failure=await snapshotDigest(f.workspace,f.context).then(()=>null,error=>error as Error);assert.equal(changed,true,"The member stream must exercise physical replacement.");assert.ok(failure instanceof Error);assert.match(failure.message,/identity changed/);}
+  finally{fs.createReadStream=original;syncBuiltinESMExports();}
+});
 
 test("managed owner aggregates qualified repository evidence without repository workflow state",async()=>{const f=await fixture();assert.ok(!f.workspace.root.startsWith(f.roots[0]!));const result=await f.call("workspace_find_context",{query:"calculateInvoice"});assert.equal(result.exitCode,0,JSON.stringify(result.payload));const data=JSON.stringify(result.payload);assert.match(data,/alpha/);assert.match(data,/beta/);await f.call("workflow_activate",{});assert.ok((await readFile(join(f.workspace.root,".engineering-workflow/state.json"),"utf8")).includes('"active"'));for(const root of f.roots){await assert.rejects(readFile(join(root,".engineering-workflow/state.json")));await releaseRepository(root);}await releaseRepository(f.workspace.root);});
 

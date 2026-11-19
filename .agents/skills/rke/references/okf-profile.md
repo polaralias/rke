@@ -16,7 +16,7 @@ A high retrieval rank, declared human review or a current hash does not establis
 
 Attested Computation can retain runtime, parameters, computation, executor/receipt and attester declarations as knowledge. RKE does not execute them, follow remote resources, install tools or grant credentials. Any launch requires current user authorization and explicit command selection.
 
-OKF Tasks remains an independent specification and authoritative CLI for Tasks, Workstreams, acceptance, effort, providers, tracker profiles and visualization. Use the [adapter](okf-tasks-adapter.md) for strict task validation and mutate records through that producer. Supporting OKF knowledge 0.2 does not migrate the separate Tasks schema.
+OKF Tasks remains an independent specification for Tasks, Workstreams, acceptance, effort and Tracker Profiles. RKE's [integrated task module](okf-tasks-adapter.md) provides native TypeScript mutations, strict validation and visualisation. Supporting OKF knowledge 0.2 does not migrate the distinct Tasks schema.
 
 ## Bounded navigation
 

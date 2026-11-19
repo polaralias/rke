@@ -1,0 +1,1288 @@
+{
+  "result": "passed",
+  "file": "docs/rke-ui-review-all.html",
+  "layoutCases": 90,
+  "graphViews": 10,
+  "recordsPerGraph": 14,
+  "relationshipsPerGraph": 20,
+  "checks": [
+    "90 design/view/viewport combinations",
+    "embedded fonts",
+    "node and relationship selection",
+    "type filters",
+    "search and empty results",
+    "focus neighbours",
+    "graph zoom",
+    "graph-to-reader routing",
+    "original task search and wording comparison",
+    "comparison panes",
+    "viewport control",
+    "font licenses",
+    "reduced motion",
+    "direct file opening",
+    "zero external or neighbouring-file requests",
+    "zero runtime exceptions"
+  ],
+  "layouts": [
+    {
+      "design": "still",
+      "view": "kanban",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "still",
+      "view": "reader",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "still",
+      "view": "graph",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "folio",
+      "view": "kanban",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "folio",
+      "view": "reader",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "folio",
+      "view": "graph",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "signal",
+      "view": "kanban",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "signal",
+      "view": "reader",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "signal",
+      "view": "graph",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "lens",
+      "view": "kanban",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 1
+      }
+    },
+    {
+      "design": "lens",
+      "view": "reader",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "lens",
+      "view": "graph",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "current",
+      "view": "kanban",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "current",
+      "view": "reader",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "current",
+      "view": "graph",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "atlas",
+      "view": "kanban",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "atlas",
+      "view": "reader",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "atlas",
+      "view": "graph",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "prism",
+      "view": "kanban",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "prism",
+      "view": "reader",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "prism",
+      "view": "graph",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "cabinet",
+      "view": "kanban",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "cabinet",
+      "view": "reader",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "cabinet",
+      "view": "graph",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "studio",
+      "view": "kanban",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 1
+      }
+    },
+    {
+      "design": "studio",
+      "view": "reader",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "studio",
+      "view": "graph",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "console",
+      "view": "kanban",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 1
+      }
+    },
+    {
+      "design": "console",
+      "view": "reader",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 1
+      }
+    },
+    {
+      "design": "console",
+      "view": "graph",
+      "width": 1440,
+      "parent": {
+        "client": 1440,
+        "scroll": 1440
+      },
+      "inner": {
+        "client": 1425,
+        "scroll": 1425,
+        "fonts": 1
+      }
+    },
+    {
+      "design": "still",
+      "view": "kanban",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "still",
+      "view": "reader",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "still",
+      "view": "graph",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "folio",
+      "view": "kanban",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "folio",
+      "view": "reader",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "folio",
+      "view": "graph",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "signal",
+      "view": "kanban",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "signal",
+      "view": "reader",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "signal",
+      "view": "graph",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "lens",
+      "view": "kanban",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 1
+      }
+    },
+    {
+      "design": "lens",
+      "view": "reader",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "lens",
+      "view": "graph",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "current",
+      "view": "kanban",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "current",
+      "view": "reader",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "current",
+      "view": "graph",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "atlas",
+      "view": "kanban",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "atlas",
+      "view": "reader",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "atlas",
+      "view": "graph",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "prism",
+      "view": "kanban",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "prism",
+      "view": "reader",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "prism",
+      "view": "graph",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "cabinet",
+      "view": "kanban",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "cabinet",
+      "view": "reader",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "cabinet",
+      "view": "graph",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "studio",
+      "view": "kanban",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 1
+      }
+    },
+    {
+      "design": "studio",
+      "view": "reader",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "studio",
+      "view": "graph",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "console",
+      "view": "kanban",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 1
+      }
+    },
+    {
+      "design": "console",
+      "view": "reader",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 1
+      }
+    },
+    {
+      "design": "console",
+      "view": "graph",
+      "width": 1024,
+      "parent": {
+        "client": 1024,
+        "scroll": 1024
+      },
+      "inner": {
+        "client": 1009,
+        "scroll": 1009,
+        "fonts": 1
+      }
+    },
+    {
+      "design": "still",
+      "view": "kanban",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "still",
+      "view": "reader",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "still",
+      "view": "graph",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "folio",
+      "view": "kanban",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "folio",
+      "view": "reader",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "folio",
+      "view": "graph",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "signal",
+      "view": "kanban",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "signal",
+      "view": "reader",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "signal",
+      "view": "graph",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "lens",
+      "view": "kanban",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 1
+      }
+    },
+    {
+      "design": "lens",
+      "view": "reader",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "lens",
+      "view": "graph",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "current",
+      "view": "kanban",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "current",
+      "view": "reader",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "current",
+      "view": "graph",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "atlas",
+      "view": "kanban",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "atlas",
+      "view": "reader",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "atlas",
+      "view": "graph",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "prism",
+      "view": "kanban",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "prism",
+      "view": "reader",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "prism",
+      "view": "graph",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "cabinet",
+      "view": "kanban",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "cabinet",
+      "view": "reader",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "cabinet",
+      "view": "graph",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 3
+      }
+    },
+    {
+      "design": "studio",
+      "view": "kanban",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 1
+      }
+    },
+    {
+      "design": "studio",
+      "view": "reader",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "studio",
+      "view": "graph",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 2
+      }
+    },
+    {
+      "design": "console",
+      "view": "kanban",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 1
+      }
+    },
+    {
+      "design": "console",
+      "view": "reader",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 1
+      }
+    },
+    {
+      "design": "console",
+      "view": "graph",
+      "width": 390,
+      "parent": {
+        "client": 390,
+        "scroll": 390
+      },
+      "inner": {
+        "client": 375,
+        "scroll": 375,
+        "fonts": 1
+      }
+    }
+  ]
+}

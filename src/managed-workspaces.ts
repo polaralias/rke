@@ -113,8 +113,15 @@ export async function manageWorkspace(root:string,action:string,args:Record<stri
     return{payload:{result:"workspace-updated",workspace:selectManagedWorkspace(current.id)},exitCode:0};});
 }
 
-export function snapshotDigest(workspace:ManagedWorkspace,context:OperationContext):string{
-  const records=workspace.members.map(item=>{const member=authorizedMember(workspace,item.alias,context),head=git(member.path,"rev-parse","HEAD"),status=git(member.path,"status","--porcelain=v1");const delta=gitDelta(member.path,"HEAD");if(head.code||status.code||delta.code)fail("workspace_snapshot_unavailable","Member Git evidence is unavailable.");return{alias:member.alias,identity:member.identity,head:head.stdout,status:status.stdout,delta:sha256(delta.stdout)};});
+export async function snapshotDigest(workspace:ManagedWorkspace,context:OperationContext):Promise<string>{
+  const records=await Promise.all(workspace.members.map(async item=>{
+    const member=authorizedMember(workspace,item.alias,context);
+    return withRootIdentity(member.path,member.identity,async()=>{
+      const head=git(member.path,"rev-parse","HEAD"),status=git(member.path,"status","--porcelain=v1"),delta=await gitDelta(member.path,"HEAD");
+      if(head.code||status.code||delta.code)fail("workspace_snapshot_unavailable","Member Git evidence is unavailable.");
+      return{alias:member.alias,identity:member.identity,head:head.stdout,status:status.stdout,delta:sha256(delta.stdout)};
+    });
+  }));
   return sha256(JSON.stringify({id:workspace.id,revision:workspace.revision,records}));
 }
 

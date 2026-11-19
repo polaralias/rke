@@ -1,0 +1,51 @@
+import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import YAML from "yaml";
+import { RkeError } from "../errors.js";
+import { atomicWrite, sha256, withFileLock } from "../io.js";
+import { repositoryPath, safeRelative } from "../paths.js";
+import { validateBundle, validatePlaintextFrontmatter, taskIndexBody } from "./validator.js";
+
+export type Fields = Record<string, unknown>;
+export interface TaskDocument { path:string; metadata:Fields; body:string; digest:string; comments?:Fields[];attachments?:Fields[] }
+export const now=():string=>new Date().toISOString().replace(/\.\d{3}Z$/,"Z");
+export function fail(message:string):never { throw new RkeError("task_invalid",message,2); }
+export function object(value:unknown):Fields { if(!value||typeof value!=="object"||Array.isArray(value))return {};return value as Fields; }
+export function rows(value:unknown):Fields[] { if(value===undefined||value===null)return [];if(!Array.isArray(value)||value.some(v=>!v||typeof v!=="object"||Array.isArray(v)))fail("Expected a list of mappings.");return value as Fields[]; }
+export function text(value:unknown,label="value"):string { if(typeof value!=="string"||!value.trim())fail(`${label} must be non-empty text.`);return value; }
+export function slug(value:unknown):string { const v=text(value,"slug");if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v))fail("Expected a lowercase hyphenated slug.");return v; }
+export function integer(value:unknown,label:string):number { if(!Number.isSafeInteger(value)||Number(value)<0)fail(`${label} must be a non-negative safe integer.`);return Number(value); }
+export function date(value:unknown):string { const v=text(value,"timestamp");if(!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)$/.test(v)||!Number.isFinite(Date.parse(v)))fail("Timestamp must be RFC 3339.");return v; }
+export function roundMinutes(value:number):number {const floor=Math.floor(value);return value-floor===0.5?(floor%2?floor+1:floor):Math.round(value);}
+export function minutes(start:unknown,end:unknown):number {const duration=Date.parse(date(end))-Date.parse(date(start));if(duration<0)fail("Finished timestamp precedes start.");return roundMinutes(duration/60000);}
+export function encoded(metadata:Fields,body:string):string {return `---\n${YAML.stringify(metadata,{lineWidth:0}).trimEnd()}\n---\n\n${body.replace(/^\s*\n/,"").trimEnd()}\n`;}
+export function parseDocument(path:string,source:string):TaskDocument {const match=/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(source);if(!match)fail(`Missing YAML frontmatter: ${path}`);const parsed=YAML.parseDocument(match[1]!,{uniqueKeys:true});if(parsed.errors.length)fail(`Invalid YAML: ${path}`);const metadata=parsed.toJS({maxAliasCount:50}) as unknown;if(!metadata||typeof metadata!=="object"||Array.isArray(metadata))fail(`Frontmatter must be a mapping: ${path}`);return {path,metadata:metadata as Fields,body:source.slice(match[0].length).replace(/^\r?\n/,""),digest:sha256(source)};}
+export function recordPath(root:string,path:string):string {const clean=safeRelative(path),target=repositoryPath(root,clean);let part="";for(const segment of clean.split("/")){part=part?part+"/"+segment:segment;const current=repositoryPath(root,part);if(existsSync(current)&&lstatSync(current).isSymbolicLink())fail("Record paths must not traverse symbolic links.");}return target;}
+export function readRecord(root:string,path:string):TaskDocument {const target=recordPath(root,path),stat=lstatSync(target);if(stat.isSymbolicLink()||!stat.isFile()||stat.size>2*1024*1024)fail("Record must be a bounded regular file.");return parseDocument(path,readFileSync(target,"utf8"));}
+export function files(root:string,folder:string):string[] {const target=repositoryPath(root,folder);if(!existsSync(target))return [];const result:string[]=[];const walk=(dir:string,depth:number)=>{if(depth>24)fail("Task directory depth exceeded.");for(const entry of readdirSync(repositoryPath(root,dir),{withFileTypes:true})){if(entry.name===".git"||entry.name==="node_modules"||entry.name===".engineering-workflow")continue;const path=join(dir,entry.name).replaceAll("\\","/");if(entry.isSymbolicLink())fail("Symlinks are not supported in task bundles.");if(entry.isDirectory())walk(path,depth+1);else if(entry.isFile()&&entry.name.endsWith(".md"))result.push(path);if(result.length>10000)fail("Task bundle exceeds 10000 records.");}};walk(folder,0);return result.sort();}
+export class TaskStore {
+  readonly bundle:string;
+  private staged=new Map<string,{document:TaskDocument;source:string;expected:string|null}>();
+  constructor(readonly root:string,bundle="tasks"){this.bundle=safeRelative(bundle);if(this.bundle!=="."&&this.bundle.split("/").some(p=>p.startsWith(".")))fail("Task bundle must not be a hidden control directory.");repositoryPath(root,this.bundle);}
+  task(id:unknown):string{return safeRelative(`${this.bundle}/${slug(id)}/task.md`);}
+  workstream(task:unknown,id:unknown):string{return safeRelative(`${this.bundle}/${slug(task)}/workstreams/${slug(id)}.md`);}
+  read(path:string):TaskDocument {path=safeRelative(path);const staged=this.staged.get(path);return staged?structuredClone(staged.document):readRecord(this.root,path);}
+  all():TaskDocument[] {const paths=new Set([...files(this.root,this.bundle),...this.staged.keys()]);let bytes=0;return [...paths].sort().map(path=>{const doc=this.read(path);bytes+=Buffer.byteLength(doc.body)+Buffer.byteLength(JSON.stringify(doc.metadata));if(bytes>32*1024*1024)fail("Task bundle exceeds the 32 MiB processing bound.");return doc;});}
+  tasks():TaskDocument[]{return this.all().filter(doc=>doc.metadata.type==="Task"&&doc.path===this.task(doc.metadata.task));}
+  save(doc:TaskDocument,create=false):void {const issues:string[]=[];validatePlaintextFrontmatter(doc.path,doc.metadata,issues);if(issues.length)fail("Frontmatter strings must remain plaintext; put formatting in the body.");recordPath(this.root,doc.path);const source=encoded(doc.metadata,doc.body);if(Buffer.byteLength(source)>2*1024*1024)fail("Task record exceeds 2 MiB.");const current=this.staged.get(doc.path);if(create&&existsSync(repositoryPath(this.root,doc.path)))fail("Record already exists.");const expected=current?current.expected:(create?null:doc.digest);doc.digest=sha256(source);this.staged.set(doc.path,{document:structuredClone(doc),source,expected});}
+  create(path:string,metadata:Fields,body:string):TaskDocument {path=safeRelative(path);if(this.staged.has(path)||existsSync(repositoryPath(this.root,path)))fail("Record already exists.");const doc={path,metadata,body,digest:""};this.save(doc,true);return doc;}
+  index(force=false):void {const path=safeRelative(`${this.bundle}/index.md`),target=repositoryPath(this.root,path);if(existsSync(target)&&!readFileSync(target,"utf8").includes("<!-- Generated by okf-task-lifecycle. Do not edit by hand. -->")&&!force)fail("Refusing to replace a manually maintained index.");const body=taskIndexBody(this.tasks());const doc=existsSync(target)?this.read(path):{path,metadata:{okf_version:"0.1",okf_tasks_version:"0.1",okf_tasks_profile:"https://github.com/polaralias/okf-tasks/blob/v0.1.1/SPEC.md"},body:"",digest:""};doc.body=body;this.save(doc,!existsSync(target));}
+  async commit():Promise<void> {for(const [path,entry] of this.staged){const target=recordPath(this.root,path);if(entry.expected===null?existsSync(target):!existsSync(target)||sha256(readFileSync(target))!==entry.expected)throw new RkeError("task_conflict",`Record changed: ${path}`,3);}for(const [path,entry] of this.staged){await atomicWrite(recordPath(this.root,path),entry.source);}this.staged.clear();}
+  relativeLink(from:string,to:string):string{return relative(dirname(from),to).replaceAll("\\","/");}
+}
+export async function transaction<T>(store:TaskStore,action:()=>Promise<T>|T):Promise<T>{return withFileLock(repositoryPath(store.root,`.engineering-workflow/cache/tasks-${sha256(store.bundle).slice(0,16)}`),async()=>{const result=await action();await store.commit();return result;});}
+export function checkDigest(doc:TaskDocument,value:unknown):void {if(value!==undefined&&value!==doc.digest)throw new RkeError("task_conflict","The record changed since it was loaded. Reload before saving.",3);}
+export function rollup(metadata:Fields):void {const entries=rows(metadata.time),starts=entries.map(e=>e.started).filter(Boolean).map(date);if(starts.length){metadata.started=starts.sort((a,b)=>Date.parse(a)-Date.parse(b))[0];metadata.effort_minutes=entries.filter(e=>e.status==="closed").reduce((sum,e)=>sum+integer(e.effort_minutes,"effort"),0);}}
+export function validateTasks(root:string,bundle="tasks",strict=false,graphFolders?:readonly string[]):{valid:boolean;errors:string[];warnings:string[];tasks:number;workstreams:number} {const store=new TaskStore(root,bundle),documents:TaskDocument[]=[];for(const path of files(root,store.bundle)){try{documents.push(readRecord(root,path));}catch{ /* The independent validator reports malformed source below. */ }}const errors=validateBundle(repositoryPath(root,store.bundle),repositoryPath(root,"."),graphFolders),warnings:string[]=[];for(const doc of documents.filter(d=>d.metadata.type==="Task")){for(const marker of ["Describe the observable result and how a reviewer will recognise it.","Add evidence-backed completion criteria.","Add validation, integration, deployment, and live-verification evidence separately."]){if(doc.body.includes(marker))warnings.push(`${doc.path}: unedited task skeleton: ${marker}`);}for(const label of ["In scope","Out of scope"])if(new RegExp(`^-\\s+${label}:\\s*$`,"m").test(doc.body))warnings.push(`${doc.path}: empty ${label}`);for(const target of [doc.metadata.parent,...Array.isArray(doc.metadata.depends_on)?doc.metadata.depends_on:[]])if(typeof target==="string"&&!/^[a-z][a-z0-9+.-]*:/i.test(target)){const p=target.split("#")[0]!.replace(/^\.\//,"");const path=`${store.bundle}/${p.endsWith(".md")?p:p+".md"}`;if(!existsSync(repositoryPath(root,path)))warnings.push(`${doc.path}: unresolved relationship ${target}`);}}return {valid:!errors.length&&(!strict||!warnings.length),errors,warnings,tasks:documents.filter(d=>d.metadata.type==="Task").length,workstreams:documents.filter(d=>d.metadata.type==="Workstream").length};}
+
+
+
+
+
+
+

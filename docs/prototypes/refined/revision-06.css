@@ -1,0 +1,37 @@
+.studio-main .article .studio-intro { border-bottom: 0; padding-bottom: 0; }
+body.signal[data-shortlist-view="kanban"] .board:not(.vertical-board) { align-items: stretch; }
+body.signal[data-shortlist-view="kanban"] .board:not(.vertical-board) .column { align-self: stretch; }
+
+body[data-shortlist-view="graph"] .graph-canvas { overflow: hidden; height: auto; }
+body[data-shortlist-view="graph"] .graph-canvas .graph-svg {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: clamp(360px, 62dvh, 730px);
+  aspect-ratio: auto !important;
+  touch-action: none;
+}
+.graph-canvas .graph-svg .overview-dot {
+  display: block;
+  fill: var(--accent);
+  pointer-events: none;
+}
+.graph-svg[data-camera] .graph-node rect {
+  opacity: var(--card-opacity, 1);
+  pointer-events: all;
+}
+.graph-svg[data-camera] .node-type { opacity: var(--card-opacity, 1); }
+.graph-svg[data-camera] .node-title { opacity: var(--label-opacity, 1); }
+.graph-svg[data-camera] .overview-dot { opacity: var(--dot-opacity, 0); }
+.graph-svg[data-camera] .graph-node text { pointer-events: none; }
+
+@media (max-width: 700px) {
+  body.signal[data-shortlist-view="reader"] .reading-grid { border: 0; }
+  body[data-shortlist-view="graph"] .graph-canvas .graph-svg { height: clamp(300px, 58dvh, 620px); }
+  body[data-shortlist-view="graph"] .graph-heading { margin-bottom: 6px; }
+  body[data-shortlist-view="graph"] .graph-heading h1 { font-size: 24px; margin-bottom: 6px; }
+  body[data-shortlist-view="graph"] .graph-heading p { display: none; }
+  body[data-shortlist-view="graph"] .graph-controls { margin-bottom: 0; gap: 5px; }
+  body[data-shortlist-view="graph"] .graph-summary { padding-block: 5px 8px; }
+}

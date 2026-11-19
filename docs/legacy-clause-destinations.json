@@ -2,7 +2,7 @@
   "schema": 1,
   "authority": "implementation-source-review-not-independent-semantic-acceptance",
   "sourceInventorySha256": "a6eb87a429a556f1db0f5a63735482cfae0cbd7319bcfdd35bdfe3fd5206760f",
-  "scenarioCorpusSha256": "e17a81d1f31475b0123f81efa3ee0b3675fa21453d38a5d08adcda0b4675bdf1",
+  "scenarioCorpusSha256": "dec7a96283807b64102036964df9b4c1108a99248317247b8daf0f0d54938de4",
   "reviewedClauses": 483,
   "unreviewedClauses": 671,
   "records": [
@@ -3624,12 +3624,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",
@@ -5399,12 +5399,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",
@@ -5429,12 +5429,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",
@@ -5459,12 +5459,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",
@@ -5489,12 +5489,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",
@@ -5519,12 +5519,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",
@@ -5549,12 +5549,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",
@@ -5579,12 +5579,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",
@@ -5609,12 +5609,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",
@@ -5639,12 +5639,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",
@@ -5669,12 +5669,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",
@@ -5699,12 +5699,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",
@@ -5729,12 +5729,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",
@@ -5759,12 +5759,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",
@@ -9044,7 +9044,7 @@
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         },
         {
           "id": "spec-conformance",
@@ -9069,7 +9069,7 @@
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         },
         {
           "id": "spec-conformance",
@@ -9094,7 +9094,7 @@
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         },
         {
           "id": "spec-conformance",
@@ -9119,7 +9119,7 @@
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         },
         {
           "id": "spec-conformance",
@@ -9144,7 +9144,7 @@
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         },
         {
           "id": "spec-conformance",
@@ -9169,7 +9169,7 @@
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         },
         {
           "id": "spec-conformance",
@@ -9194,7 +9194,7 @@
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         },
         {
           "id": "spec-conformance",
@@ -9219,7 +9219,7 @@
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         },
         {
           "id": "spec-conformance",
@@ -9249,12 +9249,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",
@@ -9279,12 +9279,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",
@@ -9309,12 +9309,12 @@
         {
           "id": "tasks-adapter",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#ownership",
-          "textDigest": "4d813f6e6f4ff8f614189251bdeef80e28f3d2b71f757397c44cb9b7abba250b"
+          "textDigest": "7b6c35e2b363f3b5249ea79cf77ec75f3cb748543331b8bd5b0b85ac6ac53d06"
         },
         {
           "id": "tasks-validation",
           "href": ".agents/skills/rke/references/okf-tasks-adapter.md#validation-boundary",
-          "textDigest": "d42c511c3dcaf042d29452b52cd79c9602ccc88e7a4d7f87ba1f16af97d0cd26"
+          "textDigest": "226c4697754a8ece9d18f912ea4a47c45a089938faadff657fc232f53a03f104"
         }
       ],
       "rationale": "The independent current producer owns executable and schema semantics. The archived fallback helper is not restored, and missing compatible tooling remains an explicit validation gap.",

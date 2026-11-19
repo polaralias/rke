@@ -23,7 +23,7 @@ Add `--global` for a user-wide installation. The catalogue provides synchronized
 - Keep `skills/engineering-workflow` and `.agents/skills/rke` as independently versioned canonical skill packages in this repository. Methodology must remain complete without the runtime; runtime command guidance belongs in `.agents/skills/rke`.
 - Publish both skills into the Polaralias skills catalogue as synchronized mirrors; do not maintain independent copies there.
 - Verify each catalogue mirror with `npm run skill:check -- --skill <engineering-workflow|rke> --target <skills-repo>/skills/engineering/<name>` before coordinated release.
-- Preserve Query-to-Knowledge and Repository Change Comprehension as named workflow concepts, and preserve OKF Tasks as an independent primitive.
+- Preserve Query-to-Knowledge and Repository Change Comprehension as named workflow concepts. OKF Tasks remains an independent portable specification; its TypeScript engine and visual interface are integrated into RKE, with task and knowledge validation kept distinct.
 - Run the complete deterministic test suite, no-Python audit, and npm package build before release.
 
 <!-- repo-setup:shared-governance:start -->

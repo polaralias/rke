@@ -50,7 +50,7 @@ export async function writeHandoff(root:string,args:Record<string,unknown>):Prom
   const topic=handoffLine(String(args.topic)),summary=handoffLine(String(args.summary)),next=handoffLine(String(args.nextAction));
   const visibility=String(args.visibility??"local"),mode=String(args.mode??"standard"),workspace=managedWorkspace()?.root===root?managedWorkspace():undefined;
   if(workspace&&visibility!=="local")return out({result:"handoff-visibility-invalid",error:"User-area workspace handoffs are private; choose a repository member for shared handoffs."},3);
-  const workspaceSnapshot=workspace?snapshotDigest(workspace,workspaceAuthority()):undefined;
+  const workspaceSnapshot=workspace?await snapshotDigest(workspace,workspaceAuthority()):undefined;
   const directory=String(args.directory??(visibility==="local"?"local-docs/handoff":".rke/handoffs"));
   const dir=repositoryPath(root,safeRelative(directory));await mkdir(dir,{recursive:true});
   const name=`${new Date().toISOString().replace(/[-:.]/g,"")}-${slug(topic)}-${randomBytes(4).toString("hex")}.md`,path=join(dir,name);
@@ -91,7 +91,7 @@ export async function inspectHandoff(root:string,args:Record<string,unknown>):Pr
   if(workspace?actual!=="local":((actual==="local"&&(!ignored||tracked))||(actual==="shared"&&(ignored||!tracked))))return out({result:"handoff-visibility-invalid",path:rel,visibility:actual,reason:actual==="shared"&&!tracked?"pending-commit":"storage-mismatch"},3);
   const recorded=text.match(/^\*\*As of:\*\* [^\n]*branch `([^`]+)`; commit `([^`]+)`$/m),currentBranch=git(root,"branch","--show-current").stdout.trim(),currentHead=git(root,"rev-parse","HEAD").stdout.trim();
   const recordedWorkspace=text.match(/^\*\*Workspace snapshot:\*\* ([a-f0-9]{64})$/m)?.[1];
-  const workspaceDrift=workspace&&recordedWorkspace!==snapshotDigest(workspace,workspaceAuthority());
+  const workspaceDrift=workspace&&recordedWorkspace!==await snapshotDigest(workspace,workspaceAuthority());
   const drift=[...(workspaceDrift?["workspace-inputs-changed"]:[]),...(reviewAfter&&reviewAfter<new Date().toISOString().slice(0,10)?["review-expired"]:[]),...(recorded&&recorded[1]!==currentBranch?["branch-changed"]:[]),...(recorded&&recorded[2]!==currentHead?["head-changed"]:[])];
   const referenceSection=text.match(/^## Canonical References\s+([\s\S]*?)(?=\n## |$)/m)?.[1]??"";
   const references=referenceSection.split(/\r?\n/).map(line=>line.match(/^- (.+)$/)?.[1]?.trim()).filter((item):item is string=>Boolean(item)&&item!=="None recorded.").map(item=>{
@@ -241,7 +241,7 @@ export async function documentationBootstrap(root:string,bundle="docs/knowledge"
   return out({result:"documentation-bootstrap-assessed",bundle:rel,startingState,outcome,preserve,review,supersede:[],gaps,knowledgeFreshness:{fresh:freshness.freshPaths,stale:freshness.stale,unverified:freshness.unverified,missing:freshness.missing}});
 }
 export async function documentationAssess(root:string,base:string,manifest?:unknown):Promise<OperationOutcome>{
-  const initialDelta=gitDelta(root,base);
+  const initialDelta=await gitDelta(root,base);
   if(initialDelta.code)return out({result:"documentation-assessment-failed",base,error:initialDelta.stderr},2);
   let changed:string[];
   try{changed=gitChangedPaths(root,base).filter(path=>!/(^|\/)(?:index\.md|log\.md)$/.test(path)&&!path.startsWith(".engineering-workflow/"));}
@@ -255,7 +255,7 @@ export async function documentationAssess(root:string,base:string,manifest?:unkn
   let documentationDiscovery:DocumentationDiscovery;
   try{documentationDiscovery=await discoverDocumentation(root,changed,base);}
   catch(error){return out({result:"documentation-assessment-failed",base,error:`Documentation discovery failed: ${String(error)}`},2);}
-  const finalDelta=gitDelta(root,base);
+  const finalDelta=await gitDelta(root,base);
   if(finalDelta.code||finalDelta.stdout!==initialDelta.stdout)return out({result:"documentation-assessment-failed",base,error:"Repository changed during documentation discovery; assess again."},2);
   return out({result:"documentation-assessed",base,outcome,deltaDigest:sha256(initialDelta.stdout),changedPathCount:changed.length,changedPaths:changed.slice(0,20),detailsTruncated:changed.length>20,affectedKnowledge:affected,claimBindings:claims??null,documentationDiscovery,classification:outcome},changed.length||claimReview?3:0);
 }
@@ -281,7 +281,7 @@ export async function documentationDisposition(root:string,base:string,reviewedP
   if(evidence.trim().length<24||containsSecret(evidence))return out({result:"documentation-disposition-refused",error:{code:"documentation_evidence_insufficient"}},3);
   const unreviewed=unreviewedDocumentation(assessment.payload,reviewedDocuments);
   if(unreviewed.length)return out({result:"documentation-disposition-refused",error:{code:"documentation_candidates_unreviewed",unreviewed}},3);
-  const diff=gitDelta(root,base);if(diff.code)return out({result:"documentation-disposition-refused",error:{code:"documentation_base_invalid",message:diff.stderr.trim()}},2);
+  const diff=await gitDelta(root,base);if(diff.code)return out({result:"documentation-disposition-refused",error:{code:"documentation_base_invalid",message:diff.stderr.trim()}},2);
   if(sha256(diff.stdout)!==assessment.payload.deltaDigest)return out({result:"documentation-disposition-refused",error:{code:"documentation_delta_changed"}},3);
   const receipt={version:2,base,disposition:"no-canonical-update",changedPaths:changed,reviewedDocuments:[...new Set(reviewedDocuments.map(safeRelative))].sort(),evidence:evidence.trim(),deltaDigest:sha256(diff.stdout),recordedAt:utcNow()};
   const target=join(root,".engineering-workflow/documentation-receipt.json");await withFileLock(target,()=>writeJson(target,receipt));
@@ -289,6 +289,7 @@ export async function documentationDisposition(root:string,base:string,reviewedP
 }
 export async function documentationApply(root:string,args:Record<string,unknown>):Promise<OperationOutcome>{
   const knowledgePaths=(args.knowledgePaths as string[]).map(safeRelative),readerQueries=args.readerQueries as string[],bundle=String(args.bundle);
+  const readerScopes=[...new Set(((args.scopes as string[]|undefined)??[]).map(scope=>{const path=safeRelative(scope).replace(/\/+$/,"");repositoryPath(root,path);return path;}))].sort();
   for(const path of knowledgePaths)if(!existsSync(repositoryPath(root,path)))return out({result:"documentation-apply-failed",error:{code:"documentation_knowledge_missing",message:`Knowledge path does not exist: ${path}`}},2);
   const checked=await checkKnowledge(root,bundle);
   if(checked.exitCode)return out({result:"documentation-apply-failed",error:{code:"documentation_bundle_invalid",message:"The canonical knowledge bundle is not conformant.",details:checked.payload}},3);
@@ -302,27 +303,27 @@ export async function documentationApply(root:string,args:Record<string,unknown>
   const unreviewed=unreviewedDocumentation(assessment.payload,reviewedDocuments);
   if(unreviewed.length)return out({result:"documentation-apply-failed",error:{code:"documentation_candidates_unreviewed",unreviewed}},3);
   const {RepositoryEngine}=await import("./repository-engine.js"),engine=await RepositoryEngine.open(root),readerChecks:Record<string,unknown>[]=[];
-  try{for(const query of readerQueries){const matches=await engine.search(query,5),rank=matches.findIndex(match=>knowledgePaths.includes(String(match.path)));readerChecks.push({query,status:rank>=0?"passed":"failed",rank:rank>=0?rank+1:null,rankedPaths:matches.map(match=>match.path)});}}finally{engine.close();}
+  try{for(const query of readerQueries){const matches=await engine.search(query,5,readerScopes),rank=matches.findIndex(match=>knowledgePaths.includes(String(match.path)));readerChecks.push({query,scopes:readerScopes,status:rank>=0?"passed":"failed",rank:rank>=0?rank+1:null,rankedPaths:matches.map(match=>match.path)});}}finally{engine.close();}
   if(readerChecks.some(check=>check.status==="failed"))return out({result:"documentation-apply-failed",error:{code:"documentation_reader_check_failed",message:"An affected canonical concept was not in the first five results."},readerChecks},3);
-  const diff=gitDelta(root,String(args.base));if(diff.code)return out({result:"documentation-apply-failed",error:{code:"documentation_base_invalid",message:diff.stderr.trim()}},2);
+  const diff=await gitDelta(root,String(args.base));if(diff.code)return out({result:"documentation-apply-failed",error:{code:"documentation_base_invalid",message:diff.stderr.trim()}},2);
   if(sha256(diff.stdout)!==assessment.payload.deltaDigest)return out({result:"documentation-apply-failed",error:{code:"documentation_delta_changed"}},3);
   const presence=manifestPresence(root,args.manifest),target=presence.target,receiptPath=repositoryPath(root,".engineering-workflow/documentation-receipt.json");let receipt:Record<string,unknown>={};
   try{await withFileLock(target,async()=>{const original=existsSync(target)?await readFile(target,"utf8"):undefined,originalReceipt=existsSync(receiptPath)?await readFile(receiptPath,"utf8"):undefined;
     const legacyPath=presence.legacyTarget,originalLegacy=existsSync(legacyPath)?await readFile(legacyPath,"utf8"):undefined;
     const indexPaths=indexDirectories(root,safeRelative(bundle),checked.payload.concepts as {path:string}[]).map(directory=>repositoryPath(root,`${directory}/index.md`));
     const indexRelatives=indexPaths.map(path=>relativePosix(root,path)),ownLock=[relativePosix(root,`${target}.lock`)];
-    const unaffected=gitDelta(root,String(args.base),indexRelatives,ownLock);
+    const unaffected=await gitDelta(root,String(args.base),indexRelatives,ownLock);
     if(unaffected.code)throw new Error("Unable to fingerprint source before index generation.");
     const originalIndexes=await Promise.all(indexPaths.map(async path=>({path,bytes:existsSync(path)?await readFile(path,"utf8"):undefined})));
     try{const loaded=await loadManifest(root,args.manifest),data=loaded.data;for(const path of knowledgePaths){const item=(data.knowledge??[]).find(entry=>entry.path===path);if(!item)throw new Error(`Knowledge path is not registered: ${path}`);const identities=await identitiesForEntry(root,item);if(identities.length<2)throw new Error(`Knowledge path has no resolved bound source: ${path}`);item.verified={verifiedAt:utcNow(),evidence:String(args.evidence),sourceIdentities:identities};}
       data.revision=(data.revision??0)+1;validateManifest(data);await writeJson(repositoryPath(root,presence.path),data);if(loaded.legacy)await unlink(repositoryPath(root,".polaralias/repo-context.json"));
       const index=await buildIndexes(root,bundle);if(index.exitCode)throw new Error(`Index generation failed: ${JSON.stringify(index.payload)}`);
       const freshness=await contextCheck(root,args.manifest);if(freshness.exitCode)throw new Error(`Knowledge freshness remains unresolved: ${JSON.stringify(freshness.payload)}`);
-      const unchanged=gitDelta(root,String(args.base),indexRelatives,ownLock);
+      const unchanged=await gitDelta(root,String(args.base),indexRelatives,ownLock);
       if(unchanged.code||unchanged.stdout!==unaffected.stdout)throw new Error("Source changed during documentation apply; review it again.");
       // The manifest lock disappears on return; it is excluded only if untracked.
-      const finalDelta=gitDelta(root,String(args.base),[],ownLock);if(finalDelta.code)throw new Error("Unable to fingerprint final documentation delta.");
-      receipt={base:args.base,bundle,knowledgePaths,reviewedDocuments,readerQueries,evidence:args.evidence,readerChecks,deltaDigest:sha256(finalDelta.stdout),recordedAt:utcNow()};
+      const finalDelta=await gitDelta(root,String(args.base),[],ownLock);if(finalDelta.code)throw new Error("Unable to fingerprint final documentation delta.");
+      receipt={base:args.base,bundle,knowledgePaths,reviewedDocuments,readerQueries,readerScopes,evidence:args.evidence,readerChecks,deltaDigest:sha256(finalDelta.stdout),recordedAt:utcNow()};
       await writeJson(receiptPath,receipt);
     }catch(error){
       for(const {path,bytes} of originalIndexes){if(bytes===undefined)await rm(path,{force:true});else await atomicWrite(path,bytes);}

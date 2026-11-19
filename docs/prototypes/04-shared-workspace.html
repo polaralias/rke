@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="en" data-theme="studio"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>RKE workspace prototype</title><style>:root {
+  color-scheme: light;
+  --bg: #fffaf6;
+  --surface: #fffdfb;
+  --chrome: #faeee7;
+  --ink: #302521;
+  --muted: #695651;
+  --accent: #99372b;
+  --active: #f9e3d9;
+  --line: #d9c5bb;
+  --edge: #927b70;
+  --radius: 8px;
+  font: 16px/1.5 system-ui, sans-serif;
+}
+[data-theme="current"] {
+  color-scheme: dark;
+  --bg: #121d20;
+  --surface: #1a292d;
+  --chrome: #172427;
+  --ink: #ecf3f0;
+  --muted: #b5c6c2;
+  --accent: #a7e6cc;
+  --active: #253e38;
+  --line: #3b5352;
+  --edge: #79928c;
+}
+[data-theme="signal"] {
+  --bg: #f4f3ee;
+  --surface: #fcfbf7;
+  --chrome: #eceae2;
+  --ink: #22211e;
+  --muted: #5b5951;
+  --accent: #a52722;
+  --active: #f7e5de;
+  --line: #c0bdb2;
+  --edge: #78766e;
+  --radius: 0px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); }
+a { color: var(--accent); text-underline-offset: .15em; }
+button, input, select { font: inherit; color: inherit; }
+button, input, select {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 6px 10px;
+  min-height: 36px;
+}
+button, summary, select { cursor: pointer; }
+:is(button, a, input, select, summary, .node):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+button[aria-pressed="true"], button[aria-expanded="true"] { background: var(--active); border-color: var(--accent); }
+[hidden] { display: none !important; }
+.shell {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 3vw, 32px);
+  min-height: 53px;
+  padding: 6px clamp(12px, 3vw, 36px);
+  border-bottom: 1px solid var(--line);
+  background: var(--chrome);
+}
+.brand { font-weight: 850; font-size: 23px; letter-spacing: -.07em; text-decoration: none; color: var(--ink); }
+.shell nav { display: flex; align-items: center; gap: 2px; }
+.shell nav a { padding: 6px clamp(6px, 2vw, 12px); border-radius: var(--radius); text-decoration: none; font-size: 14px; color: var(--ink); }
+.shell nav a[aria-current] { color: var(--accent); background: var(--active); font-weight: 650; }
+.theme { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.theme select { max-width: 100%; }
+main { padding: 16px clamp(14px, 3vw, 36px) 24px; min-width: 0; }
+h1, h2, h3 { line-height: 1.18; }
+.path { font: 13px/1.45 ui-monospace, monospace; color: var(--muted); }
+.reading { display: grid; grid-template-columns: minmax(0, 880px) minmax(0, 240px); gap: clamp(20px, 4vw, 56px); max-width: 1250px; margin: auto; align-items: start; }
+.reading.focus { grid-template-columns: minmax(0, 880px); justify-content: center; gap: 24px; }
+article { min-width: 0; }
+article h1 { font-size: clamp(29px, 4vw, 43px); letter-spacing: -.035em; margin: 6px 0 12px; }
+.reader-tools { font-size: 13px; }
+.outline { border-block: 1px solid var(--line); padding: 8px 0; margin: 12px 0; font-size: 14px; }
+.outline summary { font-weight: 650; }
+.outline nav { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 6px; }
+.prose { font-size: 17px; line-height: 1.58; overflow-wrap: anywhere; }
+.prose p { margin: 0 0 14px; }
+.prose :is(h2,h3) { margin: 24px 0 10px; scroll-margin-top: 16px; }
+.prose h2 { font-size: 24px; }
+.prose h3 { font-size: 19px; }
+.prose pre { padding: 12px; overflow: auto; background: var(--chrome); border: 1px solid var(--line); font-size: 13px; }
+.prose :not(pre) > code { font-size: .87em; background: var(--chrome); padding: 1px 3px; }
+.evidence { border-top: 2px solid var(--accent); padding-top: 8px; font-size: 14px; overflow-wrap: anywhere; }
+.evidence h2 { font-size: 16px; margin: 0 0 8px; }
+.board-tools, .graph-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; font-size: 14px; }
+.board-tools input { width: min(100%, 250px); }
+.board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(165px, 1fr));
+  gap: 8px;
+  overflow: auto;
+  max-height: calc(100dvh - 126px);
+  align-items: start;
+}
+.board.queue { display: block; max-width: 720px; }
+.lane { min-width: 0; background: var(--chrome); padding: 0 5px 5px; border: 1px solid var(--line); border-radius: var(--radius); }
+.lane h2 { position: sticky; top: 0; background: var(--chrome); display: flex; justify-content: space-between; gap: 4px; padding: 7px 4px; margin: 0; font-size: 14px; }
+.lane h2 span { color: var(--muted); font-weight: 500; }
+.lane[data-status="Blocked"] h2 { color: var(--accent); }
+.task { display: block; width: 100%; margin-bottom: 4px; text-align: left; padding: 7px 8px; line-height: 1.3; }
+.task:last-child { margin-bottom: 0; }
+.task strong { display: block; font-size: 14px; font-weight: 650; }
+.task span, .empty { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
+.task-detail { width: min(520px, calc(100% - 24px)); border: 1px solid var(--line); border-radius: var(--radius); color: var(--ink); background: var(--surface); padding: 16px; }
+.task-detail::backdrop { background: #0008; }
+.task-detail a, .relations > a { display: block; margin: 6px 0; }
+.detail-head { display: flex; align-items: center; justify-content: space-between; }
+.graph-layout { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 235px; gap: 12px; }
+.canvas { min-width: 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface) radial-gradient(var(--line) .7px, transparent .7px) 0 0 / 16px 16px; }
+.canvas svg { display: block; width: 100%; height: max(420px, calc(100dvh - 145px)); touch-action: none; cursor: grab; }
+.canvas svg:active { cursor: grabbing; }
+.edge { fill: none; stroke: var(--edge); stroke-width: 1.1; vector-effect: non-scaling-stroke; }
+.edge.active { stroke: var(--accent); stroke-width: 2; }
+#arrow { fill: var(--edge); }
+.node { cursor: pointer; }
+.node rect { fill: var(--surface); stroke: var(--edge); vector-effect: non-scaling-stroke; }
+.node.selected rect { fill: var(--active); stroke: var(--accent); stroke-width: 2; }
+.node circle { fill: var(--edge); stroke: var(--surface); vector-effect: non-scaling-stroke; }
+.node.selected circle { fill: var(--accent); stroke-width: 2; }
+.node .kind { font: 12px ui-monospace, monospace; fill: var(--muted); }
+.node .label { font-size: 14px; font-weight: 650; fill: var(--ink); }
+[data-level="cards"] .node circle, [data-level="labels"] .node circle,
+[data-level="labels"] .node .kind, [data-level="dots"] .node :is(rect,text) { display: none; }
+.relations { border-top: 2px solid var(--accent); min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
+.relations h2 { font-size: 20px; margin: 8px 0; }
+.relations ul { list-style: none; padding: 0; }
+.relations li { border-top: 1px solid var(--line); padding: 5px 0; color: var(--muted); font-size: 12px; }
+.relations li button { display: block; border: 0; background: none; color: var(--accent); padding: 0; text-align: left; min-height: 28px; font-size: 14px; }
+.graph-tools label { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.graph-tools select { min-width: 0; max-width: 100%; }
+.close-sheet, #details { display: none; }
+.evidence .outline { margin-top: 0; border-top: 0; }
+.evidence .outline nav { display: grid; }
+@media (max-width: 1000px) {
+  .reading { grid-template-columns: minmax(0, 880px); justify-content: center; gap: 20px; }
+}
+@media (max-width: 700px) {
+  .theme span { display: none; }
+  main { padding-top: 10px; }
+  .board { grid-template-columns: repeat(5, minmax(154px, 46%)); }
+  .board-tools input { flex: 1; min-width: 116px; }
+  .graph-layout { display: block; }
+  .graph-tools label { width: 100%; }
+  .graph-tools select { flex: 1; }
+  .canvas svg { height: max(260px, calc(100dvh - 162px)); }
+  .relations { display: none; position: fixed; inset: auto 0 0; z-index: 2; max-height: 45dvh; overflow: auto; padding: 10px 16px; background: var(--surface); box-shadow: 0 -8px 24px #0002; }
+  .show-details .relations { display: block; }
+  .close-sheet { display: block; float: right; font-size: 12px; }
+  #details { display: inline-block; }
+}
+@media (max-width: 350px) {
+  .shell { gap: 5px; padding-inline: 8px; }
+  .shell nav a { padding-inline: 5px; }
+}
+</style></head>
+<body><header class="shell"><a class="brand" href="#reader">RKE</a>
+<nav aria-label="Workspace"><a href="#reader">Reader</a><a href="#kanban">Kanban</a><a href="#graph">Graph</a></nav>
+<label class="theme"><span>Theme</span><select id="theme"><option>Studio</option><option>Current</option><option>Signal</option></select></label></header>
+<main id="main"></main>
+<template id="reader-document"><h1>Repository reader workspace</h1>
+<p>The optional actual-browser contract is <code>node tests/reader-browser.contract.mjs &lt;absolute-browser-executable&gt; &lt;packed-workspace-reader.html&gt; [mobile]</code>. Use the installed two-root export created by packed smoke; the harness expects its <code>packagedRuntime</code> source and two selected records. It launches only an owned headless browser/profile, tests source location/comparison reload and native keyboard control, asserts no HTTP/runtime errors, and removes its profile. It does not establish human utility. The <a href="release-completion-report.md">dated browser receipt</a> records desktop/mobile observations separately from the <a href="reader-study-protocol.md">human protocol</a>.</p>
+<p><code>view project</code> returns a schema-1 bounded snapshot of authored knowledge, safe source, explicit source bindings, file API definitions and selected caller/callee relationships. <code>view export</code> writes the same snapshot into an offline reader with comparison panes, outline, source line numbers, provenance/freshness labels, local selection links, browser history and keyboard navigation. Both CLI and MCP use the shared operation registry.</p>
+<p>The reader retains producer-owned types, authored relationship verbs and existing reviewed freshness; it does not validate execution records or certify inferred prose. Relationships begin collapsed. Body rendering uses text nodes and included-record links, with no active Markdown or remote resources. Styles and scripts are original inline assets bound by SHA-256 content-policy hashes; platform fonts require no external files.</p>
+<p>The projection caps records at 40, relationships at 80, each body at 32 KiB and total body text at 256 KiB. Selected implementation bindings precede unrelated navigation. Bodies truncate only at valid UTF-8 boundaries. Input digests, the binding manifest and knowledge graph are rechecked before returning the snapshot. Changed inputs are withheld. Omission/exclusion/truncation counts and partial exit 3 are explicit; none of these checks provides a filesystem-wide transaction.</p>
+<p>Selected concepts receive their own knowledge neighbourhood even outside the default ranked set. Structural navigation inspects at most four selected source records (selection, comparison and explicit bound sources), eight definitions per source and one hop per trace. Definition and trace receipts are rechecked alongside the current source index. Only parser-backed high-confidence edges receive <code>confirmed-static</code>; agent-reviewed and semantic edges remain <code>inferred</code>/<code>candidate</code> in this view. A bare unresolved symbol never selects a guessed file. Call scope and unresolved/internal occurrences are shown in the inspector. A definition/source/trace cap keeps coverage partial; relationship omissions include known links whose endpoints were excluded or capped.</p>
+<p>Selected call endpoints precede other bound sources during hydration, so a concept with many bindings cannot crowd the comparison's dependency evidence out of the record cap. Selection and comparison always retain first priority.</p>
+<pre><code class="language-text">rke view project --selection docs/knowledge/system.md --comparison src/service.ts --root &lt;repository&gt;
+rke view export --selection docs/knowledge/system.md --output .engineering-workflow/cache/reader.html --root &lt;repository&gt;
+</code></pre>
+<p>An export receipt returns the output path, byte count, digest and projection revision. Replacing an existing file requires its exact <code>--expected-digest</code>; foreign or changed output is refused at preflight. Output must be a separate HTML path, and output reads are bounded. Export locking serializes runtime writers while preserving the ordinary external-filesystem concurrency limitation.</p>
+<p>Cached subsystem prose is available with <code>--include-explanations</code>. The adapter consumes current validated explanation receipts through their owning runtime API, never by treating cache files as source. It includes at most eight relevant subsystems within the shared 40-record/body caps. Each has a packet-qualified identity, inferred provenance, confidence, source quotes, producer coverage and questions. Its <code>explains</code> and typed subsystem links remain inferred candidates. Withheld receipts, omitted subsystems/relationships and incomplete producer coverage keep the projection partial. No receipt is synthesized or promoted during viewing.</p>
+<p>Use <code>--explanation &lt;packet-digest&gt;::&lt;subsystem-id&gt;</code> with the required source/concept <code>--selection</code> to open a specific current subsystem; the selected source/concept becomes the default comparison. Missing, stale or out-of-scope identities are refused. Receipt contents are revalidated before return; changing prose or provenance cannot reuse the previous projection revision. Local Markdown source links prefer included physical records even when an inferred record uses the same source anchor.</p>
+<p>For before/after source comparison, pass an explicit <code>--base &lt;commit-ref&gt;</code>. The selected path is read from the pinned Git commit and the comparison path (defaulting to selection) from the working tree. <code>--merge-base</code> uses the selected commit's merge base with current HEAD. This adapter reads source directly without building an index or creating knowledge-review receipts. Git and working-tree identities are distinct even for the same path; missing sides are labelled as absent. Added, deleted, modified and unchanged states describe source bytes. Different paths are an explicit comparison; only Git-reported rename similarity is labelled a rename candidate, never an established semantic move. Baseline/HEAD, working bytes and rename evidence are rechecked before return.</p>
+<pre><code class="language-text">rke view export --selection src/service.ts --base HEAD --output .engineering-workflow/cache/change-reader.html --root &lt;repository&gt;
+rke view project --selection src/old.ts --comparison src/new.ts --base main --merge-base --root &lt;repository&gt;
+</code></pre>
+<p>Historical reads accept bounded regular blobs only, reject secrets, binary/oversized content, symlink modes and excluded paths, and do not enable lazy fetch, replacement objects, filesystem monitors, external diffs or text converters. Protected content is refused rather than replaced with an empty side. Source bodies share the 32-KiB cap and partial exit 3. Historical source does not establish historical canonical freshness, execution validation or reachability. Inferred explanation flags require a separate view. This is a side-by-side snapshot, with no line-diff alignment or automatic path pairing.</p>
+<p>Source line numbers, section permalink buttons and the outline create snapshot-bound location links. The fragment retains the exact record ID, optional comparison, <code>anchor=L42</code> or <code>anchor=section:&lt;heading-key&gt;</code>, and the projection <code>snapshot</code> revision. Selecting a location in the comparison brings that exact record into the primary pane while retaining its counterpart. Focus and highlighting identify the target; reload and browser history restore it. Duplicate headings receive distinct keys, Unicode headings are supported, and source positions refer only to included body lines. Internal Markdown <code>#heading-key</code> and <code>path#L42</code> links use the same route; ambiguous physical paths stay inactive. Unknown records/comparisons, malformed locations, changed or unspecified snapshots and missing/capped locations produce visible notices without guessing a target. Document-only bookmarks remain compatible. Each pane retains its own reading position.</p>
+<p>The Documents and Evidence buttons collapse their side panes independently without changing selection, bookmarks or reading positions. Pane sizes exposes labelled native range controls for document width (180–320 px), evidence width (220–380 px) and comparison balance (35/65–65/35). Keyboard arrows and pointer input use bounded preset CSS rules; no source-selected inline styles are permitted. Comparison panes stack at narrower widths, and controls disable where their dimension no longer applies. Reset restores visible side panes and default sizes. <code>/</code> reveals document navigation before focusing search. Coverage counts sit outside the collapsible navigation and remain rendered. Preferences last for the current page session; reload uses default sizes.</p>
+<p>Reader delivery remains short of completed P6. OKF producer/upstream parity and the five-user formative study remain open. Deterministic and browser witnesses are recorded separately in the implementation progress ledger. No full repository graph is required for the reader's useful navigation tasks.</p>
+<h2>Selected workspace reading</h2>
+<p><code>workspace view project</code> and <code>workspace view export</code> use the existing workspace authorization, root pins and before/after content snapshots. Supply explicit primary and comparison paths in their owning aliases; a comparison repository requires its comparison path. Without a comparison repository, comparison stays in the primary root. CLI allow-roots and MCP startup allow-roots remain caller configuration, never manifest or tool arguments.</p>
+<pre><code class="language-text">rke workspace view export --manifest workspace.json --selected-repository service --selection docs/knowledge/system.md --comparison-repository client --comparison src/service.ts --root &lt;owner&gt; --allow-root &lt;permitted-root&gt;
+</code></pre>
+<p>Records and bookmarks use <code>alias::local-record-id</code>; relative Markdown links stay in the originating repository. Search includes aliases and a repository filter narrows document navigation. Every selected root retains its status, input snapshot and omission count in the projection and coverage footer. Roots without an explicit primary/comparison seed are snapshot-checked but contribute no reader records; the filter labels that boundary. No path, symbol or source instruction selects another repository automatically.</p>
+<p>The result's <code>complete</code> describes reader coverage and agrees with the projection and exit status. <code>workspaceComplete</code> separately describes the underlying workspace snapshot/dependency aggregation. Current roots can therefore coexist with a partial reader because of document, relationship or byte caps; a root snapshot never clears those omissions.</p>
+<p>Manifest scopes narrow hydration, bindings, traces and inferred receipts. Authored validation requires the complete selected knowledge bundle inside those scopes; pass <code>--bundle</code> or <code>--comparison-bundle</code> for an explicit alternative. A source-only scope omits unrelated knowledge navigation. Index refresh and producer freshness checks remain repository-owned operations; scopes are query/hydration boundaries, not a filesystem sandbox inside an authorized root. Explanation receipts spanning other scopes are withheld. <code>--include-explanations</code> and <code>--explanation</code> apply to the primary repository.</p>
+<p>Selected primary/comparison records retain first priority; remaining local ranks alternate across contributing roots. The same 40-record, 80-edge and body caps apply to the combined projection. Existing source-bound workspace dependencies appear only between included endpoint files and remain inferred candidates with their declaration kind/resolution; they do not become confirmed runtime edges. Missing endpoints and unresolved mappings keep coverage partial. No name-only relationship is invented.</p>
+<p>Reader graph, source, binding and explanation evidence is projected again after aggregation, alongside workspace manifest and source snapshots. Changed roots lose their records and dependent links. A failed primary returns an unavailable result and writes no file; an unavailable comparison root permits a partial primary export with its failure visible. Existing output still requires its exact expected digest, and the workspace manifest cannot be overwritten. Checks are bounded individual observations, without a global filesystem transaction. This surface compares current records across roots; explicit Git-base comparison remains the separate single-root source adapter.</p>
+<h2>Fixed-root live reading</h2>
+<p>Use <code>view serve</code> or <code>workspace view serve</code> with the same selection arguments as projection. The receipt contains a private loopback URL; keep the CLI or MCP process alive while reading. Refresh snapshot reloads the captured selection and preserves location bookmarks. A changed projection revision makes old bookmarks visibly stale.</p>
+<p>The server binds only to 127.0.0.1 on an ephemeral port. Its authenticated GET route accepts no replacement root, path, operation or selection. Sessions capture physical owner/caller roots, selected workspace topology/scopes and request arguments. Physical replacement, retargeting or scope changes require a new session; unavailable or denied children cannot gain authorization on refresh. An explicit single-root Git baseline resolves once at startup. Source evidence is recomputed through the existing producers and caps; refresh creates no canonical knowledge or review receipt.</p>
+<p>Keep the URL private because its nonce grants access to the selected evidence. Responses disable caching and remote execution/connections. Invalid request authority is rejected before projection; unavailable evidence returns an opaque failure without serving an older snapshot. Each process supports at most eight sessions, closes idle sessions after ten minutes, and owns their cleanup. MCP input closure drains queued calls before closing its sessions; stopping the owning CLI closes its reader. Offline exports remain independent of a running process.</p>
+<p><code>rke view serve --selection src/service.ts --root &lt;repository&gt;</code></p>
+<p><code>rke workspace view serve --manifest workspace.json --selected-repository service --selection src/service.ts --root &lt;owner&gt; --allow-root &lt;permitted-root&gt;</code></p>
+<h2>Code presentation</h2>
+<p>The reader colors recognized source extensions and explicitly labelled code fences using pinned highlight.js 11.12.0 at export/refresh time. Grammars load only when highlighting is requested. No browser highlighter or remote asset is required. The library's result passes a span/text-only conversion with exact reconstructed-text comparison, then the client creates text nodes and styled spans. Multiline comments/strings retain context; source line numbers and snapshot-bound locations retain their original identities.</p>
+<p>Decoration is disposable presentation, not structural or semantic evidence. Unknown/unlabelled languages, failed conversions, oversized token runs and the 64 KiB aggregate decoration cap fall back to plain original code. The original projection, body caps, provenance and content digests remain unchanged. Empty fenced lines remain empty, and source-line placeholders retain their existing layout. Syntax support does not establish parser or language-server qualification.</p>
+<p>Mermaid fences now offer on-demand rendering in an opaque script-only sandbox, with exact original source available through a separate control. Invalid syntax, unsupported active content, timeouts and unavailable assets keep plain source. Controls are limited to eight closed fences per export, 8 KiB per fence, 128 library edges and 15 seconds per attempt. Ordinary prose and source records do not load the asset or run the diagram engine. Selection changes remove frames, revoke owned Blob URLs and discard pending messages. The parent accepts only the exact current frame/job and bounded state/height, never SVG, HTML, commands or selection instructions. The pinned Mermaid 11.10.1 asset and complete MIT license are packaged. Parent script hashes and stylesheet hashes/nonces remain enforced; eligible diagram exports permit style attributes for SVG layout while all Markdown remains inert parent content. Runtime integration is implemented; browser fidelity and installed diagram checks remain in progress.</p>
+<p>The collapsed relationship inspector separates Incoming → Selected → Outgoing. Each direction initially includes at most four projected links, with explicit counts and four-link expansion steps. Directional rows retain the producer verb, provenance and certainty; candidates are labelled unresolved and have a dashed marker. Self-links appear once under Outgoing. Expansion state and reading position survive selection changes within the snapshot, and keyboard focus stays on the remaining expansion control or the direction heading. Export-wide omissions have unknown direction and remain distinct from links merely hidden in the current panel. This view does not infer endpoints or certify complete dependencies.</p>
+<p>The independent OKF producer uses the same four-link directional reveal workflow in its selected relationship panel, adds explicit collapse and retains expansion per document/direction. Its document links keep their producer meaning. That adapter does not import RKE's parser certainty, canonical freshness or inferred-source evidence classes. Producer and compatible upstream have separate normative and browser checks; equivalence of the navigation workflow does not merge their record schemas or generators.</p>
+<p>Reader HTML has a separate 12 MiB output/replacement bound to accommodate escaped projection text and the optional pinned renderer. Both first writes and replacements are bounded; existing files still require the exact current digest and a regular unlinked destination. This does not increase projection, source-body or diagram-input budgets. The larger-output regression passed in an isolated build and in the normal distribution build, including wrong-digest refusal without modifying the existing file.</p>
+<p>Diagram labels retain authored SVG dimensions and scroll within the opaque frame instead of shrinking to fit a dense or narrow pane. Reduced-motion preferences disable SVG animations/transitions; impossible geometry retains source. These latest rendering refinements require dense/mobile browser qualification.</p>
+</template>
+<script id="graph-data" type="application/json">{"design":"signal","nodes":[{"id":"repo","title":"Repository intelligence","type":"Architecture","path":"docs/knowledge/repository-intelligence.md","description":"Connect authored knowledge, implementation evidence and delivery without merging their distinct claims."},{"id":"lifecycle","title":"Task lifecycle","type":"Knowledge","path":"docs/knowledge/task-lifecycle.md","description":"Describe valid task states, workstreams and the evidence needed before completion."},{"id":"reader","title":"Reader workspace","type":"Knowledge","path":"docs/reader-workspace.md","description":"Navigate a bounded document projection while keeping selection, context and comparison explicit."},{"id":"provenance","title":"Knowledge provenance","type":"Knowledge","path":"docs/knowledge/provenance.md","description":"Distinguish authored knowledge from source evidence and generated explanations."},{"id":"tracker","title":"Tracker boundaries","type":"Decision","path":"docs/knowledge/tracker-boundaries.md","description":"Keep external tracker identities and provider write authority separate from local task records."},{"id":"unify","title":"Unify task and knowledge views","type":"Task","path":"tasks/unify-views/task.md","description":"Example RKE-031: keep one record identity across the board, reader and graph."},{"id":"position","title":"Preserve reader position","type":"Task","path":"tasks/reader-position/task.md","description":"Example RKE-036: restore the document, section and reading position on return."},{"id":"boundary","title":"Validate repository boundaries","type":"Task","path":"tasks/validate-boundaries/task.md","description":"Example RKE-028: reject source paths outside the selected repository."},{"id":"project-src","title":"Project projection","type":"Source","path":"src/visualisation.ts","description":"An example binding to the integrated task and knowledge projection."},{"id":"reader-src","title":"Reader implementation","type":"Source","path":"src/reader.ts","description":"An example binding to the bounded evidence reader implementation."},{"id":"operations-src","title":"Shared operations","type":"Source","path":"src/operations.ts","description":"An example binding to the shared CLI and MCP operation boundary."},{"id":"reader-work","title":"Reader delivery","type":"Workstream","path":"tasks/unify-views/workstreams/reader.md","description":"A scoped workstream that implements the shared document reading path."},{"id":"boundary-work","title":"Boundary checks","type":"Workstream","path":"tasks/validate-boundaries/workstreams/checks.md","description":"A scoped workstream that verifies the selected repository boundary."},{"id":"offline","title":"Verify offline reader export","type":"Task","path":"tasks/offline-export/task.md","description":"Example RKE-026: check navigation and comparison without a network connection."}],"edges":[{"from":"repo","to":"lifecycle","verb":"describes"},{"from":"repo","to":"reader","verb":"describes"},{"from":"repo","to":"provenance","verb":"describes"},{"from":"repo","to":"tracker","verb":"constrains"},{"from":"unify","to":"repo","verb":"implements"},{"from":"unify","to":"reader","verb":"depends on"},{"from":"position","to":"reader","verb":"improves"},{"from":"boundary","to":"provenance","verb":"protects"},{"from":"offline","to":"reader","verb":"verifies"},{"from":"reader-work","to":"unify","verb":"workstream of"},{"from":"boundary-work","to":"boundary","verb":"workstream of"},{"from":"repo","to":"project-src","verb":"bound to"},{"from":"reader","to":"reader-src","verb":"bound to"},{"from":"lifecycle","to":"operations-src","verb":"bound to"},{"from":"project-src","to":"reader-src","verb":"uses"},{"from":"project-src","to":"operations-src","verb":"uses"},{"from":"tracker","to":"lifecycle","verb":"references"},{"from":"reader-work","to":"reader-src","verb":"changes"},{"from":"boundary-work","to":"operations-src","verb":"checks"},{"from":"provenance","to":"reader","verb":"informs"}],"positions":{"repo":[493,325],"lifecycle":[310,86],"reader":[753,129],"provenance":[770,420],"tracker":[480,545],"unify":[235,254],"position":[27,388],"boundary":[277,566],"offline":[27,89],"reader-work":[32,228],"boundary-work":[53,600],"project-src":[600,36],"reader-src":[968,258],"operations-src":[944,611]}}</script>
+<script>function signalConnector(layout, source, target, index) {
+  const rightward = target.x >= source.x;
+  const direction = rightward ? 1 : -1;
+  const offset = ((index % 5) - 2) * 6;
+  const startY = source.y + 36 + offset;
+  const endY = target.y + 36 + offset;
+
+  if (layout === 'flow') {
+    if (source.x === target.x) {
+      const x = source.x + 184;
+      const elbow = x + 26 + offset;
+      return `M${x} ${startY} H${elbow} V${endY} H${x + 3}`;
+    }
+    const startX = source.x + (rightward ? 184 : 0);
+    const endX = target.x + (rightward ? -3 : 187);
+    const elbow = endX - direction * (43 + offset);
+    return `M${startX} ${startY} H${elbow} V${endY} H${endX}`;
+  }
+
+  // Use vertical ports when boxes overlap on the horizontal axis.
+  if (Math.abs(target.x - source.x) < 210) {
+    const down = target.y > source.y;
+    const startX = source.x + 92 + offset;
+    const endX = target.x + 92 + offset;
+    const fromY = source.y + (down ? 72 : 0);
+    const toY = target.y + (down ? -3 : 75);
+    const step = (toY - fromY) / 3;
+    return `M${startX} ${fromY} V${fromY + step} L${endX} ${toY - step} V${toY}`;
+  }
+  const startX = source.x + (rightward ? 184 : 0);
+  const endX = target.x + (rightward ? -3 : 187);
+  const step = (endX - startX) / 3;
+  return `M${startX} ${startY} H${startX + step} L${endX - step} ${endY} H${endX}`;
+}
+const main = document.querySelector('main');
+const theme = document.querySelector('#theme');
+const { nodes, edges, positions } = JSON.parse(document.querySelector('#graph-data').textContent);
+const decision = 'Tracker boundaries';
+const tasks = [
+  ['RKE-041','Compare knowledge revisions','Proposed','Unassigned'],
+  ['RKE-042','Group related task evidence','Proposed','James'],
+  ['RKE-043','Review document section links','Proposed','Alex'],
+  ['RKE-036','Preserve reader position','Ready','James','position'],
+  ['RKE-038','Make status moves explicit','Ready','Unassigned'],
+  ['RKE-040','Review keyboard navigation','Ready','Alex'],
+  ['RKE-031','Unify task and knowledge views','In progress','James','unify'],
+  ['RKE-034','Retain unsaved task drafts','In progress','Alex'],
+  ['RKE-035','Clarify evidence provenance','In progress','James'],
+  ['RKE-029','Reconcile tracker status mappings','Blocked','James','tracker','Approval pending on how unmapped statuses are handled.'],
+  ['RKE-045','Review external status labels','Blocked','Alex'],
+  ['RKE-026','Verify offline reader export','Validation','Alex','offline'],
+  ['RKE-028','Validate repository boundaries','Validation','James','boundary'],
+];
+const statuses = [...new Set(tasks.map(task => task[2]))];
+let focus = false;
+let queue = false;
+let status = 'Blocked';
+let query = '';
+let selected = 'repo';
+let graphCleanup;
+
+function link(label, href) {
+  const element = document.createElement('a');
+  element.textContent = label;
+  element.href = '#' + href;
+  return element;
+}
+
+function reader(section) {
+  const isDecision = section === 'decision';
+  main.innerHTML = `<div class="reading"><article>
+    <div class="path">Knowledge / ${isDecision ? 'Example decision' : 'Repository reader'}</div>
+    <h1>${isDecision ? decision : 'Repository reader workspace'}</h1>
+    <div class="reader-tools"><button id="focus" aria-pressed="${focus}">Focus mode</button></div>
+    <details class="outline"><summary>On this page</summary><nav aria-label="On this page"></nav></details>
+    <div class="prose"></div></article>
+    <aside class="evidence"><h2>Evidence and links</h2></aside></div>`;
+  const layout = main.querySelector('.reading');
+  const outlinePanel = main.querySelector('.outline');
+  const evidence = main.querySelector('.evidence');
+  function placeOutline() {
+    const side = !focus && matchMedia('(min-width: 1100px)').matches;
+    if (side) evidence.prepend(outlinePanel);
+    else main.querySelector('.reader-tools').after(outlinePanel);
+    outlinePanel.open = side;
+  }
+  layout.classList.toggle('focus', focus);
+  main.querySelector('#focus').onclick = event => {
+    focus = !focus;
+    layout.classList.toggle('focus', focus);
+    event.currentTarget.setAttribute('aria-pressed', focus);
+    placeOutline();
+  };
+  const prose = main.querySelector('.prose');
+  if (isDecision) {
+    prose.innerHTML = '<p>This example decision is awaiting approval.</p><h2>Handling unmapped statuses</h2><p>Keep an external tracker status visible as reported until it has an approved mapping to a local task state. An unmapped status stays unresolved during synchronisation.</p><h2>Why this matters</h2><p>Automatically mapping an unfamiliar value could move a task into the wrong state. The mapping review needs an explicit fallback before the blocked task can proceed.</p>';
+    evidence.append(link('Return to RKE-029', 'kanban/RKE-029'));
+  } else {
+    const content = document.querySelector('#reader-document').content.cloneNode(true);
+    content.querySelector('h1')?.remove();
+    const browserContract = content.querySelector('p');
+    if (browserContract?.textContent.startsWith('The optional actual-browser contract')) {
+      const heading = document.createElement('h2');
+      heading.textContent = 'Browser verification';
+      content.append(heading, browserContract);
+    }
+    for (const anchor of content.querySelectorAll('a')) anchor.replaceWith(document.createTextNode(anchor.textContent));
+    prose.append(content);
+    evidence.append('Source snapshot · docs/reader-workspace.md', document.createElement('br'), link('View reader relationships', 'graph/reader'));
+  }
+  const outline = main.querySelector('.outline nav');
+  const headings = [...prose.querySelectorAll('h2,h3')];
+  headings.forEach((heading, index) => {
+    heading.id = 'section-' + index;
+    heading.tabIndex = -1;
+    const jump = link(heading.textContent, 'reader/' + (isDecision ? 'decision/' : '') + heading.id);
+    outline.append(jump);
+  });
+  placeOutline();
+}
+
+function board(taskId) {
+  main.innerHTML = `<div class="board-tools"><input type="search" aria-label="Find a task" placeholder="Find a task"><button id="queue" aria-pressed="${queue}">Vertical queue</button><label id="status">Status <select></select></label></div>
+    <div class="board" aria-label="Task board"></div><dialog class="task-detail" aria-labelledby="task-title"></dialog>`;
+  const board = main.querySelector('.board');
+  const search = main.querySelector('input');
+  const picker = main.querySelector('select');
+  picker.replaceChildren(...statuses.map(value => new Option(value, value)));
+  picker.value = status;
+  search.value = query;
+  const dialog = main.querySelector('dialog');
+  function openTask(task) {
+    const [id, title, state, owner, node, blocker] = task;
+    dialog.innerHTML = `<div class="detail-head"><span class="path">${id} / ${state}</span><button autofocus>Close</button></div>
+      <h2 id="task-title">${title}</h2><p>Owner: ${owner}</p>`;
+    dialog.querySelector('button').onclick = () => dialog.close();
+    if (state === 'Blocked') {
+      const note = document.createElement('p');
+      note.textContent = blocker || 'Blocker reason not recorded';
+      dialog.append(note);
+    }
+    if (node === 'tracker') dialog.append(link('Read the decision · ' + decision, 'reader/decision/section-0'));
+    if (node) dialog.append(link('View relationships', 'graph/' + node));
+    dialog.showModal();
+  }
+  function renderTasks() {
+    board.classList.toggle('queue', queue);
+    main.querySelector('#status').hidden = !queue;
+    main.querySelector('#queue').setAttribute('aria-pressed', queue);
+    board.replaceChildren();
+    const filter = query.trim().toLowerCase();
+    for (const state of queue ? [status] : statuses) {
+      const matching = tasks.filter(task => task[2] === state && task.join(' ').toLowerCase().includes(filter));
+      const lane = document.createElement('section');
+      lane.className = 'lane';
+      lane.dataset.status = state;
+      lane.innerHTML = `<h2>${state} <span>${matching.length}</span></h2>`;
+      for (const task of matching) {
+        const card = document.createElement('button');
+        card.className = 'task';
+        card.innerHTML = `<strong>${task[1]}</strong><span>${task[2] === 'Blocked' ? (task[5] ? 'Decision pending' : 'Blocker reason not recorded') : task[0] + ' · ' + task[3]}</span>`;
+        card.onclick = () => openTask(task);
+        lane.append(card);
+      }
+      if (!matching.length) lane.insertAdjacentHTML('beforeend', '<p class="empty">No matching tasks</p>');
+      board.append(lane);
+    }
+  }
+  search.oninput = () => { query = search.value; renderTasks(); };
+  picker.onchange = () => { status = picker.value; renderTasks(); };
+  main.querySelector('#queue').onclick = () => { queue = !queue; renderTasks(); };
+  renderTasks();
+  const task = tasks.find(item => item[0] === taskId);
+  if (task) openTask(task);
+}
+
+function graph(nodeId) {
+  if (nodes.some(node => node.id === nodeId)) selected = nodeId;
+  main.innerHTML = `<div class="graph-tools"><label>Find a record <select id="record"></select></label><button id="fit">Fit graph</button><button id="out" aria-label="Zoom out">−</button><button id="in" aria-label="Zoom in">+</button><button id="details" aria-expanded="false">Details</button></div>
+    <div class="graph-layout"><div class="canvas"><svg role="group" aria-label="Repository relationships. Drag to pan, pinch to zoom.">
+    <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8z"></path></marker></defs><g class="world"></g></svg></div>
+    <aside class="relations" aria-label="Selected record"></aside></div>`;
+  const picker = main.querySelector('#record');
+  picker.replaceChildren(...nodes.map(node => new Option(node.title, node.id)));
+  const svg = main.querySelector('svg');
+  const world = svg.querySelector('.world');
+  const layout = main.querySelector('.graph-layout');
+  const panel = main.querySelector('.relations');
+  const details = main.querySelector('#details');
+  const mobile = matchMedia('(max-width: 700px)');
+  const pointers = new Map();
+  let scale = 1, x = 0, y = 0, fitScale = 1, dragged = false;
+  const elements = new Map();
+  const paths = [];
+  const makeSvg = (tag, attributes) => {
+    const element = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
+    return element;
+  };
+  const coord = id => {
+    const [x, y] = positions[id];
+    return { x, y };
+  };
+  edges.forEach((edge, index) => {
+    const path = makeSvg('path', { d: signalConnector('network', coord(edge.from), coord(edge.to), index), class: 'edge', 'marker-end': 'url(#arrow)' });
+    paths.push(path);
+    world.append(path);
+  });
+  for (const node of nodes) {
+    const point = coord(node.id);
+    const item = makeSvg('g', { transform: `translate(${point.x} ${point.y})`, class: 'node', tabindex: 0, role: 'button', 'aria-label': node.title, 'data-node': node.id });
+    const box = makeSvg('rect', { width: 184, height: 72, rx: 3 });
+    const dot = makeSvg('circle', { cx: 92, cy: 36, r: 15 });
+    const kind = makeSvg('text', { x: 10, y: 16, class: 'kind' });
+    kind.textContent = node.type;
+    const words = node.title.split(' ');
+    const lines = [''];
+    for (const word of words) {
+      const last = lines.at(-1);
+      if (last && last.length + word.length > 20) lines.push(word);
+      else lines[lines.length - 1] = (last + ' ' + word).trim();
+    }
+    item.append(box, dot, kind);
+    lines.forEach((line, index) => {
+      const text = makeSvg('text', { x: 10, y: 36 + index * 17, class: 'label' });
+      text.textContent = line;
+      item.append(text);
+    });
+    item.addEventListener('click', () => { if (!dragged) choose(node.id, true); });
+    item.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); choose(node.id, true); }
+    });
+    elements.set(node.id, item);
+    world.append(item);
+  }
+  function paint() {
+    svg.dataset.level = !mobile.matches || scale >= .84 ? 'cards' : scale >= .48 ? 'labels' : 'dots';
+    world.setAttribute('transform', `translate(${x} ${y}) scale(${scale})`);
+  }
+  function fit() {
+    fitScale = Math.min(svg.clientWidth / 1200, svg.clientHeight / 720);
+    scale = fitScale;
+    x = (svg.clientWidth - 1200 * scale) / 2;
+    y = (svg.clientHeight - 720 * scale) / 2;
+    paint();
+  }
+  function center(id) {
+    const point = coord(id);
+    scale = mobile.matches ? Math.max(.9, scale) : scale;
+    x = svg.clientWidth / 2 - (point.x + 92) * scale;
+    y = svg.clientHeight / 2 - (point.y + 36) * scale;
+    paint();
+  }
+  function showDetails(show) {
+    layout.classList.toggle('show-details', show);
+    details.setAttribute('aria-expanded', show);
+  }
+  function choose(id, reveal = false) {
+    selected = id;
+    picker.value = id;
+    const node = nodes.find(item => item.id === id);
+    for (const [key, item] of elements) {
+      item.classList.toggle('selected', key === id);
+      item.setAttribute('aria-pressed', key === id);
+    }
+    edges.forEach((edge, index) => paths[index].classList.toggle('active', edge.from === id || edge.to === id));
+    panel.innerHTML = '<button class="close-sheet">Close details</button><p class="path"></p><h2></h2><p class="description"></p>';
+    panel.querySelector('button').onclick = () => { showDetails(false); details.focus(); };
+    panel.querySelector('.path').textContent = node.type;
+    panel.querySelector('h2').textContent = node.title;
+    panel.querySelector('.description').textContent = node.description;
+    if (id === 'tracker') panel.append(link('Read the example decision', 'reader/decision/section-0'));
+    if (id === 'reader') panel.append(link('Open Reader workspace', 'reader'));
+    const task = tasks.find(item => item[4] === id);
+    if (task) panel.append(link('Open ' + task[0], 'kanban/' + task[0]));
+    const list = document.createElement('ul');
+    for (const edge of edges.filter(edge => edge.from === id || edge.to === id)) {
+      const outgoing = edge.from === id;
+      const other = nodes.find(item => item.id === (outgoing ? edge.to : edge.from));
+      const row = document.createElement('li');
+      const button = document.createElement('button');
+      button.textContent = other.title;
+      button.onclick = () => { choose(other.id, true); if (mobile.matches) center(other.id); panel.querySelector('h2').tabIndex = -1; panel.querySelector('h2').focus(); };
+      row.append(outgoing ? edge.verb : 'Incoming · ' + edge.verb, button);
+      list.append(row);
+    }
+    panel.append(list);
+    if (reveal) showDetails(true);
+  }
+  function local(event) {
+    const rect = svg.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+  function zoom(factor, from, to = from) {
+    const next = Math.max(Math.min(.14, fitScale), Math.min(3.4, scale * factor));
+    x = to.x - (from.x - x) * next / scale;
+    y = to.y - (from.y - y) * next / scale;
+    scale = next;
+    paint();
+  }
+  const middle = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+  const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  svg.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || pointers.size === 2) return;
+    if (!pointers.size) dragged = false;
+    else dragged = true;
+    pointers.set(event.pointerId, local(event));
+    event.target.setPointerCapture(event.pointerId);
+  });
+  svg.addEventListener('pointermove', event => {
+    const old = pointers.get(event.pointerId);
+    if (!old) return;
+    const point = local(event);
+    const other = [...pointers].find(([id]) => id !== event.pointerId)?.[1];
+    pointers.set(event.pointerId, point);
+    if (other) {
+      zoom(distance(point, other) / Math.max(1, distance(old, other)), middle(old, other), middle(point, other));
+    } else {
+      if (distance(old, point) > 2) dragged = true;
+      x += point.x - old.x;
+      y += point.y - old.y;
+      paint();
+    }
+  });
+  for (const event of ['pointerup','pointercancel','lostpointercapture']) {
+    svg.addEventListener(event, event => pointers.delete(event.pointerId));
+  }
+  svg.addEventListener('wheel', event => {
+    event.preventDefault();
+    zoom(Math.exp(-event.deltaY * .002), local(event));
+  }, { passive: false });
+  picker.onchange = () => { choose(picker.value, true); if (mobile.matches) center(picker.value); };
+  main.querySelector('#fit').onclick = fit;
+  for (const [id, factor] of [['in',1.4],['out',1/1.4]]) {
+    main.querySelector('#' + id).onclick = () => zoom(factor, { x: svg.clientWidth / 2, y: svg.clientHeight / 2 });
+  }
+  details.onclick = () => showDetails(!layout.classList.contains('show-details'));
+  panel.addEventListener('keydown', event => { if (event.key === 'Escape') { showDetails(false); details.focus(); } });
+  choose(selected, Boolean(nodeId));
+  fit();
+  if (nodeId && mobile.matches) center(selected);
+  const resize = new ResizeObserver(() => {
+    const width = svg.clientWidth;
+    const height = svg.clientHeight;
+    if (width === lastWidth && height === lastHeight) return;
+    lastWidth = width;
+    lastHeight = height;
+    fit();
+  });
+  let lastWidth = svg.clientWidth, lastHeight = svg.clientHeight;
+  resize.observe(svg);
+  graphCleanup = () => resize.disconnect();
+}
+
+let rendered = '';
+function route() {
+  const [requested, record, section] = location.hash.slice(1).split('/');
+  const view = ['reader','kanban','graph'].includes(requested) ? requested : 'reader';
+  const key = view + '/' + (view === 'reader' && record !== 'decision' ? '' : record || '');
+  if (key !== rendered) {
+    graphCleanup?.();
+    graphCleanup = undefined;
+    if (view === 'reader') reader(record);
+    if (view === 'kanban') board(record);
+    if (view === 'graph') graph(record);
+    rendered = key;
+    window.scrollTo(0, 0);
+  }
+  for (const tab of document.querySelectorAll('.shell nav a')) {
+    if (tab.hash === '#' + view) tab.setAttribute('aria-current', 'page');
+    else tab.removeAttribute('aria-current');
+  }
+  const heading = view === 'reader' ? document.getElementById(section || record) : null;
+  if (heading?.matches('.prose h2,.prose h3')) {
+    heading.focus({ preventScroll: true });
+    heading.scrollIntoView({ block: 'start' });
+  }
+}
+theme.onchange = () => { document.documentElement.dataset.theme = theme.value.toLowerCase(); };
+window.addEventListener('hashchange', route);
+route();
+</script></body></html>

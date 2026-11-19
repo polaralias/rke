@@ -5,7 +5,7 @@ const root=process.cwd();
 const violations:string[]=[];
 async function visit(directory:string):Promise<void>{
   for(const entry of await readdir(directory,{withFileTypes:true})){
-    if([".git",".engineering-workflow","node_modules","dist","build-artifacts",".rke-external"].includes(entry.name))continue;
+    if([".git",".engineering-workflow","local-docs","node_modules","dist","build-artifacts",".rke-external"].includes(entry.name))continue;
     const path=join(directory,entry.name);const rel=relative(root,path).replaceAll("\\","/");
     if(entry.isDirectory()){if(entry.name==="__pycache__")violations.push(rel);else await visit(path);continue;}
     if(extname(path)===".pyc")violations.push(rel);

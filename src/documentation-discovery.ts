@@ -44,9 +44,10 @@ export async function discoverDocumentation(root:string,changedPaths:string[],ba
       let text="",current:string|undefined,previous:string|undefined,unavailable=false;
       try{current=(await readSourceEvidence(root,path)).text;}
       catch(error){if((error as NodeJS.ErrnoException).code!=="ENOENT")unavailable=true;}
-      if(revision){const old=git(root,"show",`${revision.stdout.trim()}:${path}`);if(old.code===0){if(Buffer.byteLength(old.stdout)>MAX_SOURCE_BYTES||old.stdout.includes("\0")||containsSecret(old.stdout))unavailable=true;else previous=old.stdout;}}
+      if(revision){const object=`${revision.stdout.trim()}:${path}`,size=git(root,"cat-file","-s",object);
+        if(size.code===0){if(Number(size.stdout)>MAX_SOURCE_BYTES)unavailable=true;else{const old=git(root,"show",object);if(old.code!==0||old.stdout.includes("\0")||containsSecret(old.stdout))unavailable=true;else previous=old.stdout;}}}
       const ranges:ChangedRange[]=[];
-      if(base){
+      if(base&&!unavailable){
         const diff=git(root,"diff","--no-ext-diff","--no-textconv","--no-renames","--unified=0",revision!.stdout.trim(),"--",`:(literal)${path}`);
         if(diff.code)throw new Error(`Unable to inspect changed source: ${path}`);
         if(diff.stdout.length>TEXT_LIMIT)truncated=true;

@@ -51,6 +51,8 @@ An optional tracked `.rke/claim-bindings.json` can select a few important docume
 
 Assessment bounds the changed-path list to 20 entries and reports `detailsTruncated` when more changed paths exist. Exact-path disposition still requires all material paths, including those omitted from the preview.
 
+Delta fingerprinting streams the complete tracked binary patch into a digest and streams untracked file identities; it does not buffer the patch or truncate it to fit the process-output limit. Oversized historical files remain covered by the exact delta, but their contents and patches are omitted from lexical documentation discovery and reported in `sourceEvidenceOmittedPaths`. Inspect those changes separately when their meaning matters. Git warnings on stderr do not fail a successful command; failed processes retain an explicit diagnostic. The versioned fingerprint format intentionally invalidates older local receipts, which must be reassessed.
+
 EWF comprehension owns the causal explanation; no runtime explanation receipt or state is required to answer a read-only question.
 
 ## Apply and quality gate
@@ -81,6 +83,8 @@ Apply does not generate prose. It:
 Apply snapshots every generated index it may touch, including nested indexes, along with the manifest and receipt. A later generation or freshness failure restores prior bytes and removes newly created indexes. It resolves manifest targets against the repository boundary before mutation. It checks that source outside its controlled index paths did not change during the transaction, then records the final post-index/freshness Git delta. Later source edits invalidate the receipt; index generation itself must not leave an immediately stale pre-generation fingerprint.
 
 One to three reader questions is proportionate for a routine slice. Broader foundation or migration work may use more. Passing retrieval proves findability, not factual correctness; evidence and source review remain mandatory.
+
+Use repeatable `--scope <repository-relative-path>` on `documentation apply` when the intended reading boundary is known, for example `--scope docs/knowledge`. CLI and MCP share the optional `scopes` array. Omission preserves repository-wide retrieval; `--bundle` does not silently restrict reader questions. Selected scopes are validated against the repository boundary and recorded in `readerScopes` and every reader check. They restrict only reader retrieval: affected-concept coverage, candidate-document review, exact-delta checks and repository freshness remain repository-wide. A pass within a bundle establishes scoped findability, not repository-wide findability.
 
 For a request limited to authoring or repairing canonical knowledge, stop after the requested source review, bundle and reader checks, freshness verification, and current `documentation apply` receipt. Report the authored concept, evidence class, retrieval result, and any residual uncertainty promptly. Do not run `closure assess` or `close` unless the user also requested change closure; those steps are a separate workflow outcome.
 

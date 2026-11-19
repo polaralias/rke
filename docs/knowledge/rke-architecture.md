@@ -2,11 +2,16 @@
 type: Architecture Concept
 title: RKE architecture
 description: Defines the independently installed Repository Knowledge Engineering runtime, its shared CLI and MCP operation layer, repository boundaries, and relationship with EWF and OKF Tasks.
-timestamp: 2026-10-19T16:14:12+00:00
+timestamp: 2026-11-06T00:00:00Z
 authority: canonical
 verification: needs-review
 reviewed_at: 2026-10-08T17:33:10+00:00
 verified_against:
+  - src/visualisation.ts
+  - src/visualisation-model.ts
+  - src/visualisation-graph.ts
+  - src/visualisation-assets.ts
+  - src/reader-markdown.ts
   - src/operations.ts
   - src/cli.ts
   - src/workflow.ts
@@ -50,6 +55,12 @@ navigation:
 RKE turns repository evidence into bounded, retrievable engineering context without confusing generated indexes, authored knowledge, execution records or workflow state.
 
 EWF owns engineering judgement and remains usable without RKE. RKE supplies deterministic retrieval, structural navigation, knowledge graph and freshness evidence, bounded safety operations, and optional continuity state. The independent `rke` adapter skill owns runtime command selection and operational contracts; EWF references describe complete methods without requiring its commands. Both canonical packages currently live in this repository and are synchronized separately to the catalogue. A runtime operation is justified when code provides evidence or a safe operation that EWF prose cannot reliably provide on its own.
+
+## Documentation validation
+
+Documentation assessment and apply fingerprint complete tracked changes by streaming Git's binary patch into a digest. Untracked content is also hashed incrementally; large deletions do not require a full in-memory patch. Lexical discovery checks historical object sizes before loading old content, reports omitted oversized evidence, and never treats that omission as absence of documentation impact. Failed commands retain diagnostics, while successful Git warnings remain advisory. The versioned fingerprint invalidates older local receipts and requires reassessment.
+
+`documentation apply --scope <repository-relative-path>` optionally bounds reader-query retrieval; repeat the flag for multiple paths. The default remains repository-wide. Reader scopes are recorded with the receipt and do not narrow affected knowledge coverage, candidate-document review or repository freshness requirements.
 
 ## Distribution
 
@@ -164,7 +175,9 @@ The [study contract](../agent-study-contract.md) now has a frozen-input workspac
 
 The bridge checks the selected host executable bytes and uses explicit model/reasoning, ephemeral JSON execution, user configuration disabled, selected PATH, isolated home and an owned process timeout. It does not authenticate or copy credentials. Unknown context, evidence timing and accounting remain unknown. Trusted arm preparation, dependency selection and independent bounded grading require separate qualification; infrastructure tests alone cannot establish arm isolation or agent benefit. The [owned Android cohort selection](../agent-study-cohort.md) is explicitly a prototype snapshot, with model trials still deferred.
 
-RKE does not absorb OKF Tasks. OKF Tasks owns execution records, validation and lifecycle truth. RKE may invoke its authoritative CLI through a bounded adapter.
+RKE integrates a native TypeScript task engine under the independently specified OKF Tasks format. Shared CLI/MCP operations provide lifecycle, effort, validation and Tracker Profile reconciliation. Optional workflow tracking references those execution records; none mode reads no bundle, while durable checks and closure use native strict validation. The old external adapter helper remains internal compatibility coverage rather than the default engine.
+
+The [integrated visualisation](../tasks-and-visualisation.md) combines a task board and relationship graph with the existing knowledge/source reader. Its authenticated loopback command surface pins the source repository and any registered record store and permits selected task/collaboration actions; the original fixed-source live reader stays read-only. Digest checks and serialized RKE writes prevent stale RKE editor saves, with atomic per-file replacement rather than a cross-file transaction. Source-repository Git remains the default. The optional collaboration extension below adds a shared local external/private store and installed-agent handoffs.
 
 EWF does not absorb RKE. EWF is the agent-facing engineering methodology; RKE is the optional installed repository evidence and safety toolbelt it directs. Read-only questions about repository code, implementation behaviour, or a diff route to EWF's RCC prose without starting RKE workflow state. Simple document wording questions remain outside EWF. RCC causal explanation, design, and knowledge editorial judgement remain in EWF prose. The public runtime omits the former `change explain`, `closure complete-small`, and static `legacy route` operations.
 
@@ -190,3 +203,15 @@ The canonical [EWF entrypoint](../../skills/engineering-workflow/SKILL.md) selec
 
 
 Named multi-repository work uses one explicit aggregate owner at a default user-area location or any caller-authorized folder. A bounded user-area registry pins that owner and each independent Git member. Explicit workspace selection enables aggregate/owner operations; ordinary Git-root calls remain local. Member-specific operations require a declared alias and independent caller authority, and reuse existing handlers. Central knowledge can bind qualified member sources; handoffs and aggregate closure recheck independent member content snapshots. Generated roots carry RKE attribution, while generated indexes, readers, handoffs and owned host blocks identify their generator without claiming authored knowledge or semantic verification.
+
+The integrated visualisation now shares one explicit discovery/exclusion policy across task cards, typed knowledge (including README concepts), graph membership and embedded readers. Rules retain their bundle anchors and omitted-path provenance; they do not weaken conformance. Offline outputs include a scalable component/area/neighbourhood report and a source/renderer/output freshness receipt. Read-only freshness checks detect drift without writing. The live graph retains type and reading-role context, focus layouts and bounded isolate/link reveal. Host-parsed Markdown tokens add GitHub-style tables, emphasis and task-list presentation without adopting HTML. Offline project outputs share one pinned Mermaid engine and reconstruct exact child readers/CSPs; reader coverage adapts within the output budget without dropping graph/report membership. A navigation-only host bridge keeps included selection, comparison, time fragments and reading positions consistent across Graph/Board/Reader views.
+
+Producer qualification runs the separately selected OKF reference suite and a side-by-side operation/record matrix, with declared clock/prose/default-mapping normalization, an explicit native completion-preservation assertion, and an exact fixed-record revision check. The runtime remains TypeScript. Provider HTTP fixtures qualify the enumerated transports; live discovery and authenticated mutation qualification remain separately reported, credential/scope-dependent evidence.
+
+## Optional task collaboration and local storage
+
+The [task collaboration guide](../tasks-and-visualisation.md#local-collaboration-extension) owns operation details and limits. `okf-projects.ts` registers source checkouts against one shared local Git store, with one main record authority and a distinct private collection per portable project. `okf-migration.ts` provides digest-reviewed staging, retirement/backups and recovery. Source Git remains the default; external storage requires no remote or second GitHub mirror.
+
+`task-collaboration.ts` owns human-only policy, manual order, independent discussion/assets and CAS claim refs. Independent source clones connect to one local authority; data clones cannot claim independently. `task-documents.ts` resolves source/store/private links for task context and the shared reader. `task-agents.ts` prepares reviewed context and hosts bounded subscription CLI runs with owned cancellation and claim leases; desktop links prefill. `background-service.ts` and `service-runner.ts` keep an authenticated watcher available independently of browser lifetime. Startup never launches agents or syncs source repositories. Source-code freshness manifests remain source-owned; this extension does not automatically relocate them.
+
+Task mutations preserve completed-parent/workstream invariants and original completion evidence on same-status requests. Claim transactions rebuild the task index. Reordering checks every changed peer against human-only and lease policy. Private export companions share the ignored-output boundary, and private overlays inherit selected scope/exclusions. Cross-collection document resolution follows registered main authority for governed folders while leaving source-code links source-owned. Tracker pulls protect unsynced local changes and refuse unrepresentable descriptions without advancing the base; pushes refuse a new revision observed by the writer read. Unsupported assignee/priority mappings are explicit refusals rather than silently ignored fields. These safeguards are covered by deterministic regressions; authenticated provider writes and the final read-to-write network race remain separate qualification limits.

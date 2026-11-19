@@ -44,6 +44,9 @@ const shimRun=(name:string,args:string[],input?:string)=>process.platform==="win
 const shimVersion=shimRun("rke",["--version"]);
 assert.equal(shimVersion.status,0,shimVersion.error?.message||shimVersion.stderr||shimVersion.stdout);
 assert.equal(shimVersion.stdout.trim(),VERSION);
+const taskRoot=join(root,"task-fixture");await mkdir(taskRoot);assert.equal(spawnSync("git",["init"],{cwd:taskRoot,encoding:"utf8",windowsHide:true}).status,0);
+for(const args of [["init-bundle"],["create","--slug","installed","--title","Installed task","--description","Installed native task engine"],["set-status","--task","installed","--status","ready"],["set-estimate","--task","installed","--effort-minutes","30","--basis","Installed package smoke","--actor","tester"],["list"],["get","--task","installed"],["validate"]]){const result=shimRun("rke",["task",...args,"--root",taskRoot]);assert.equal(result.status,0,result.stderr||result.stdout);}
+const exportedProject=shimRun("rke",["view","export-project","--root",taskRoot]);assert.equal(exportedProject.status,0,exportedProject.stderr||exportedProject.stdout);assert.match(await readFile(join(taskRoot,".engineering-workflow/cache/project.html"),"utf8"),/static-data/);
 const goRoot=join(root,"go-visibility-fixture");await mkdir(join(goRoot,"helpers"),{recursive:true});
 assert.equal(spawnSync("git",["init"],{cwd:goRoot,encoding:"utf8",windowsHide:true}).status,0);
 await writeFile(join(goRoot,"go.mod"),"module example.invalid/owned\n\ngo 1.22\n");

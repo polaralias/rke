@@ -10,7 +10,7 @@ The `engineering-workflow` skill supplies the engineering methodology: accepted 
 
 - **RKE** owns repository retrieval, structural analysis, knowledge bindings, documentation impact, deterministic safety checks, and optional workflow evidence.
 - **Engineering Workflow (EWF)** is the agent-facing skill and the normal entry point for material engineering work.
-- **OKF Tasks** remains an independent execution-record specification and CLI. RKE delegates strict task validation rather than copying its schema or lifecycle.
+- **OKF** supplies portable knowledge and task formats. RKE's integrated TypeScript task module manages OKF Tasks lifecycle, effort, validation and Tracker Profiles alongside its knowledge tooling.
 - **The `rke` skill** maps EWF methods to optional runtime operations. Doc-driven development remains an EWF method.
 
 [Named multi-repository workspaces](docs/managed-workspaces.md) keep aggregate reviews, knowledge and continuity in one explicitly selected owner. The default is `~/.rke/workspaces/<id>`; `workspace create --directory <folder>` supports any authorized location, including a Claude or Codex project root. Existing AGENTS.md and CLAUDE.md files are preserved. Single-repository operations retain their existing local folders; `rke state ignore` can make selected runtime state local-only. Generated structures identify [RKE](https://github.com/polaralias/rke) and the `@polaralias/rke` package without claiming authorship or semantic verification of canonical knowledge.
@@ -30,6 +30,10 @@ understand → design when needed → change and validate → explain → review
 EWF remains usable without the runtime. Material changes require bounded documentation-impact judgement; direct source/document inspection can satisfy it. Select RKE assessment when bindings, uncertain ownership, broader discovery or repository policy make it useful. Retrieval and traces guide inspection; they do not replace source verification. RKE can persist continuity state and exact-delta documentation receipts when those are useful. When selected, documentation apply checks bundle conformance, affected coverage, reader rank, and freshness for canonical knowledge changes. A reviewed no-update disposition can close an unbound small change without inventing a knowledge bundle; it must cover every changed path and becomes stale with the delta. Causal change explanation stays in EWF prose. Optional [selected claim bindings](docs/claim-binding-prototype.md) add section-sized review candidates; they never certify behavior from a hash. Review the [parity matrix](docs/legacy-skill-parity-matrix.md) for agent and delegated-provider evidence.
 
 ## Install
+
+The [task module and integrated visualisation](docs/tasks-and-visualisation.md) support task lifecycle, effort/estimates, tracker reconciliation and `rke view` for an editable board with the shared knowledge reader. The collaboration extension adds human-only policy, coordinated claiming across connected source clones, manual order, discussion/assets, installed subscription-agent handoffs and optional background hosting. In-repository Git remains the default; an explicitly registered shared local Git store supports external/private records, reviewed migration and local worktrees without requiring a remote.
+
+`rke documentation apply --scope docs/knowledge ...` optionally limits reader questions to a known reading boundary; repeat `--scope` for multiple paths. Other documentation obligations remain repository-wide. Exact-delta checks stream full change identities, so large archive deletions do not require a full patch in memory; oversized source omitted from lexical discovery is reported explicitly.
 
 For installation or release qualification, `rke qualification inspect` records loaded runtime, bundled EWF methodology and RKE adapter content identities. Compare a saved repository-local report with `--baseline`; matching versions alone do not establish artifact parity. `--skill` checks an explicitly selected repository-local copy of either supported skill separately. Identity evidence does not certify behaviour or live-host selection; test the actual packed/installed command as well.
 
@@ -153,7 +157,7 @@ The planned 1.x public-interface, repository-format, directory-ownership, deprec
 
 ## Code and knowledge assistance
 
-RKE supports OKF 0.1/0.2 knowledge metadata, declared review/expiry signals, bundle-root links and explicit source-hash freshness. OKF Tasks retains its independent validation and rendering CLI. Focused graph output helps navigate dense bundles without requiring an all-node canvas.
+RKE supports OKF 0.1/0.2 knowledge metadata, declared review/expiry signals, bundle-root links and explicit source-hash freshness. Its native task module follows the independent OKF Tasks specification. Focused graph output and the integrated Board/Graph/Reader connect task execution and authored knowledge without merging their validation rules.
 
 ```text
 rke structure map --root <repository>
@@ -181,6 +185,6 @@ New installed MCP and hook launchers bind the physical repository and Git admini
 
 Repository context balances Git-visible package scopes automatically; use `context find --source-only` to exclude prose when locating implementation. `structure search` ranks bounded collected matches by resolved caller identities before trimming output and reports incomplete scans. `structure map --token-budget 3000` includes semantic navigation and bounded package orientation. `structure impact --base main --merge-base --owners` supplies changed-line evidence, module-level gaps and a Markdown report with optional recent-author candidates.
 
-`knowledge graph --bundle docs/knowledge --related-bundle tasks --focus architecture.md --depth 2` provides one selected relationship graph while OKF Tasks retains execution validation and rendering. Optional Claude `--context-hooks` install stateless session/prompt evidence; no model or workflow activation is performed by those hooks. See the RKE adapter references for source-review and ownership boundaries.
+`knowledge graph --bundle docs/knowledge --related-bundle tasks --focus architecture.md --depth 2` provides one selected relationship graph while native task validation retains execution semantics. Optional Claude `--context-hooks` install stateless session/prompt evidence; no model or workflow activation is performed by those hooks. See the RKE adapter references for source-review and ownership boundaries.
 
 Language-server execution uses explicit [host-owned profiles](.agents/skills/rke/references/language-server-profiles.md); raw executable/argv selection is unavailable to CLI/MCP operations. Installed hooks pin their root, Node executable and loaded package script; pre-push assessment works without workflow state. Host inspection and previews are read-only, including `install --dry-run`. Repository-local ownership receipts allow missing configuration repair and removal of verified owned components while preserving shared resources and unrelated configuration. Modified owned components require attention before mutation; these fixtures do not establish live-host qualification.

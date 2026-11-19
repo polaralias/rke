@@ -48,13 +48,17 @@
       "types": "./dist/src/types.d.ts",
       "import": "./dist/src/types.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./tasks": {
+      "types": "./dist/src/tasks/operations.d.ts",
+      "import": "./dist/src/tasks/operations.js"
+    }
   },
   "scripts": {
     "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src scripts tests",
-    "test": "npm run build && node --test --test-concurrency=1 dist/tests/operations.test.js dist/tests/public-behavior.test.js dist/tests/parser.test.js dist/tests/engine.test.js dist/tests/transport.test.js dist/tests/security.test.js dist/tests/legacy-parity.test.js dist/tests/claim-bindings.test.js dist/tests/review-regressions.test.js dist/tests/release-publication.test.js dist/tests/context-capabilities.test.js dist/tests/documentation-discovery.test.js dist/tests/qualification.test.js dist/tests/evaluation-study.test.js dist/tests/evaluation-workspaces.test.js dist/tests/evaluation-codex.test.js dist/tests/explanations.test.js dist/tests/managed-workspaces.test.js dist/tests/workspace.test.js dist/tests/workspace-reader.test.js dist/tests/language-fidelity.test.js dist/tests/host-lifecycle.test.js dist/tests/root-boundary.test.js dist/tests/reader.test.js dist/tests/reader-changes.test.js dist/tests/reader-code.test.js dist/tests/reader-diagrams.test.js dist/tests/reader-export.test.js dist/tests/reader-live.test.js dist/tests/reader-live-adapter.test.js dist/tests/skill-provenance.test.js dist/tests/release-readiness.test.js dist/tests/targeted-parity.test.js",
+    "test": "npm run build && node --test --test-concurrency=1 dist/tests/operations.test.js dist/tests/public-behavior.test.js dist/tests/parser.test.js dist/tests/engine.test.js dist/tests/transport.test.js dist/tests/security.test.js dist/tests/legacy-parity.test.js dist/tests/claim-bindings.test.js dist/tests/review-regressions.test.js dist/tests/release-publication.test.js dist/tests/context-capabilities.test.js dist/tests/documentation-discovery.test.js dist/tests/qualification.test.js dist/tests/evaluation-study.test.js dist/tests/evaluation-workspaces.test.js dist/tests/evaluation-codex.test.js dist/tests/explanations.test.js dist/tests/managed-workspaces.test.js dist/tests/workspace.test.js dist/tests/workspace-reader.test.js dist/tests/language-fidelity.test.js dist/tests/host-lifecycle.test.js dist/tests/root-boundary.test.js dist/tests/reader.test.js dist/tests/reader-changes.test.js dist/tests/reader-code.test.js dist/tests/reader-markdown.test.js dist/tests/reader-diagrams.test.js dist/tests/reader-export.test.js dist/tests/reader-live.test.js dist/tests/reader-live-adapter.test.js dist/tests/skill-provenance.test.js dist/tests/release-readiness.test.js dist/tests/targeted-parity.test.js dist/tests/tasks.test.js dist/tests/task-trackers.test.js dist/tests/visualisation.test.js dist/tests/visualisation-parity.test.js dist/tests/task-collaboration.test.js dist/tests/task-projects.test.js dist/tests/task-migration.test.js dist/tests/task-agents.test.js dist/tests/task-background.test.js",
     "test:legacy-parity": "npm run build && node --test --test-concurrency=1 dist/tests/legacy-parity.contract.js",
     "benchmark": "npm run build && node dist/scripts/benchmark-freshness.js",
     "benchmark:repository": "npm run build && node dist/scripts/benchmark-real-repository.js",
@@ -66,11 +70,17 @@
     "verify:no-python": "npm run build && node dist/scripts/no-python.js",
     "prepack": "npm run build && npm run lint && npm test && npm run test:legacy-parity && npm run validate:release && npm run verify:no-python",
     "benchmark:code-context": "npm run build && node dist/scripts/benchmark-code-context.js",
-    "validate:publication": "npm run build && node dist/scripts/validate-publication.js"
+    "validate:publication": "npm run build && node dist/scripts/validate-publication.js",
+    "test:tasks": "npm run build && node --test --test-concurrency=1 dist/tests/tasks.test.js dist/tests/task-trackers.test.js dist/tests/visualisation.test.js dist/tests/visualisation-parity.test.js dist/tests/task-collaboration.test.js dist/tests/task-projects.test.js dist/tests/task-migration.test.js dist/tests/task-agents.test.js dist/tests/task-background.test.js dist/tests/reader-markdown.test.js",
+    "smoke:packed:built": "node dist/scripts/smoke-packed.js",
+    "smoke:tasks:packed": "node dist/scripts/smoke-task-collaboration.js",
+    "test:okf-parity": "npm run build && node dist/scripts/verify-okf-parity.js",
+    "verify:live-trackers": "npm run build && node dist/scripts/verify-live-task-trackers.js"
   },
   "dependencies": {
     "@cursorless/tree-sitter-wasms": "^0.10.0",
     "highlight.js": "11.12.0",
+    "markdown-it": "15.0.3",
     "minimatch": "^10.0.3",
     "web-tree-sitter": "^0.27.0",
     "yaml": "^2.8.1"

@@ -520,13 +520,13 @@
       "id": "tasks-adapter",
       "path": ".agents/skills/rke/references/okf-tasks-adapter.md",
       "heading": "Ownership",
-      "claim": "The independent Tasks producer owns schemas, CLI behavior and tracker mechanics."
+      "claim": "The independent OKF Tasks specification defines portable records; the integrated RKE task module owns native CLI behavior and tracker mechanics."
     },
     {
       "id": "tasks-validation",
       "path": ".agents/skills/rke/references/okf-tasks-adapter.md",
       "heading": "Validation boundary",
-      "claim": "Delegated strict validation is required where selected; missing tools cannot be replaced by invented conformance."
+      "claim": "Native strict validation is required where selected; unavailable capabilities cannot be replaced by invented conformance."
     },
     {
       "id": "spec-bundle",

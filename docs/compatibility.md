@@ -21,6 +21,8 @@ These ownership boundaries are stable even when files within an implementation-d
 
 ## Deprecation and compatibility
 
+Local exact-delta receipts use a versioned fingerprint identity rather than a raw buffered patch. After a fingerprint-format change, reassess and reapply documentation or record a reviewed disposition; an older receipt does not inherit validity. The optional `documentation apply` `scopes` argument (repeatable CLI `--scope`) bounds reader queries only. Without it, reader checks retain repository-wide behavior.
+
 A public 1.x interface is deprecated for at least one minor release before removal. Removal or incompatible reinterpretation requires the next major release. Security fixes may disable unsafe behaviour immediately, but the release must name the affected surface and provide a safe migration where feasible.
 
 The runtime distribution includes two independently versioned skill packages: `engineering-workflow` for engineering methods and `rke` for runtime support. Neither skill version is the runtime version. EWF remains usable without RKE. The RKE adapter selects commands for a chosen method and owns runtime state, schemas, receipts and host integration guidance. Installing EWF alone does not install the runtime or adapter.

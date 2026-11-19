@@ -1,0 +1,23 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {mkdtempSync,mkdirSync,realpathSync,writeFileSync,readFileSync,chmodSync} from "node:fs";
+import {tmpdir} from "node:os";
+import {join,delimiter,dirname} from "node:path";
+import {invokeOperation,releaseRepository} from "../src/operations.js";
+import {git} from "../src/io.js";
+import {serviceConfig} from "../src/background-service.js";
+
+test("owned background host starts, serves live snapshots, stops and preserves records without login installation",async t=>{
+ const old=process.env.RKE_USER_HOME,oldPath=process.env.PATH,base=realpathSync.native(mkdtempSync(join(tmpdir(),"rke-background-"))),root=join(base,"source"),host=join(base,"host");mkdirSync(root);git(root,"init","--quiet");process.env.RKE_USER_HOME=join(base,"home");const executable=process.platform==="win32"?join(host,"node_modules/@openai/codex/bin/codex.js"):join(host,"codex");mkdirSync(dirname(executable),{recursive:true});writeFileSync(executable,(process.platform==="win32"?"":"#!/usr/bin/env node\n")+"if(process.argv.includes('login')){console.error('Logged in using ChatGPT');process.exit(0);}process.stdin.resume();process.stdin.on('end',()=>setInterval(()=>{},1000));");if(process.platform!=="win32")chmodSync(executable,0o700);process.env.PATH=host+delimiter+process.env.PATH;
+ const call=(name:string,args:Record<string,unknown>={})=>invokeOperation(root,name,args,{taskActor:"human"});
+ t.after(async()=>{try{await call("rke_service_stop");}finally{await releaseRepository(root);if(old===undefined)delete process.env.RKE_USER_HOME;else process.env.RKE_USER_HOME=old;if(oldPath===undefined)delete process.env.PATH;else process.env.PATH=oldPath;}});
+ await call("okf_project_register");await call("task_init_bundle");await call("task_create",{slug:"feature",title:"Background feature",description:"Persistent local view"});await call("task_set_status",{task:"feature",status:"ready"});await call("rke_service_configure");await call("rke_service_start");
+ let status:Record<string,unknown>={};for(let attempt=0;attempt<100;attempt++){status=(await call("rke_service_status")).payload;if(status.state==="running")break;await new Promise(done=>setTimeout(done,100));}assert.equal(status.state,"running",JSON.stringify(status));assert.equal(status.startupInstalled,false);
+ const url=new URL(String(status.url));url.pathname="/snapshot";const snapshot=await (await fetch(url)).json() as {tasks:{metadata:{title:string}}[]};assert.equal(snapshot.tasks[0]!.metadata.title,"Background feature");
+ const configuration=readFileSync(serviceConfig(root).path,"utf8");await assert.rejects(call("rke_service_configure",{knowledgeBundle:"docs/changed"}),/lock/);assert.equal(readFileSync(serviceConfig(root).path,"utf8"),configuration);
+ const command=async(action:string,args:Record<string,unknown>)=>{const endpoint=new URL(String(status.url));endpoint.pathname="/command";const response=await fetch(endpoint,{method:"POST",headers:{Origin:endpoint.origin,"Content-Type":"application/json"},body:JSON.stringify({action,arguments:args})});const value=await response.json() as Record<string,unknown>;assert.equal(response.status,200,JSON.stringify(value));return value;};
+ const prepared=await command("agent-prepare",{task:"feature",provider:"codex",intent:"implementation"}),run=await command("agent-start",{task:"feature",provider:"codex",intent:"implementation",expectedDigest:prepared.digest});
+ assert.equal((await call("rke_service_start")).payload.state,"running");const reused=await call("repo_visualisation_serve");assert.equal(reused.payload.result,"visualisation-reused");assert.equal(reused.payload.url,status.url);await call("rke_service_stop");for(let attempt=0;attempt<100;attempt++){status=(await call("rke_service_status")).payload;if(status.state!=="running")break;await new Promise(done=>setTimeout(done,100));}assert.notEqual(status.state,"running");assert.equal((await call("task_get",{task:"feature"})).payload.result,"task-read");
+ let outcome:Record<string,unknown>={};for(let attempt=0;attempt<200;attempt++){outcome=(await call("task_agent_status",{run:run.run})).payload.run as Record<string,unknown>;if(outcome.state==="cancelled")break;await new Promise(done=>setTimeout(done,100));}assert.equal(outcome.state,"cancelled");
+ const claims=(await call("task_claims")).payload.claims as {state:string}[];assert.ok(claims.every(claim=>claim.state==="released"));await assert.rejects(call("rke_service_configure",{knowledgeBundle:"docs/changed"}),/configured bundles/);await call("rke_service_configure");assert.equal((await call("rke_service_status")).payload.startupInstalled,false);
+});

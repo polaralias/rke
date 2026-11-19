@@ -8,8 +8,10 @@ import { spawnSync } from "node:child_process";
 
 import { invokeOperation, OPERATIONS } from "../src/operations.js";
 import { closeLiveReaders } from "../src/reader-live.js";
+import { EXTENSION_OPERATIONS } from "../src/task-extension-operations.js";
+import { exerciseTaskPublicContract } from "./task-public-contract.js";
 
-test("every public operation has an executable success and malformed-input failure contract",async t=>{
+test("core public operations have success contracts; every operation rejects malformed input",async t=>{
   t.after(closeLiveReaders);
   const profile=await mockServerProfile(t);
   const root=await mkdtemp(join(tmpdir(),"rke-public-contract-"));
@@ -141,6 +143,8 @@ test("every public operation has an executable success and malformed-input failu
   await managedCall("workspace_update",{id:owner.id,revision:0,name:"Renamed contract",members});await managedCall("workspace_retire",{id:owner.id,revision:1});
   await call("repo_state_ignore",{});
 
-  assert.deepEqual([...observed].sort(),OPERATIONS.map(operation=>operation.name).sort());
+  for(const name of await exerciseTaskPublicContract())observed.add(name);
+  assert.deepEqual([...observed].sort(),OPERATIONS.filter(operation=>!EXTENSION_OPERATIONS.some(extension=>extension.name===operation.name)).map(operation=>operation.name).sort());
+  // Host extensions have isolated process/store fixtures in task-{agents,background,collaboration,projects}; login installation is separately qualified.
   for(const operation of OPERATIONS)await assert.rejects(()=>invokeOperation(root,operation.name,{unexpected:true}),/required|unsupported properties/);
 });

@@ -9,6 +9,7 @@ export interface OperationOutcome {
 
 /** Host/caller authorization, never accepted from operation arguments or repository data. */
 export interface OperationContext {
+  taskActor?: "human" | "agent";
   member?: string;
   workspaceMemberDispatch?: boolean;
   workspaceOwnerDispatch?: boolean;

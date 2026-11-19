@@ -1,0 +1,98 @@
+/* Keep the source themes. Tighten the rhythm around the content. */
+body[data-shortlist-view="reader"] :is(.studio-main,.signal-main,.current-main),
+body[data-shortlist-view="kanban"] :is(.studio-main,.signal-main,.current-main) {
+  padding-block: 16px 28px;
+}
+body[data-shortlist-view="reader"] :is(.studio-top,.current-top),
+body[data-shortlist-view="kanban"] :is(.studio-top,.current-top) { margin-bottom: 12px; }
+body[data-shortlist-view="reader"] .document-tools { margin-bottom: 16px; }
+body[data-shortlist-view="reader"] .article { min-width: 0; overflow-wrap: anywhere; }
+body[data-shortlist-view="reader"] .article :is(p,li) { color: var(--ink); font-size: 17px; line-height: 1.55; }
+body[data-shortlist-view="reader"] .text-large .article :is(p,li),
+body[data-shortlist-view="reader"] .article.text-large :is(p,li) { font-size: 20px; }
+body[data-shortlist-view="reader"] .article h1 { font-size: clamp(30px,4vw,44px); max-width: none; text-transform: none; margin: 8px 0 12px; }
+body[data-shortlist-view="reader"] .article h2 { text-transform: none; margin-top: 22px; padding-top: 10px; }
+body[data-shortlist-view="reader"] .badges { margin-bottom: 14px; }
+body[data-shortlist-view="reader"] .motion-dock,
+body[data-shortlist-view="kanban"] .motion-dock,
+body[data-shortlist-view="graph"] .motion-dock { display: none; }
+.current-main .graph-heading { margin-bottom: 12px; }
+.current-main .graph-caption { display: none; }
+.current-main .graph-heading h1 { font-size: 32px; }
+.studio-main .article .studio-intro {
+  background: transparent; border: 0; box-shadow: none; border-radius: 0;
+  padding: 0 0 12px; margin-bottom: 14px; border-bottom: 2px solid #bd6656;
+}
+.studio-main .article .chapter {
+  margin: 0 0 16px; padding: 0; background: transparent; border: 0;
+  border-top: 1px solid var(--line); border-radius: 0; box-shadow: none;
+}
+.studio-main .article .chapter > h2 { margin: 0; }
+.studio-main .article .chapter-body { padding: 8px 0; }
+.current-main .article { padding: 16px 20px; box-shadow: none; }
+.signal-main .article { padding: 16px 20px; }
+.reader-contents { margin: 0 0 12px; border-bottom: 1px solid var(--line); padding: 4px 0 8px; font-size: 14px; }
+.reader-contents summary { font-weight: 650; }
+.reader-contents a { display: block; text-decoration: underline; padding-block: 4px; }
+.article :is(h2,h3) { scroll-margin-top: 12px; }
+.graph-node circle { display: none; }
+
+body[data-shortlist-view="kanban"] .page-title {
+  display: flex; flex-wrap: wrap; padding: 0; margin: 0 0 6px;
+  border: 0; box-shadow: none; background: transparent;
+}
+body[data-shortlist-view="kanban"] .page-title > :not(.actions),
+body[data-shortlist-view="kanban"] .signal-summary { display: none; }
+body[data-shortlist-view="kanban"] .page-title .actions { margin: 0; }
+body[data-shortlist-view="kanban"] .toolbar { margin-bottom: 8px; padding-block: 6px; }
+body[data-shortlist-view="kanban"] .board {
+  grid-template-columns: repeat(5,minmax(165px,1fr)); gap: 9px;
+  align-items: start; max-height: 68vh; overflow: auto;
+}
+body[data-shortlist-view="kanban"] .column { min-height: 0; padding-bottom: 7px; }
+body[data-shortlist-view="kanban"] .column-head {
+  padding: 7px 6px; margin: 0 0 6px; position: sticky; top: 0;
+  background: var(--bg); z-index: 1;
+}
+body[data-shortlist-view="kanban"] .task-shell { margin-block: 0 6px; }
+body[data-shortlist-view="kanban"] .task {
+  min-height: 0; padding: 8px 9px; display: flex; flex-direction: column;
+  align-items: stretch; gap: 4px;
+}
+body[data-shortlist-view="kanban"] .task h3 { order: -1; font-size: 15px; line-height: 1.25; margin: 0; min-height: 0; }
+body[data-shortlist-view="kanban"] .task-top { margin: 0; }
+body[data-shortlist-view="kanban"] .task-meta { padding-top: 3px; font-size: 11px; }
+body[data-shortlist-view="kanban"] .column-note { display: none; }
+.studio-main .task { border-radius: 12px; box-shadow: 2px 2px 0 #dba28e; }
+.current-main .task-shell { padding: 2px; }
+.signal-main .task-shell { margin-inline: 4px; }
+.signal-main .task-shell::before { inset: -3px 10px 3px 5px; }
+body[data-shortlist-view="kanban"] .column[data-state="3"] .column-head h2 { color: var(--accent); font-weight: 700; }
+
+@media(max-width: 700px) {
+  body[data-shortlist-view] :is(.studio-top,.current-top,.signal-top) {
+    display: flex; gap: 5px; padding: 8px;
+  }
+  body[data-shortlist-view] :is(.studio-top,.current-top,.signal-top) .brand small { display: none; }
+  body[data-shortlist-view] :is(.studio-top,.current-top,.signal-top) .nav { gap: 2px; }
+  body[data-shortlist-view] :is(.studio-top,.current-top,.signal-top) .nav a { padding: 5px 7px; font-size: 11px; }
+  body[data-shortlist-view] .launch-commands { padding: 5px; font-size: 10px; }
+  body[data-shortlist-view="reader"] .document-tools { gap: 4px; }
+  body[data-shortlist-view="reader"] .document-tools button { padding: 5px 8px; font-size: 12px; }
+  body[data-shortlist-view="kanban"] :is(.toolbar,.page-title .actions) :is(button,a,select,input) { padding: 6px 8px; font-size: 12px; }
+  body[data-shortlist-view="kanban"] .task-meta .avatar { display: none; }
+  body[data-shortlist-view="kanban"] .task-meta { display: flex; gap: 4px; }
+  body[data-shortlist-view="graph"] .graph-canvas { overflow: hidden; height: auto; }
+  body[data-shortlist-view="graph"] .graph-canvas .graph-svg {
+    width: 100%; min-width: 0; min-height: 0; height: 54dvh; aspect-ratio: auto !important;
+  }
+  [data-graph-detail="dots"] .graph-node :is(rect,text),
+  [data-graph-detail="labels"] .graph-node .node-type { display: none; }
+  [data-graph-detail="dots"] .graph-node circle { display: block; fill: var(--accent); }
+  body[data-shortlist-view="reader"] .reading-grid { display: block; }
+  body[data-shortlist-view="reader"] .reading-grid > .outline { display: none; }
+  body[data-shortlist-view="reader"] :is(.current-main,.signal-main) .article { padding: 0; border: 0; background: transparent; }
+  body[data-shortlist-view="kanban"] .board:not(.vertical-board) {
+    grid-template-columns: repeat(5, minmax(145px, 47%));
+  }
+}

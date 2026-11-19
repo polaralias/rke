@@ -1,6 +1,13 @@
+import { TASK_ROUTES } from "./tasks/operations.js";
+import { EXTENSION_ROUTES } from "./task-extension-operations.js";
 export interface CliRoute { operation:string; positionals?:string[] }
 
 export const CLI_ROUTES:Record<string,CliRoute>={
+  ...TASK_ROUTES,
+  ...EXTENSION_ROUTES,
+  "view":{operation:"repo_visualisation_serve"},
+  "view export-project":{operation:"repo_visualisation_export"},
+  "task visualise":{operation:"repo_visualisation_export"},
   "state ignore":{operation:"repo_state_ignore"},
   "workspace create":{operation:"workspace_create"},"workspace list":{operation:"workspace_list"},"workspace inspect":{operation:"workspace_inspect"},"workspace resolve":{operation:"workspace_resolve"},"workspace update":{operation:"workspace_update"},"workspace retire":{operation:"workspace_retire"},
   "view project":{operation:"repo_view_project"},

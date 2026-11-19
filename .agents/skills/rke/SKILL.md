@@ -4,8 +4,8 @@ description: Use when the user asks to install, configure, qualify, troubleshoot
 license: Apache-2.0. license.txt has complete terms
 metadata:
   author: James Whelan
-  version: 1.3.0
-  updated: '2026-10-19'
+  version: 1.7.0
+  updated: '2026-11-04'
 ---
 
 # RKE
@@ -23,7 +23,7 @@ Select the engineering method first. Use the smallest relevant runtime capabilit
 | Comprehension, dissection, delivery | [Bounded retrieval](references/repo-context-contract.md) and [structural navigation](references/structural-context.md), including optional language-server evidence. When useful for delivery or required by repository policy, use the no-state `documentation assess --base <ref>` route in [documentation lifecycle](references/documentation-lifecycle.md) to review explicit bindings and lexical candidate documents. For inventory use `dissection assess`; an explicitly requested documentation foundation may use `documentation bootstrap`. |
 | Clarification, design | Retrieve implementation facts where useful. User decisions, scenarios, acceptance and experiment judgement stay in EWF. [Workflow support](references/workflow-support.md) maps optional persisted gates; it cannot answer an unresolved decision. |
 | Knowledge | [Knowledge validation and bindings](references/knowledge-contract.md), [OKF compatibility](references/okf-profile.md), and [documentation receipts](references/documentation-lifecycle.md). Source-hash freshness and format conformance do not establish factual truth. |
-| Task lifecycle | [Independent OKF Tasks adapter](references/okf-tasks-adapter.md). The authoritative producer owns task records, status, providers and Tracker Profiles. |
+| Task lifecycle | [Integrated OKF task module](references/okf-tasks-adapter.md). Native TypeScript operations own task mutations, effort, conformance, providers and Tracker Profiles under the independent OKF format. `rke view` opens the integrated board and knowledge reader. |
 | Alignment | [Documentation lifecycle](references/documentation-lifecycle.md) and [optional workflow state](references/workflow-support.md). Assessment supplies explicit obligations plus bounded candidate evidence; it cannot discover every engineering obligation or establish acceptance. |
 | Handoff, pickup | [Continuity commands](references/continuity.md). Inspect saved claims against current evidence before using their proposed next action. |
 | Coordination | [Manifest validation, plans and exact-tip cleanup](references/coordination.md). A plan does not allocate worktrees, and eligibility does not authorize deletion. |

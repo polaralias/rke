@@ -1,0 +1,467 @@
+{
+  "schema": 1,
+  "producer": "OKF Tasks",
+  "source_commit": "99a2907181c029446ffaf9c6bff664a7b0ff487c",
+  "evidence": "Reviewed working-tree conformance resources; not an immutable upstream release claim",
+  "resources": {
+    "generated/exports/file-uri/repo/docs/guide.md": {
+      "package_sha256": "cc40847307a81f2e5c8656fe3effceed184fa998f3990883c02891a0c30fc284"
+    },
+    "generated/exports/file-uri/repo/tasks/fixture-task/task.md": {
+      "package_sha256": "6ad2d4732092513e7650ea0c71ea3ce469078ebcbbf2175b4d668f015d481c1f"
+    },
+    "generated/exports/github-relative/repo/docs/guide.md": {
+      "package_sha256": "cc40847307a81f2e5c8656fe3effceed184fa998f3990883c02891a0c30fc284"
+    },
+    "generated/exports/github-relative/repo/tasks/fixture-task/task.md": {
+      "package_sha256": "c9f8d8b4615b02984f8bfe61bf90d6bdd790d9b97425076d5d15a8031430c3c7"
+    },
+    "generated/exports/gitlab-relative/repo/docs/guide.md": {
+      "package_sha256": "cc40847307a81f2e5c8656fe3effceed184fa998f3990883c02891a0c30fc284"
+    },
+    "generated/exports/gitlab-relative/repo/tasks/fixture-task/task.md": {
+      "package_sha256": "ae6a466591500551470fb221de30846a184164b7863c9c9c609bd9ea995c1bd8"
+    },
+    "generated/exports/home-path/repo/docs/guide.md": {
+      "package_sha256": "cc40847307a81f2e5c8656fe3effceed184fa998f3990883c02891a0c30fc284"
+    },
+    "generated/exports/home-path/repo/tasks/fixture-task/task.md": {
+      "package_sha256": "39c4c4227983345598233b21cab94377ff60dbd07533683879f942eee3ad4f1d"
+    },
+    "generated/exports/insecure-http/repo/docs/guide.md": {
+      "package_sha256": "cc40847307a81f2e5c8656fe3effceed184fa998f3990883c02891a0c30fc284"
+    },
+    "generated/exports/insecure-http/repo/tasks/fixture-task/task.md": {
+      "package_sha256": "df84a83ee39a37e2ca0dbeb2f680d95112e79c12e6905ef48e1c1fe61606bbc1"
+    },
+    "generated/exports/missing-link/repo/docs/guide.md": {
+      "package_sha256": "cc40847307a81f2e5c8656fe3effceed184fa998f3990883c02891a0c30fc284"
+    },
+    "generated/exports/missing-link/repo/tasks/fixture-task/task.md": {
+      "package_sha256": "207f99b1d05d93559fda3f7774490e01f9c513168773b8db7fd8a6a01a11b26f"
+    },
+    "generated/exports/outside-link/repo/docs/guide.md": {
+      "package_sha256": "cc40847307a81f2e5c8656fe3effceed184fa998f3990883c02891a0c30fc284"
+    },
+    "generated/exports/outside-link/repo/tasks/fixture-task/task.md": {
+      "package_sha256": "156e8fc2792d25fca514cf61387c224feaf677a7cebaae0b0f1994e7ba59af08"
+    },
+    "generated/exports/posix-path/repo/docs/guide.md": {
+      "package_sha256": "cc40847307a81f2e5c8656fe3effceed184fa998f3990883c02891a0c30fc284"
+    },
+    "generated/exports/posix-path/repo/tasks/fixture-task/task.md": {
+      "package_sha256": "ef235662c8a12d2567f0cab7585fac45d6f124839118dc43ea5ca420cc78e1fc"
+    },
+    "generated/exports/remote-image/repo/docs/guide.md": {
+      "package_sha256": "cc40847307a81f2e5c8656fe3effceed184fa998f3990883c02891a0c30fc284"
+    },
+    "generated/exports/remote-image/repo/tasks/fixture-task/task.md": {
+      "package_sha256": "0112c22932235946ae49fdbd931bc2e688a6a85f69fd505481fbc5ab2688dd49"
+    },
+    "generated/exports/secret-link/repo/docs/guide.md": {
+      "package_sha256": "cc40847307a81f2e5c8656fe3effceed184fa998f3990883c02891a0c30fc284"
+    },
+    "generated/exports/secret-link/repo/tasks/fixture-task/task.md": {
+      "package_sha256": "bd85ee8c52bd4d3551ac920692f9e10f00a8d553f66a9e72f109b2a39123aa5d"
+    },
+    "generated/exports/secret/repo/docs/guide.md": {
+      "package_sha256": "cc40847307a81f2e5c8656fe3effceed184fa998f3990883c02891a0c30fc284"
+    },
+    "generated/exports/secret/repo/tasks/fixture-task/task.md": {
+      "package_sha256": "776a854d3927181aee420633df988f75236796aaf0c6aadeb67e6635683537ae"
+    },
+    "generated/exports/untrusted-instructions/repo/docs/guide.md": {
+      "package_sha256": "cc40847307a81f2e5c8656fe3effceed184fa998f3990883c02891a0c30fc284"
+    },
+    "generated/exports/untrusted-instructions/repo/tasks/fixture-task/task.md": {
+      "package_sha256": "f9575b60af1257f692fb75323393f7affb5ed6ab7cca24a2fc28c8f450232fb4"
+    },
+    "generated/exports/windows-path/repo/docs/guide.md": {
+      "package_sha256": "cc40847307a81f2e5c8656fe3effceed184fa998f3990883c02891a0c30fc284"
+    },
+    "generated/exports/windows-path/repo/tasks/fixture-task/task.md": {
+      "package_sha256": "fe8678eef42db88fd40f1370c9a2946a91fe509058def90c8a3acfddfffa7c95"
+    },
+    "generated/invalid/active-task-vendor-manifest/tasks/fixture-task/task.md": {
+      "package_sha256": "bcf569c2d4f5aeaca9ffb927995de43fc738a4146093e0fe699b1c847248729c"
+    },
+    "generated/invalid/active-task-vendor-manifest/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/active-task-vendor-manifest/tasks/second-task/task.md": {
+      "package_sha256": "0f4fc6b823f19134b4c22cafceef297a6c3bc21c0641c8730b691f518a07a934"
+    },
+    "generated/invalid/changed-vendored-snapshot/tasks/fixture-task/task.md": {
+      "package_sha256": "bcf569c2d4f5aeaca9ffb927995de43fc738a4146093e0fe699b1c847248729c"
+    },
+    "generated/invalid/changed-vendored-snapshot/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/changed-vendored-snapshot/third-party/example.md": {
+      "package_sha256": "2ab2f0b1839535c6734f027ae664ee116e1c7c5afba4ea5615c2631b0d214ee8"
+    },
+    "generated/invalid/closed-missing-effort/tasks/fixture-task/task.md": {
+      "package_sha256": "1b29977292d2233dc885b5ed09b874433313f75ae5961448c4b9ca23194b153f"
+    },
+    "generated/invalid/closed-missing-effort/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/disconnected-durable-links/tasks/fixture-task/task.md": {
+      "package_sha256": "109d575d00c42b62c85d8d257877f3dfaaf767d76c645397d8e5dd530bac7579"
+    },
+    "generated/invalid/disconnected-durable-links/tasks/index.md": {
+      "package_sha256": "25589ed35a3337b7e7ce1a3ed74a449dd6929c42accc2ac0ff5ccc83953e7601"
+    },
+    "generated/invalid/disconnected-durable-links/tasks/second-task/task.md": {
+      "package_sha256": "fb313e701a4e669e59f6638d8dedc53a35d299bb8b9c3fdf303c24ccb4b36087"
+    },
+    "generated/invalid/done-active-workstream/tasks/fixture-task/task.md": {
+      "package_sha256": "3ef4f6796843fe98388cc9ff64cc7e0e38297659f672bbe1bfd89f3eb99ddd22"
+    },
+    "generated/invalid/done-active-workstream/tasks/fixture-task/workstreams/delivery.md": {
+      "package_sha256": "d62ddaf8c25576d111192121e494b135541496e6efc9b3947f94c24f553eb8ca"
+    },
+    "generated/invalid/done-active-workstream/tasks/index.md": {
+      "package_sha256": "0beba1b4a7caa7b92b0b8bdb813ab5359bb67f45467ee83ea9ce94d71fa81c2a"
+    },
+    "generated/invalid/done-running-time/tasks/fixture-task/task.md": {
+      "package_sha256": "605f264b58ff9a5202c7a0c3477240039dfdf2f49413d8e7de7ec45c62cbb596"
+    },
+    "generated/invalid/done-running-time/tasks/index.md": {
+      "package_sha256": "0beba1b4a7caa7b92b0b8bdb813ab5359bb67f45467ee83ea9ce94d71fa81c2a"
+    },
+    "generated/invalid/duplicate-active-branch/tasks/fixture-task/task.md": {
+      "package_sha256": "109d575d00c42b62c85d8d257877f3dfaaf767d76c645397d8e5dd530bac7579"
+    },
+    "generated/invalid/duplicate-active-branch/tasks/fixture-task/workstreams/one.md": {
+      "package_sha256": "da04fec87e1bd7accf70728e74b298744991573d9156e3835d0f93dbcef56a24"
+    },
+    "generated/invalid/duplicate-active-branch/tasks/fixture-task/workstreams/two.md": {
+      "package_sha256": "0339b39e30cac57e0b535fe73ca2ec9120335815a877e3840c00484c4c9b907a"
+    },
+    "generated/invalid/duplicate-active-branch/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/duplicate-external-mapping/tasks/fixture-task/task.md": {
+      "package_sha256": "d04566e727f3788143875cfc5f7cf925d97d5f6c9047642e8e1d214175e9b05b"
+    },
+    "generated/invalid/duplicate-external-mapping/tasks/index.md": {
+      "package_sha256": "29dc12b728a47cb26be7e50b4ff76ac1e5752340711bb98dfbad7c21f54f67ba"
+    },
+    "generated/invalid/duplicate-external-mapping/tasks/second-task/task.md": {
+      "package_sha256": "7aa8b081e4e0f41984663e681cf7ff6bc48e36a485039f400693168084c87a4a"
+    },
+    "generated/invalid/duplicate-external-mapping/tasks/trackers/github-main.md": {
+      "package_sha256": "50448ad7fe5c85150d6d51769ecc0588c5313d472916df1fbde966eeceef63a8"
+    },
+    "generated/invalid/duplicate-running-combination/tasks/fixture-task/task.md": {
+      "package_sha256": "11879c2e3a417e3aa5dcc5935cd3130a5a4e26b7eb6c7c6dbcd564c629624817"
+    },
+    "generated/invalid/duplicate-running-combination/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/escaping-vendor-manifest/tasks/fixture-task/task.md": {
+      "package_sha256": "bcf569c2d4f5aeaca9ffb927995de43fc738a4146093e0fe699b1c847248729c"
+    },
+    "generated/invalid/escaping-vendor-manifest/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/escaping-vendor-manifest/third-party/example.md": {
+      "package_sha256": "2124d02e689de1a9e1c88560f01bd3e72bc6cb514ad044f7ba2c42dc24c86e93"
+    },
+    "generated/invalid/external-missing-fields/tasks/fixture-task/task.md": {
+      "package_sha256": "084e1b0343810de92db562d47db2af8d90fc36ab3736910a7a886d6b4de0ebee"
+    },
+    "generated/invalid/external-missing-fields/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/incomplete-status-map/tasks/fixture-task/task.md": {
+      "package_sha256": "109d575d00c42b62c85d8d257877f3dfaaf767d76c645397d8e5dd530bac7579"
+    },
+    "generated/invalid/incomplete-status-map/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/incomplete-status-map/tasks/trackers/github-main.md": {
+      "package_sha256": "17de3e5194633896e69f990d9c06d80ec71c0b94deaaa56985c622e782b41355"
+    },
+    "generated/invalid/invalid-completion-history/tasks/fixture-task/task.md": {
+      "package_sha256": "309e2d1cf5a3bfabc01d576433cb2df929c34de25ab74af13a37ffcc26c33abd"
+    },
+    "generated/invalid/invalid-completion-history/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/invalid-estimate/tasks/fixture-task/task.md": {
+      "package_sha256": "3a557e695ede9562b59fab342266eae5db15dbfee0a95c3aba01e2d252e5aaca"
+    },
+    "generated/invalid/invalid-estimate/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/invalid-frontmatter-formatting/tasks/fixture-task/task.md": {
+      "package_sha256": "81f9aa51cdce4619b7744959988b7c540831e8c6be6ddeba68437466ca499d42"
+    },
+    "generated/invalid/invalid-frontmatter-formatting/tasks/index.md": {
+      "package_sha256": "51ed9b59efb42f3333ff753d95986d70b9596e91c61571fbbc187b96164a1389"
+    },
+    "generated/invalid/invalid-navigation-role/tasks/fixture-task/task.md": {
+      "package_sha256": "4c2982eed95cbbe0c2645b867c89ab1265dbd983f8db144f92a3939b2b44df42"
+    },
+    "generated/invalid/invalid-navigation-role/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/invalid-points/tasks/fixture-task/task.md": {
+      "package_sha256": "6f8c4db626004b7edb8c12b9a4a1872e7907e2326a6cac39797b0e3e80061ec9"
+    },
+    "generated/invalid/invalid-points/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/invalid-portable-field/tasks/fixture-task/task.md": {
+      "package_sha256": "da670e8509a498ebb988973fec8044abdd327537637a4f47fcd2e0db00c07ff7"
+    },
+    "generated/invalid/invalid-portable-field/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/invalid-task-level-sync/tasks/fixture-task/task.md": {
+      "package_sha256": "405fc930f87e242dff8f4abd26634d787660770764afad0264ee383dc7f959de"
+    },
+    "generated/invalid/invalid-task-level-sync/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/invalid-task-slug/tasks/index.md": {
+      "package_sha256": "0a3717e5982d2ea308add04ffd7b08785753ff27948faee0c1acefeb93030ae4"
+    },
+    "generated/invalid/invalid-task-slug/tasks/Not-Kebab/task.md": {
+      "package_sha256": "f34e6055a7372cd4edc05b37fa7fc11f3a2d36c0498b0fbfda9f6a99351b383e"
+    },
+    "generated/invalid/invalid-task-timestamp/tasks/fixture-task/task.md": {
+      "package_sha256": "ccac2b34f1a38a6496eca36d9e1fc6037dd0fa14cd7bacb3afecf71979293208"
+    },
+    "generated/invalid/invalid-task-timestamp/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/lossy-tracker-authority/tasks/fixture-task/task.md": {
+      "package_sha256": "109d575d00c42b62c85d8d257877f3dfaaf767d76c645397d8e5dd530bac7579"
+    },
+    "generated/invalid/lossy-tracker-authority/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/lossy-tracker-authority/tasks/trackers/github-main.md": {
+      "package_sha256": "fb834a1bdabe714c4cf1f5240fafa4745d62eb3cf4c377ce32257a6292ee7a85"
+    },
+    "generated/invalid/malformed-yaml/tasks/fixture-task/task.md": {
+      "package_sha256": "12a8173db9769ac3de6a1c8a0d7f36e1be86f126cfbbec7f258a60037a2d6c37"
+    },
+    "generated/invalid/malformed-yaml/tasks/index.md": {
+      "package_sha256": "b30ed6e6f20c0a3b26532e0b0b67ed3a1446e900dff83ff7c64833d82900b998"
+    },
+    "generated/invalid/missing-frontmatter/tasks/fixture-task/task.md": {
+      "package_sha256": "68b6969e41642ffa425ec40c29fe1b7c789a1bb1e2f17dffb4c69f4b88c5e528"
+    },
+    "generated/invalid/missing-frontmatter/tasks/index.md": {
+      "package_sha256": "b30ed6e6f20c0a3b26532e0b0b67ed3a1446e900dff83ff7c64833d82900b998"
+    },
+    "generated/invalid/missing-index/tasks/fixture-task/task.md": {
+      "package_sha256": "109d575d00c42b62c85d8d257877f3dfaaf767d76c645397d8e5dd530bac7579"
+    },
+    "generated/invalid/missing-task-field/tasks/fixture-task/task.md": {
+      "package_sha256": "947c7f7d0ad25bc8d5b5af20a74d9adf4c890c85b94ddb3809d4023b535fa7f3"
+    },
+    "generated/invalid/missing-task-field/tasks/index.md": {
+      "package_sha256": "0c420689352db6e3b11dccfa9b1e8cca4164a8f6201021112fa093b3911ac341"
+    },
+    "generated/invalid/missing-task-heading/tasks/fixture-task/task.md": {
+      "package_sha256": "9acf67bbb4211215830ea58351b1e278f631b1e3a8b44ef3c64fafecd1c460c1"
+    },
+    "generated/invalid/missing-task-heading/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/missing-time-activity/tasks/fixture-task/task.md": {
+      "package_sha256": "cb3b8ac3a75fe60c2a4940bb4bcb53e2854c875a798815e5b428f60fa421ebaf"
+    },
+    "generated/invalid/missing-time-activity/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/missing-tracker-profile/tasks/fixture-task/task.md": {
+      "package_sha256": "d04566e727f3788143875cfc5f7cf925d97d5f6c9047642e8e1d214175e9b05b"
+    },
+    "generated/invalid/missing-tracker-profile/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/multiple-default-trackers/tasks/fixture-task/task.md": {
+      "package_sha256": "109d575d00c42b62c85d8d257877f3dfaaf767d76c645397d8e5dd530bac7579"
+    },
+    "generated/invalid/multiple-default-trackers/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/multiple-default-trackers/tasks/trackers/github-main.md": {
+      "package_sha256": "a7866cfacfe1a6ec484e14058a4ec902eb7f1f89368e2477f28775e70eaa44e6"
+    },
+    "generated/invalid/multiple-default-trackers/tasks/trackers/linear-default.md": {
+      "package_sha256": "81a78eed02497fc587ce1329d38acdf13ca7c69e626b60becc80b7461a921421"
+    },
+    "generated/invalid/running-with-closed-fields/tasks/fixture-task/task.md": {
+      "package_sha256": "1ec81c34f12e2acfb95d74343a3d21ff7412d983b38ff377de15c7a7989ed1fc"
+    },
+    "generated/invalid/running-with-closed-fields/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/stale-index/tasks/fixture-task/task.md": {
+      "package_sha256": "109d575d00c42b62c85d8d257877f3dfaaf767d76c645397d8e5dd530bac7579"
+    },
+    "generated/invalid/stale-index/tasks/index.md": {
+      "package_sha256": "4b2dc95a8f57258e3d5ef28499b09c95ab6ea3d19ab05ebe35344de18d29bd09"
+    },
+    "generated/invalid/unknown-task-status/tasks/fixture-task/task.md": {
+      "package_sha256": "c4ee1a6d68e34ff18659afabcd2df0a92d7142dd40c62a040dfb65f74209804c"
+    },
+    "generated/invalid/unknown-task-status/tasks/index.md": {
+      "package_sha256": "e985712d4783b26032d43194a284bc7bff9aa06fd691b4c33e563c590047b5d4"
+    },
+    "generated/invalid/unknown-time-activity/tasks/fixture-task/task.md": {
+      "package_sha256": "a2eddd4303baa28ddb4046b50f4c977bc10d56f992113e6f6884c93e7df5c880"
+    },
+    "generated/invalid/unknown-time-activity/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/unknown-time-method/tasks/fixture-task/task.md": {
+      "package_sha256": "cdeb0a45591fe5a1d40be2a897a99f0dea2cbc01eb6a394c92913f242f735a6e"
+    },
+    "generated/invalid/unknown-time-method/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/unlisted-vendored-concept/tasks/fixture-task/task.md": {
+      "package_sha256": "bcf569c2d4f5aeaca9ffb927995de43fc738a4146093e0fe699b1c847248729c"
+    },
+    "generated/invalid/unlisted-vendored-concept/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/unlisted-vendored-concept/third-party/example.md": {
+      "package_sha256": "2124d02e689de1a9e1c88560f01bd3e72bc6cb514ad044f7ba2c42dc24c86e93"
+    },
+    "generated/invalid/workstream-missing-created/tasks/fixture-task/task.md": {
+      "package_sha256": "109d575d00c42b62c85d8d257877f3dfaaf767d76c645397d8e5dd530bac7579"
+    },
+    "generated/invalid/workstream-missing-created/tasks/fixture-task/workstreams/delivery.md": {
+      "package_sha256": "7007ce2cd98f27a1a4641b5c147e3eb7e664dbc543635da8f9705fd10cd55d2d"
+    },
+    "generated/invalid/workstream-missing-created/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/invalid/workstream-parent-mismatch/tasks/fixture-task/task.md": {
+      "package_sha256": "109d575d00c42b62c85d8d257877f3dfaaf767d76c645397d8e5dd530bac7579"
+    },
+    "generated/invalid/workstream-parent-mismatch/tasks/fixture-task/workstreams/delivery.md": {
+      "package_sha256": "2fe4e1c6c78ef978d1e0a86c40dcddb6a9e725fb0777c420e9df2e7306543789"
+    },
+    "generated/invalid/workstream-parent-mismatch/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/valid/broken-relationships-warning/tasks/fixture-task/task.md": {
+      "package_sha256": "e35bd33ddb6157d00398ec2937a36c1f347862ed57ad3078b68ecc5430cf920e"
+    },
+    "generated/valid/broken-relationships-warning/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/valid/docs-placement/docs/tasks/deliver-project/task.md": {
+      "package_sha256": "2adb4f666f5b5aaf7c22f70f8100187b52518210b6a75b2a2e37e0583cd5b6ea"
+    },
+    "generated/valid/docs-placement/docs/tasks/index.md": {
+      "package_sha256": "cd5837ad97c5163cb588ae1480be4409eae9f85d7ddda3460af7b78da60d63d7"
+    },
+    "generated/valid/excluded-volatile-concepts/tasks/fixture-task/task.md": {
+      "package_sha256": "109d575d00c42b62c85d8d257877f3dfaaf767d76c645397d8e5dd530bac7579"
+    },
+    "generated/valid/excluded-volatile-concepts/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/valid/excluded-volatile-concepts/tasks/runbooks/operator.md": {
+      "package_sha256": "e6db5e7f8dafe259e3e17104fd3bf971f70a4bb8798e2d1e7ccb3b629d90d908"
+    },
+    "generated/valid/full-task/tasks/fixture-task/task.md": {
+      "package_sha256": "313cd039ebc8b1a14c23a57bcf45f4ede9a6a6190c1b76088701a377de75a3e4"
+    },
+    "generated/valid/full-task/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/valid/full-task/tasks/trackers/github-main.md": {
+      "package_sha256": "50448ad7fe5c85150d6d51769ecc0588c5313d472916df1fbde966eeceef63a8"
+    },
+    "generated/valid/reopened-history/tasks/fixture-task/task.md": {
+      "package_sha256": "61c7f16a5f06639cc6a88b156f0e48ff3a0e2807341f2b5db8046c2ee38a2c43"
+    },
+    "generated/valid/reopened-history/tasks/index.md": {
+      "package_sha256": "af8509b4241279efb72108bb706358290bcb867b0e37df129b0395a5d7b10128"
+    },
+    "generated/valid/time-methods/tasks/fixture-task/task.md": {
+      "package_sha256": "73ed1d6c33e28cad9a37bc29738275077402e3cb3d52841efbf27550c03ecedd"
+    },
+    "generated/valid/time-methods/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/valid/unedited-skeleton-warning/tasks/fixture-task/task.md": {
+      "package_sha256": "c2523db496df3772cb245d6ea4b143dcee83a0c454c427d62f541e2410a34359"
+    },
+    "generated/valid/unedited-skeleton-warning/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/valid/unique-external-mappings/tasks/fixture-task/task.md": {
+      "package_sha256": "d04566e727f3788143875cfc5f7cf925d97d5f6c9047642e8e1d214175e9b05b"
+    },
+    "generated/valid/unique-external-mappings/tasks/index.md": {
+      "package_sha256": "25589ed35a3337b7e7ce1a3ed74a449dd6929c42accc2ac0ff5ccc83953e7601"
+    },
+    "generated/valid/unique-external-mappings/tasks/second-task/task.md": {
+      "package_sha256": "0d0c5a6d1cd5ee616a5d2cddb1deaa9daf9e6218d7b806001058d5e79dd166eb"
+    },
+    "generated/valid/unique-external-mappings/tasks/trackers/github-main.md": {
+      "package_sha256": "50448ad7fe5c85150d6d51769ecc0588c5313d472916df1fbde966eeceef63a8"
+    },
+    "generated/valid/unique-external-mappings/tasks/trackers/github-other.md": {
+      "package_sha256": "747f6040ea7c5f2ff2b8e8a327d6d1da3144137eaabe3b6ecea581772d88cce4"
+    },
+    "generated/valid/unknown-concept/tasks/fixture-task/coordination.md": {
+      "package_sha256": "7689b99a4dbf7d1a82a179da7794cd7179ac110cce5db1ebe60c233033f4a054"
+    },
+    "generated/valid/unknown-concept/tasks/fixture-task/task.md": {
+      "package_sha256": "109d575d00c42b62c85d8d257877f3dfaaf767d76c645397d8e5dd530bac7579"
+    },
+    "generated/valid/unknown-concept/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/valid/vendored-snapshot/tasks/fixture-task/task.md": {
+      "package_sha256": "bcf569c2d4f5aeaca9ffb927995de43fc738a4146093e0fe699b1c847248729c"
+    },
+    "generated/valid/vendored-snapshot/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "generated/valid/vendored-snapshot/third-party/example.md": {
+      "package_sha256": "2124d02e689de1a9e1c88560f01bd3e72bc6cb514ad044f7ba2c42dc24c86e93"
+    },
+    "generated/valid/workstream/tasks/fixture-task/task.md": {
+      "package_sha256": "109d575d00c42b62c85d8d257877f3dfaaf767d76c645397d8e5dd530bac7579"
+    },
+    "generated/valid/workstream/tasks/fixture-task/workstreams/delivery.md": {
+      "package_sha256": "5d22ff4fa477a35df12ff97d20e8c9b0e041f7d9bde0b127fc10581a2a9c4543"
+    },
+    "generated/valid/workstream/tasks/index.md": {
+      "package_sha256": "bc86bffedd16dc9d44defaf86380741657c223de386b0fad2c2439c939abdec3"
+    },
+    "invalid/bad-time-rollup/tasks/bad-rollup/task.md": {
+      "package_sha256": "db609b048bad54d31c835e2209a15f438e5c3e90dded529ef8d88eb802354f27"
+    },
+    "invalid/bad-time-rollup/tasks/index.md": {
+      "package_sha256": "b159ba8bd5715f3054e8e3262ce53cf90cadf8fabac44ddd594934f47877ef68"
+    },
+    "invalid/missing-type/tasks/broken-task/task.md": {
+      "package_sha256": "f362e2e93584ead06c4cab1a13555833d559278524d28b4bf662f3ce787da716"
+    },
+    "invalid/missing-type/tasks/index.md": {
+      "package_sha256": "ff95eb8eb83ab7c46f3cd1dde4d3e4e8d212729b457de03d2420b558bd141028"
+    },
+    "valid/minimal/tasks/first-task/task.md": {
+      "package_sha256": "e86ec44e24e21ac4187295dbe2a5c89e27a314efa0bf9b17491376571c7b8f8b"
+    },
+    "valid/minimal/tasks/index.md": {
+      "package_sha256": "36cbb2600f366d13e81b56ff872d602b67a3afb5e5226318051371d34d5fde37"
+    }
+  }
+}

@@ -123,7 +123,7 @@ test("enabled task tracking validates its configured bundle even with missing or
     const checked=await closureAssessment(root,"HEAD");assert.equal(checked.exitCode,3,JSON.stringify(checked));
     assert.deepEqual(checked.payload.outstandingGates,[]);
     const lanes=checked.payload.lanes as {tasks:{validation:{result:string}}};
-    assert.equal(lanes.tasks.validation.result,"okf-tasks-unavailable","configured tracking must invoke validation independently of recognised document types");
+    assert.equal(lanes.tasks.validation.result,"task-bundle-invalid","configured tracking must run native validation independently of recognised document types or external executables");
   }
 });
 

@@ -6,7 +6,8 @@ import { RkeError } from "./errors.js";
 import { git, gitChangedPaths, gitDelta, readJson, run, sha256, utcNow, withFileLock, writeJson, type CommandResult } from "./io.js";
 import { repositoryPath, safeRelative } from "./paths.js";
 import type { OperationOutcome } from "./types.js";
-import { taskExecutable } from "./task-executable.js";
+import { withProjectLocation } from "./okf-projects.js";
+import { validateTasks } from "./tasks/store.js";
 
 const STATE = ".engineering-workflow/state.json";
 const PHASES = new Set(["understand", "design", "deliver", "close", "pause", "resume"]);
@@ -111,12 +112,13 @@ export function validateOkfBundle(root:string,bundle:string,executable:string,ru
   if(executable.toLowerCase().endsWith(".py"))return outcome({result:"okf-tasks-incompatible",executed:false,error:"Python task adapters are not supported by the TypeScript runtime."},2);
   const version=runner(executable,["--version"],root),match=version.stdout.trim().match(/^okf-tasks\s+(\d+)\.(\d+)\.(\d+)$/);
   if(version.code||!match)return outcome({result:"okf-tasks-unavailable",executed:false,error:version.stderr.trim()||"The configured executable did not identify itself as okf-tasks."},2);
-  if(match[1]!=="0"||match[2]!=="1")return outcome({result:"okf-tasks-incompatible",executed:false,adapter:{name:"okf-tasks",version:`${match[1]}.${match[2]}.${match[3]}`},error:"RKE 0.10 supports the OKF Tasks 0.1 strict-validation contract."},2);
+  if(match[1]!=="0"||match[2]!=="1")return outcome({result:"okf-tasks-incompatible",executed:false,adapter:{name:"okf-tasks",version:`${match[1]}.${match[2]}.${match[3]}`},error:"RKE 0.1 supports the OKF Tasks 0.1 strict-validation contract."},2);
   const command=[executable,"validate","--root",root,"--bundle",bundle,"--strict"],validation=runner(executable,command.slice(1),root);
   return outcome({result:validation.code===0?"task-bundle-valid":"task-bundle-invalid",executed:true,adapter:{name:"okf-tasks",version:`${match[1]}.${match[2]}.${match[3]}`},command,bundle,validation:{valid:validation.code===0,stdout:validation.stdout.trim(),stderr:validation.stderr.trim()}},validation.code===0?0:3);
 }
-export async function checkTasks(root:string,cli?:string):Promise<OperationOutcome>{const state=await load(root),errors=validate(state);if(errors.length)return outcome({result:"invalid-state",state_path:statePath(root),verification:{valid:false,errors},state},2);if(state.task_tracking.mode==="none")return outcome({result:"task-tracking-disabled",executed:false,plan:{mode:"none",durable:false},state});const checked=validateOkfBundle(root,state.task_tracking.bundle??"tasks",cli??taskExecutable(root));return outcome({...checked.payload,state},checked.exitCode);}
-async function receiptStatus(root:string,base:string,file:string):Promise<{status:string;issues:string[]}>{if(git(root,"rev-parse","--verify","HEAD").code)return{status:"not-required",issues:[]};const diff=gitDelta(root,base);if(diff.code)return{status:"invalid-base",issues:["closure-base-invalid"]};if(!diff.stdout)return{status:"not-required",issues:[]};const path=join(root,".engineering-workflow",file);if(!existsSync(path))return{status:"pending",issues:[`${file.replace(".json","")}-missing`]};try{const receipt=await readJson<Record<string,unknown>>(path);if(receipt.deltaDigest!==sha256(diff.stdout))return{status:"stale",issues:[`${file.replace(".json","")}-stale`]};
+async function nativeTaskCheck(root:string,bundle:string):Promise<OperationOutcome>{return withProjectLocation(root,{bundle},async location=>{const graphFolders=location.project&&location.root===location.project.store?[`projects/${location.project.id}/records`]:undefined,validation=validateTasks(location.root,location.bundle,true,graphFolders);return outcome({result:validation.valid?"task-bundle-valid":"task-bundle-invalid",executed:true,engine:"rke-typescript",bundle,validation},validation.valid?0:3);});}
+export async function checkTasks(root:string,cli?:string):Promise<OperationOutcome>{const state=await load(root),errors=validate(state);if(errors.length)return outcome({result:"invalid-state",state_path:statePath(root),verification:{valid:false,errors},state},2);if(state.task_tracking.mode==="none")return outcome({result:"task-tracking-disabled",executed:false,plan:{mode:"none",durable:false},state});const bundle=state.task_tracking.bundle??"tasks",checked=cli?validateOkfBundle(root,bundle,cli):await nativeTaskCheck(root,bundle);return outcome({...checked.payload,state},checked.exitCode);}
+async function receiptStatus(root:string,base:string,file:string):Promise<{status:string;issues:string[]}>{if(git(root,"rev-parse","--verify","HEAD").code)return{status:"not-required",issues:[]};const diff=await gitDelta(root,base);if(diff.code)return{status:"invalid-base",issues:["closure-base-invalid"]};if(!diff.stdout)return{status:"not-required",issues:[]};const path=join(root,".engineering-workflow",file);if(!existsSync(path))return{status:"pending",issues:[`${file.replace(".json","")}-missing`]};try{const receipt=await readJson<Record<string,unknown>>(path);if(receipt.deltaDigest!==sha256(diff.stdout))return{status:"stale",issues:[`${file.replace(".json","")}-stale`]};
   if(file==="documentation-receipt.json"){
     const {documentationAssess,unreviewedDocumentation}=await import("./surfaces.js"),assessment=await documentationAssess(root,base);
     const reviewed=[...(Array.isArray(receipt.reviewedDocuments)?receipt.reviewedDocuments:[]),...(Array.isArray(receipt.knowledgePaths)?receipt.knowledgePaths:[])];
@@ -158,7 +160,7 @@ export async function closureAssessment(root:string,base="HEAD"):Promise<Operati
   const validationGates=gates.filter(g=>["implementation-validation","integrated-tree-validation"].includes(g)),taskGates=gates.filter(g=>g==="task-reconciliation"),knowledgeGates=gates.filter(g=>g.includes("knowledge"));
   const bundle=state?.task_tracking.bundle??"tasks",taskOwned=(!!state&&state.task_tracking.mode!=="none")||declaredBundle(root,bundle,true);
   let taskValidation:OperationOutcome|undefined;
-  if(taskOwned)taskValidation=validateOkfBundle(root,bundle,taskExecutable(root));
+  if(taskOwned)taskValidation=await nativeTaskCheck(root,bundle);
   const knowledgeBundle=join(root,"docs","knowledge"),{manifestPresence,loadManifest}=await import("./knowledge-manifest.js"),manifest=manifestPresence(root);
   const registeredDefault=manifest.effectivePresent&&(await loadManifest(root)).data.knowledge?.some(item=>item.path?.startsWith("docs/knowledge/"));
   const knowledgeOwned=declaredBundle(root,"docs/knowledge")||registeredDefault;

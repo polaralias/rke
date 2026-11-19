@@ -78,6 +78,22 @@ test("reader location links bind exact source identity and survive bookmark navi
   browser.all().find(node=>node.className==="local-link")!.click();browser.flush();assert.equal(browser.document.getElementById("primary-pane")!.dataset.document,source.id);assert.equal(browser.focused!.dataset.anchor,"L2");assert.equal(new URLSearchParams(browser.location.hash.slice(1)).get("snapshot"),value.revision);
   const bookmark=browser.location.hash,reloaded=readerBrowser(value,bookmark);assert.equal(reloaded.focused!.dataset.anchor,"L2");browser.navigate("#document=docs%2Fsystem.md&anchor=section%3Apurpose-2&snapshot="+value.revision);assert.equal(browser.focused!.dataset.anchor,"section:purpose-2");assert.ok(browser.focused!.textContent.startsWith("Purpose¶"));
 });
+test("offline embedded reader navigates sections without modifying opaque frame history",()=>{
+  const browser=readerBrowser(projection(),"",undefined,"about:");
+  browser.all().find(node=>node.tag==="button"&&node.textContent==="Purpose")!.click();browser.flush();
+  assert.equal(browser.focused!.dataset.anchor,"section:purpose");assert.equal(browser.location.hash,"");
+});
+test("embedded host restores only included records with independent reading positions and time fragments",()=>{
+  const value=projection("## Outcome\n\nReview effort.\n\n### Effort entry session\n\nRecorded effort."),other={...value.records[0]!,id:"docs/other.md",path:"docs/other.md",title:"Other",body:"## Other section\n\nOther document."};value.records.push(other);value.coverage.bodyBytes+=Buffer.byteLength(other.body);
+  const browser=readerBrowser(value,"",undefined,"about:",true);
+  browser.restore({primary:value.records[0]!.id,comparison:other.id,positions:[[value.records[0]!.id,180],[other.id,75]]});
+  assert.equal(browser.document.getElementById("primary-pane")!.scrollTop,180);assert.equal(browser.document.getElementById("comparison-pane")!.scrollTop,75);
+  browser.document.getElementById("documents")!.all().find(node=>node.tag==="button"&&node.textContent.includes(other.path))!.click();browser.flush();assert.equal(browser.document.getElementById("primary-pane")!.scrollTop,75);
+  browser.document.getElementById("documents")!.all().find(node=>node.tag==="button"&&node.textContent.includes(value.records[0]!.path))!.click();browser.flush();assert.equal(browser.document.getElementById("primary-pane")!.scrollTop,180);
+  browser.restore({primary:"outside.md",comparison:null,positions:[]});assert.equal(browser.document.getElementById("primary-pane")!.dataset.document,value.records[0]!.id);
+  browser.restore({primary:value.records[0]!.id,anchor:"time:session",positions:[]});assert.equal(browser.focused!.dataset.anchor,"time:session");assert.equal(browser.location.hash,"");assert.ok(browser.hostMessages.length>0);
+  const bookmark=readerBrowser(value,"#document="+encodeURIComponent(value.records[0]!.id)+"&anchor=time%3Asession&snapshot="+value.revision);assert.equal(bookmark.focused!.dataset.anchor,"time:session");
+});
 test("reader refuses stale, malformed, omitted and unknown bookmark locations visibly",()=>{
   const value=projection();for(const hash of ["#document=docs%2Fsystem.md&anchor=section%3Apurpose&snapshot="+"b".repeat(64),"#document=docs%2Fsystem.md&anchor=L0&snapshot="+value.revision,"#document=docs%2Fsystem.md&anchor=section%3Aabsent&snapshot="+value.revision,"#document=unknown&anchor=section%3Apurpose&snapshot="+value.revision,"#document=docs%2Fsystem.md&compare=unknown&anchor=section%3Apurpose&snapshot="+value.revision]){const browser=readerBrowser(value,hash);assert.ok(browser.all().some(node=>node.className.includes("location-notice")));assert.ok(!browser.all().some(node=>node.className.includes("location-target")));assert.equal(browser.location.hash,hash);}
 });
@@ -96,10 +112,10 @@ async function fixture(t:TestContext){
 
 test("offline reader escapes hostile markup and binds CSP to actual trusted assets",()=>{
   const body="# Heading\n\n</script><script>globalThis.readerAttack=1</script>\n<img src=https://example.invalid/track>\n[remote](javascript:alert(1))\n\u2028\u2029",value=projection(body),html=renderReader(value);
-  const scripts=[...html.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g)],style=/<style>([\s\S]*?)<\/style>/.exec(html)!;
-  assert.equal(scripts.length,2);assert.deepEqual(JSON.parse(scripts[0]![1]!),value);new Script(scripts[1]![1]!);
-  const digest=(text:string)=>createHash("sha256").update(text).digest("base64");assert.ok(html.includes(`script-src 'sha256-${digest(scripts[1]![1]!)}'`));assert.ok(html.includes(`style-src 'sha256-${digest(style[1]!)}'`));
-  assert.ok(html.includes("connect-src 'none'"));assert.ok(html.includes("img-src 'none'"));assert.ok(!html.includes("<img src="));assert.ok(!scripts[1]![1]!.includes("innerHTML"));
+  const scripts=[...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)],style=/<style>([\s\S]*?)<\/style>/.exec(html)!,inert=scripts.filter(script=>script[1]!.includes('type="application/json"')),executable=scripts.filter(script=>!script[1]!.includes('type="application/json"'));
+  assert.equal(scripts.length,3);assert.equal(inert.length,2);assert.deepEqual(JSON.parse(inert.find(script=>script[1]!.includes('id="projection"'))![2]!),value);assert.ok(inert.some(script=>script[1]!.includes('id="markdown-blocks"')));for(const script of inert)JSON.parse(script[2]!);assert.equal(executable.length,1);new Script(executable[0]![2]!);
+  const digest=(text:string)=>createHash("sha256").update(text).digest("base64");assert.ok(html.includes(`script-src 'sha256-${digest(executable[0]![2]!)}'`));assert.ok(html.includes(`style-src 'sha256-${digest(style[1]!)}'`));
+  assert.ok(html.includes("connect-src 'none'"));assert.ok(html.includes("img-src 'none'"));assert.ok(!html.includes("<img src="));assert.ok(!executable[0]![2]!.includes("innerHTML"));
 });
 
 test("reader rejects sensitive, oversized, dangling and malformed projections",()=>{

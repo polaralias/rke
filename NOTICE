@@ -2,6 +2,13 @@ Copyright (c) 2026 James Whelan / Polaralias
 
 This product includes software originally developed by James Whelan / Polaralias.
 
+The integrated task module incorporates the Apache-2.0 OKF Tasks independent
+TypeScript validator, task templates and conformance fixtures from polaralias/okf-tasks
+at reviewed producer revision 99a2907181c029446ffaf9c6bff664a7b0ff487c,
+with local working-tree resources.
+Task operations are a TypeScript port of the producer contract. No Kanzo code,
+assets or dependencies are incorporated.
+
 The RKE runtime and the rke adapter skill in .agents/skills/rke are distributed
 under Apache-2.0; see LICENSE and the adapter's license.txt. The separately
 licensed engineering-workflow skill in skills/engineering-workflow remains
@@ -16,3 +23,7 @@ Optional isolated diagram rendering uses Mermaid 11.10.1 under MIT.
 The pinned browser asset is in assets/mermaid-11.10.1.min.js; complete terms
 are in licenses/mermaid-11.10.1.txt. Diagram execution is separate from the
 reader document and never establishes structural or canonical evidence.
+
+Markdown structure uses markdown-it 15.0.3 under MIT. Complete terms are in
+licenses/markdown-it-15.0.3.txt. Parsing produces an allowlisted token tree;
+no Markdown parser or remote assets are loaded by the browser.

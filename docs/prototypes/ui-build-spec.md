@@ -1,0 +1,86 @@
+# RKE workspace UI build specification
+
+Status: proposed for implementation. The three-theme selector and restart persistence are requirements. Studio as the first-run default, per-OS-user scope, and the delivery sequence are proposed choices.
+
+## 1. Scope and design reference
+
+Build Studio, Current and Signal for the live RKE workspace across Reader, Kanban and Graph, at desktop and phone widths. Use the [refined shortlist](06-refined-shortlist.html) as the visual baseline. The [shared workspace](04-shared-workspace.html) demonstrates the blocked-task journey and graph gestures. Its uniform visual layout is outside the design baseline.
+
+Ship these designs within the existing RKE browser workspace and integrated offline export. Desktop packaging, a native rewrite, new tracker operations, arbitrary shell commands, and a global cross-repository search service are outside this slice. Share data, interaction contracts and operation adapters while letting each theme own its visual composition. Prototype fixtures illustrate interactions. Production consumes the existing projections and their permission, freshness and availability signals.
+
+## 2. Theme settings and persistence
+
+**T1. Selector.** Place one settings icon in the top-right corner of the workspace shell, including Reader focus mode and phone layouts. Its accessible name is **Settings**. Opening it reveals a small popover with **Appearance** and a single-choice list for **Studio**, **Current**, and **Signal**. Show the selected option with a check and announce its state to assistive technology. Keep all three choices inside the popover. The icon has a minimum 44 × 44 CSS px touch target and a visible focus indicator.
+
+Use a button with expanded state and a labelled radio group, or an equivalent accessible native control. Enter or Space opens the popover, keyboard navigation reaches every choice, and Escape or an outside click closes it. On choice, apply the theme immediately, close the popover and return focus to Settings. The popover stays within the viewport at narrow widths. Theme names are display labels. Persist the identifiers `studio`, `current` and `signal`.
+
+**T2. State on switch.** Updating appearance keeps the active view, repository, selected document and section, scroll anchor, open task or draft, board filters, queue and sort, graph selection and camera. Where geometry differs between themes, preserve the selected graph node and approximate zoom rather than copying absolute pixel offsets. Keep edit forms and dialogs mounted or explicitly restore their input and focus. A theme change is a visual preference and never invokes a task mutation or refreshes repository data.
+
+**T3. Restart persistence.** Store the selection in RKE's per-user configuration area, separate from repository state and project records. Resolve the path using the existing user-home configuration convention. Store a small versioned object, for example `{"schemaVersion":1,"theme":"current"}`. Windows, macOS and Linux launches use the same platform-appropriate user configuration resolution already used by RKE. Different repositories launched by that OS user share the selected theme. Browser-only storage cannot be the live source of truth because the loopback origin can change when the server restarts.
+
+Load the validated preference into the initial live HTML and set the root theme before the first paint. Studio is the proposed first-run default. Missing, malformed, unsupported or unknown values fall back to Studio. Legacy light/dark browser preferences may be used only as an optional one-time migration when they are visible on the same origin and no new preference exists. Suggested mapping is light → Studio and dark → Current. Saving a valid selection replaces a recoverable invalid file. The preference contains no repository paths, secrets, or task data.
+
+Use an authenticated, same-origin preference write on the existing live session transport. Apply the session's host, origin, request size and token checks. Accept only the three enumerated identifiers. Use the repository's existing atomic-write and locking primitives for the user-level preference file. Concurrent sessions use last successfully committed write wins. An already open session may retain its active appearance until it next loads. Serialize choices from the same client so an earlier save cannot overwrite a later choice. On save failure, keep the chosen look for the current session, clearly say it could not be saved, and offer retry. The last committed value wins on restart.
+
+**T4. Offline exports.** An integrated offline export includes all three themes, the same selector and a default set by its embedded data or Studio. Store a selection locally only when the host permits it. A copied file, private browser or mobile file viewer can use the embedded default when storage is unavailable. Offline files make no server requests. The restart guarantee applies to the live app.
+
+## 3. Visual contracts
+
+| Theme | Reader | Kanban | Graph |
+| --- | --- | --- | --- |
+| **Studio** | Warm paper, coral accents, Outfit for headings and controls, mostly flat continuous prose. Reserve outlined or shadowed treatments for small callouts and controls. | Tactile outlined cards with a restrained offset shadow and distinct stage headers. Keep cards short enough to scan several at once. | Orbit arrangement with Studio’s coral sticker styling, rounded outlined nodes, curved connections and details on demand. The canvas dominates the opening view. |
+| **Current** | Dark ink and mint accents with a single quiet article surface. Keep the layered look in navigation and evidence borders. | Dark inset lanes with mint active states and shallow nested task cards. Keep lane and card edges distinguishable. | Orbital arrangement with curved connections and the selected neighbourhood highlighted. Optional motion must respect reduced-motion preferences and leave the canvas clear. |
+| **Signal** | Warm neutral surface, red accents, strong rules and sentence-case document headings. Use monospace for identifiers, paths and technical metadata. | Dense technical columns with squared cards, olive file tabs and a slight overlap that never masks metadata or a focus outline. | Angular network with crisp nodes, diagonal and elbow connectors and a clear relationship inspector. |
+
+**V1. Shared quality targets.** Use one compact workspace header without prototype comparison controls. Use the primary ink colour for body prose and task titles. Maintain at least 4.5:1 contrast for ordinary text and 3:1 for large text and meaningful UI boundaries and states. Pair status colour with text. Keep visible keyboard focus, readable 200% text zoom and browser zoom outside the graph canvas. At 320 CSS px, the page body has no horizontal overflow. Board and graph can have their own navigation surface. Check each theme at 390, 768 and 1440 CSS px. Distinctness is reviewed by comparing the same fixture in all three themes, including the card silhouette, typography, lane structure and graph geometry.
+
+## 4. Reader
+
+**R1. Reading order.** Show breadcrumb or source context, title, compact controls, contents and opening prose early. Use approximately 16–20 px phone gutters, 17 px starting body text and around 1.55 line height. At 390 × 844 with the test fixture and default settings, the first screen includes the heading and at least the opening paragraph. Studio sections render open as normal headings and prose. Signal retains rules and Current retains the dark hierarchy. Keep existing Markdown, code, comparison, evidence and navigation semantics.
+
+**R2. Contents and focus.** On phones show a compact **On this page** disclosure near the top with links to real headings. Desktop standard mode shows a visible outline alongside the document when space permits. Focus keeps one reading column up to 880 px, a compact contents control near the start and evidence below the document. Focus and larger text apply without losing the reading anchor. Heading links open the exact section, move keyboard focus appropriately and survive reload. Preserve browser Back and existing source and comparison links. Theme changes reach embedded Reader surfaces without reloading the article or giving the frame additional privileges.
+
+## 5. Kanban
+
+**K1. Scan first.** Start with a compact toolbar and status headings with counts. Keep search, owner filtering, queue, sort and existing permitted task actions. The task title comes first. Next show the strongest available delivery signal, prioritising a recorded blocker, then due date or owner where available. Keep IDs available. Descriptions are optional on-card and present in task details. Show **Blocker reason not recorded** for an explicitly blocked record without a reason. Never infer blocker reasons or dependent decisions from title text. Lanes may scroll internally on narrow screens. Desktop displays all five fixture statuses simultaneously at 1440 px with sticky column headings where the board scrolls. At 390 × 844 the fixture shows at least four complete task titles across the initial lanes before vertical scrolling.
+
+**K2. Vertical queue and task detail.** All themes offer the same status picker and single-column queue. Show matching counts, a clear empty state and a way to reset filters. Search can find a task by ID or title outside the currently selected status and shows its actual status. Selecting a task exposes status, owner, description, evidence, linked decisions and permitted actions. Where a real linked decision and section exist, use their projected identities and navigate directly there. Returning restores the same task and board context. Preserve existing exact-revision checks, task permissions, collaboration, manual order, validation and offline read-only handling. Keep drafts through a theme change.
+
+## 6. Graph
+
+**G1. Shared interactions and theme styling.** Render the same projected node and edge set for each theme. Studio and Current share the orbit arrangement with their own styling. Signal uses angular geometry. Fit the default camera to the laid-out nodes and adapt the arrangement to the viewport. Signal connectors meet dot centres at overview and the midpoint of the appropriate card edge at close zoom. Keep selection, filters, search, named directed relationships and linked record navigation consistent. Preserve projection scope, provenance and a keyboard-accessible record and relationship list.
+
+**G2. Desktop.** Start with readable labels and the relevant neighbourhood visible without requiring zoom. Use a side inspector or Studio's on-demand inspector and leave the canvas unobstructed. Search moves the camera to the match and selects it. **Fit graph** frames the available set. Where the set is too large for readable labels, prefer the selected neighbourhood with a clear way to show all. Provide zoom buttons and pointer pan. Show the same record and relationship names in the inspector as on the canvas.
+
+**G3. Phone.** Use one graph viewport without a nested horizontal scrollbar. Pan with one finger and pinch around the midpoint of two fingers. Use three representation bands based on on-screen size: dots at overview, readable names at intermediate zoom, and cards with type and name close up. Tune thresholds against the fixture and both mobile platforms. Fit and explicit zoom buttons remain available. A tap selects a node and opens a dismissible relationship sheet with focus restore. Panning or pinching must not trigger selection. Search centres the match and zooms in enough to identify it. Orientation change keeps the selected node in view. Keep pinch handling scoped to the canvas and preserve ordinary page scrolling elsewhere.
+
+## 7. Implementation boundaries and sequence
+
+| Package | Depends on | Deliverable and entry points | Acceptance |
+| --- | --- | --- | --- |
+| A. Theme infrastructure | None | Add tokens and theme-specific rules in [visualisation-style.ts](../../src/visualisation-style.ts), shell and settings in [visualisation-ui.ts](../../src/visualisation-ui.ts), and user preference persistence through [visualisation.ts](../../src/visualisation.ts). Thread the theme through the integrated Reader and offline export. | T1–T4 and V1 |
+| B. Reader | A | Adapt the existing integrated Reader, its navigation and export styles. Keep projected documents and provenance as the data source. Reuse the existing [Reader workspace contract](../reader-workspace.md). | R1–R2 and applicable V1 |
+| C. Kanban | A | Refine board controls, lanes and task actions in [visualisation-ui.ts](../../src/visualisation-ui.ts). Keep the shared operation registry and OKF validation authoritative. | K1–K2 and applicable V1 |
+| D. Graph | A | Add orbit and angular layouts with a shared camera and interaction model in [visualisation-graph.ts](../../src/visualisation-graph.ts). Keep projection and layout separate. Connect task and Reader routes using existing item identities. | G1–G3 and applicable V1 |
+| E. Integrated review | B, C, D | Exercise the same fixture across all themes, both window sizes and offline/live modes. Update runtime docs as each behaviour lands. | Full matrix below |
+
+Use one workspace state owner and one source of truth for records. Theme-specific layouts consume that state and never fork mutation or authorization logic. Existing CLI and MCP operation contracts stay authoritative. No OKF Tasks schema change is assumed. If delivery requires modifying OKF Tasks, apply the upstream skill parity rule in the same work slice.
+
+## 8. Acceptance and evidence
+
+| Requirement | Setup and action | Observable pass condition | Verification |
+| --- | --- | --- | --- |
+| T1, V1 | Open Settings with keyboard and touch at 320 and 1440 px | One corner icon, labelled single-choice menu, visible selection and focus, Escape and outside dismissal. The menu fits the viewport. | Browser checks plus manual review |
+| T2 | Select a document section, open an unsaved task edit, set board filters and select a graph node. Switch theme in each view. | Same logical selection, input, filters and context. No repository write occurs. | Browser integration |
+| T3 | Choose Signal, stop the live service and launch it on a different port. Open another repository under the same OS profile. | Signal is present on the first paint in both launches. A new profile starts with Studio. | Live browser integration with isolated profile and config |
+| T3 | Try invalid preference data, an unauthenticated request, a failed write and two sequential successful writes. | Fallback renders, unauthorized writes fail, failure is visible and the last successfully saved choice survives restart. | Runtime and browser integration |
+| T4 | Open an export with network disabled and storage denied. Change themes. | All nine views remain usable with no network traffic. Appearance change works for the open file. | Offline browser integration |
+| R1, R2 | Open the same representative document on phone and desktop, jump to a heading, enlarge text and enter Focus. | Opening prose appears in the initial phone viewport. Jump reaches the exact section, text remains readable and evidence moves below the article. | Browser checks and visual review |
+| K1, K2 | Use a populated board with one linked blocker and one missing reason. Open the decision and return to the task. Test queue and search. | Dense scan meets the viewport targets. Correct reason or missing reason appears. Exact decision section and return state are preserved. | Browser integration and visual review |
+| K2 | Attempt edit on an offline or read-only record and submit a stale live revision. | Authorship and write restrictions remain intact. Existing conflict handling is visible. | Existing parity and runtime contracts |
+| G1, G2 | Open the same graph fixture in each theme on desktop. Search for a named record and follow an edge. | The two layouts expose the same entities and direction in all three themes. Labels are usable before zooming. Search and Fit produce visible selections. | Browser integration and visual review |
+| G3 | Pinch, pan, tap, use search, dismiss the sheet and rotate on Android Chrome and iOS Safari. | Anchored zoom passes through all three bands. A gesture never opens a record by accident. Details and focus behave correctly after rotation. | Touch emulation plus physical devices |
+
+Extend [visualisation browser contract](../../tests/visualisation-browser.contract.mjs), [visualisation parity tests](../../tests/visualisation-parity.test.ts) and the [Reader browser contract](../../tests/reader-browser.contract.mjs) where they cover the actual entry points. Existing prototype checks are design evidence. They do not establish production persistence, permission handling or physical-phone gesture quality.
+
+Physical phone testing is an open dependency. The gesture hypothesis is that a shared camera model can expose all three zoom bands without accidental selection or page scroll capture across the supported mobile browsers. Treat reproduced accidental app selection during a pinch or a persistent scroll trap as a reason to revisit gesture handling. After two inconclusive device attempts, simplify the gesture implementation or narrow the tested support statement before proceeding.

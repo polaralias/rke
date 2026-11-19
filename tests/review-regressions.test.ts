@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { access, mkdtemp, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, readFile, symlink, writeFile, unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -9,7 +9,59 @@ import { invokeOperation, releaseRepository } from "../src/operations.js";
 import { mutateManifest } from "../src/knowledge-manifest.js";
 import { RepositoryEngine } from "../src/repository-engine.js";
 import { checkpoint, resolveGate } from "../src/workflow.js";
-import { gitDelta } from "../src/io.js";
+import { gitDelta, run } from "../src/io.js";
+
+test("large archive deletion remains assessable and exact without buffering its patch",async()=>{
+  const dir=await root();
+  await writeFile(join(dir,"archive.txt"),"abcdefgh\n".repeat(8*1024*1024));
+  spawnSync("git",["add","."],{cwd:dir});
+  assert.equal(spawnSync("git",["-c","user.name=Fixture","-c","user.email=fixture@example.invalid","commit","-qm","archive baseline"],{cwd:dir}).status,0);
+  await unlink(join(dir,"archive.txt"));
+  const delta=await gitDelta(dir,"HEAD");assert.equal(delta.code,0,delta.stderr);assert.ok(delta.stdout.length<4096);
+  const assessed=await invokeOperation(dir,"repo_documentation_assess",{base:"HEAD"});
+  assert.equal(assessed.exitCode,3,JSON.stringify(assessed.payload));assert.equal(assessed.payload.outcome,"decision-required");
+  assert.deepEqual(assessed.payload.changedPaths,["archive.txt"]);
+  const coverage=(assessed.payload.documentationDiscovery as {coverage:{sourceEvidenceOmittedPaths:string[]}}).coverage;
+  assert.deepEqual(coverage.sourceEvidenceOmittedPaths,["archive.txt"]);
+  assert.equal((await gitDelta(dir,"HEAD")).stdout,delta.stdout);
+  await writeFile(join(dir,"new.txt"),"one");const first=await gitDelta(dir,"HEAD");
+  await writeFile(join(dir,"new.txt"),"two");assert.notEqual((await gitDelta(dir,"HEAD")).stdout,first.stdout);
+  await mkdir(join(dir,"docs"));await mkdir(join(dir,"src"));
+  await writeFile(join(dir,"docs/a.md"),concept("Archive maintenance","The archive was removed; the runtime remains supported."));
+  await writeFile(join(dir,"src/engine.ts"),"export const runtime = true;\n");
+  await invokeOperation(dir,"repo_knowledge_register",{knowledge:"docs/a.md",sources:["src/engine.ts"]});
+  const applied=await invokeOperation(dir,"repo_documentation_apply",{base:"HEAD",bundle:"docs",knowledgePaths:["docs/a.md"],evidence:"Reviewed archive deletion and current runtime source against maintenance documentation.",readerQueries:["Archive maintenance"]});
+  assert.equal(applied.exitCode,0,JSON.stringify(applied.payload));
+});
+
+test("command warnings succeed and launch errors always have a diagnostic",()=>{
+  const warned=run(process.execPath,["-e","process.stderr.write('CRLF warning')"],process.cwd());
+  assert.equal(warned.code,0);assert.match(warned.stderr,/CRLF warning/);
+  const failed=run(join(tmpdir(),"missing-rke-executable"),[],process.cwd());assert.notEqual(failed.code,0);assert.ok(failed.stderr.trim());
+  const overflow=run(process.execPath,["-e","process.stdout.write(Buffer.alloc(65*1024*1024,120))"],process.cwd());
+  assert.notEqual(overflow.code,0);assert.match(overflow.stderr,/ENOBUFS|buffer|terminated/i);
+});
+
+test("apply scopes reader questions without limiting repository documentation obligations",async()=>{
+  const dir=await root();await mkdir(join(dir,"docs"));await mkdir(join(dir,"src"));
+  await writeFile(join(dir,"src/engine.ts"),"export const redeployBroker = 1;\n");
+  await writeFile(join(dir,"docs/a.md"),concept("Deployment","Redeploy broker instructions."));
+  await invokeOperation(dir,"repo_knowledge_register",{knowledge:"docs/a.md",sources:["src/engine.ts"]});
+  spawnSync("git",["add","."],{cwd:dir});spawnSync("git",["-c","user.name=Fixture","-c","user.email=fixture@example.invalid","commit","-qm","baseline"],{cwd:dir});
+  await writeFile(join(dir,"src/engine.ts"),"export const redeployBroker = 2;\n");
+  for(let i=0;i<8;i++)await writeFile(join(dir,`noise${i}.ts`),`// redeploy broker\nexport const redeployBroker${i} = 'redeploy broker';\n`);
+  const args={base:"HEAD",bundle:"docs",knowledgePaths:["docs/a.md"],evidence:"Reviewed deployment instructions against the updated broker source.",readerQueries:["redeploy broker"],scopes:["docs"]};
+  const applied=await invokeOperation(dir,"repo_documentation_apply",args);assert.equal(applied.exitCode,0,JSON.stringify(applied.payload));
+  const receipt=applied.payload.receipt as {readerScopes:string[];readerChecks:{rankedPaths:string[]}[]};
+  assert.deepEqual(receipt.readerScopes,["docs"]);assert.ok(receipt.readerChecks.every(check=>check.rankedPaths.every(path=>path.startsWith("docs/"))));
+  await assert.rejects(invokeOperation(dir,"repo_documentation_apply",{...args,scopes:["../outside"]}),/repository-relative/);
+  await writeFile(join(dir,"docs/b.md"),concept("Other service","See [Deployment](a.md)."));
+  await writeFile(join(dir,"src/other.ts"),"export const other = true;\n");
+  await invokeOperation(dir,"repo_knowledge_register",{knowledge:"docs/b.md",sources:["src/other.ts"]});
+  const uncovered=await invokeOperation(dir,"repo_documentation_apply",{...args,scopes:["docs/a.md"]});
+  assert.equal(uncovered.exitCode,3);assert.equal((uncovered.payload.error as {code:string}).code,"documentation_affected_uncovered");
+  assert.deepEqual((uncovered.payload.error as {uncovered:string[]}).uncovered,["docs/b.md"]);
+});
 
 async function root():Promise<string>{const path=await mkdtemp(join(tmpdir(),"rke-review-"));spawnSync("git",["init"],{cwd:path});return path;}
 const concept=(title:string,link="")=>`---\r\ntype: Architecture Concept\r\ntitle: ${title}\r\ndescription: ${title} contract.\r\n---\r\n\r\n# ${title}\r\n\r\n${link}\r\n`;
@@ -156,14 +208,14 @@ test("receipt index exclusions are literal and retain tracked and untracked sour
   await mkdir(join(dir,"docs","[generated]"),{recursive:true});await mkdir(join(dir,"src"));
   await writeFile(join(dir,index),"Original index.\n");await writeFile(join(dir,"src","engine.ts"),"export const mode = 1;\n");
   spawnSync("git",["add","."],{cwd:dir});assert.equal(spawnSync("git",["-c","user.name=Fixture","-c","user.email=fixture@example.invalid","commit","-m","index baseline"],{cwd:dir}).status,0);
-  await writeFile(join(dir,index),"Regenerated index.\n");assert.equal(gitDelta(dir,"HEAD",[index]).stdout,"");
-  await writeFile(join(dir,"src","engine.ts"),"export const mode = 2;\n");const tracked=gitDelta(dir,"HEAD",[index]);assert.equal(tracked.code,0);assert.match(tracked.stdout,/src\/engine.ts/);
-  await writeFile(join(dir,"src","new.ts"),"export const newSource = true;\n");const untracked=gitDelta(dir,"HEAD",[index]);assert.notEqual(untracked.stdout,tracked.stdout);assert.match(untracked.stdout,/src\/new.ts/);
+  await writeFile(join(dir,index),"Regenerated index.\n");assert.equal((await gitDelta(dir,"HEAD",[index])).stdout,"");
+  await writeFile(join(dir,"src","engine.ts"),"export const mode = 2;\n");const tracked=await gitDelta(dir,"HEAD",[index]);assert.equal(tracked.code,0);assert.match(tracked.stdout,/src\/engine.ts/);
+  await writeFile(join(dir,"src","new.ts"),"export const newSource = true;\n");const untracked=await gitDelta(dir,"HEAD",[index]);assert.notEqual(untracked.stdout,tracked.stdout);assert.match(untracked.stdout,/src\/new.ts/);
   await mkdir(join(dir,".rke"));await writeFile(join(dir,".rke","repo-context.json.lock"),"temporary lock\n");
-  assert.equal(gitDelta(dir,"HEAD",[index],[".rke/repo-context.json.lock"]).stdout,untracked.stdout);
+  assert.equal((await gitDelta(dir,"HEAD",[index],[".rke/repo-context.json.lock"])).stdout,untracked.stdout);
   spawnSync("git",["add",".rke/repo-context.json.lock"],{cwd:dir});
-  assert.match(gitDelta(dir,"HEAD",[index],[".rke/repo-context.json.lock"]).stdout,/\.rke\/repo-context.json.lock/,"a tracked source cannot be hidden as a transient lock");
-  assert.throws(()=>gitDelta(dir,"HEAD",["../outside"]),/repository-relative/);
+  assert.match((await gitDelta(dir,"HEAD",[index],[".rke/repo-context.json.lock"])).stdout,/\.rke\/repo-context.json.lock/,"a tracked source cannot be hidden as a transient lock");
+  await assert.rejects(()=>gitDelta(dir,"HEAD",["../outside"]),/repository-relative/);
 });
 
 test("relationship results remain available when direct lexical matches fill the limit",async()=>{

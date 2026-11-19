@@ -1,5 +1,13 @@
 # Reader workspace
 
+For the editable task Board/Graph plus this shared reader, use `rke view --root <repository>`. `rke view export-project` produces a standalone read-only project view and paired Mermaid. Project records follow the selected source folders or registered local OKF store; shared exports exclude the distinct private collection. The fixed-selection reader operations below keep their read-only contract and do not accept task mutations.
+
+Integrated project views accept an explicit `--view-root`, repeatable `--exclude` patterns and a repository-local `--exclude-from` file. Automatic `.okf-visualization-ignore` files keep their own bundle-relative anchors. The same policy determines graph and reader membership; exclusions and resolved omitted Markdown paths remain embedded and cannot weaken independent conformance. The type/reading-role graph preserves dimmed context, landmark labels, decision classes and circular direct-neighbour focus. Isolates have a bounded reveal shelf. Task boards offer rows/columns and effort summaries; timestamp-order signals never certify semantic staleness.
+
+Markdown structure is parsed on the host with pinned markdown-it 15.0.3 into an allowlisted token tree. Tables, emphasis, strike-through, quotations, nested lists and disabled task-list checkboxes render through DOM creation, never HTML adoption. Raw HTML and remote images remain inert. Token budgets fall back visibly to original text. Project exports deduplicate the pinned Mermaid engine and reconstruct byte-identical child readers/CSPs offline; they embed as many readers as fit the 12 MiB output bound, up to 40, with explicit omission counts. Full recorded task metadata remains readable within the source/body projection bounds.
+
+`rke task visualise` also writes a scalable sibling `.mermaid.md` report with connected areas, component/area partitions, key neighbourhoods and isolates. `--check` is read-only and returns exit 3 for stale source, renderer, policy or output. Regeneration retains existing-output digest protection. Integrated reader frames retain state across view switches; included-only bookmarks, history, comparison and `time:<id>` anchors use a bounded navigation bridge, never a command or source-discovery channel. See [the task module](okf-tasks-adapter.md) for producer parity verification and live-provider limits.
+
 Use this optional surface when a person wants to read authored concepts, inspect their bound implementation or compare two records. It does not create canonical knowledge or execution records.
 
 ```text
@@ -71,5 +79,7 @@ Decoration is disposable presentation, not structural or semantic evidence. Unkn
 The HTML output/replacement bound is 12 MiB, separate from all projection/body/diagram-input budgets. Existing output still requires its exact current digest and a regular unlinked destination. The extra presentation asset must not silently make an export impossible to refresh.
 
 Diagram labels retain authored SVG size with scrolling inside the frame, and reduced-motion preferences disable animation. Dense/mobile fidelity remains separately qualified; a ready message does not prove readability.
+
+The editable task/knowledge project view also offers related-document navigation, discussion/assets and installed-agent preparation. Its registered local Git store composes distinct private records without adding them to public exports. Foreground/background hosts watch connected folders and notify browsers through local SSE; SQLite remains disposable derived state. Service installation and agent execution require explicit human host actions. See [task collaboration](okf-tasks-adapter.md#local-collaboration-extension).
 
 Generated diagram SVG is bounded to512KiB, parsed and checked before adoption inside the opaque frame. Nonces are assigned to sandbox-created styles before insertion; the parent keeps its script and stylesheet policies. Dense30-node mobile fixtures retain16px labels and scroll to the final node without page-wide overflow or HTTP requests. Browser checks qualify those concrete fixtures, not arbitrary diagrams or human usability.

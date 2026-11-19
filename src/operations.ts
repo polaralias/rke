@@ -1,4 +1,10 @@
 import { git } from "./io.js";
+import { bindTaskAgentOperation, taskAgentJob } from "./task-agent-boundary.js";
+import { TASK_OPERATIONS } from "./tasks/operations.js";
+import { withProjectLocation, projectLocation } from "./okf-projects.js";
+import { EXTENSION_OPERATIONS } from "./task-extension-operations.js";
+import { serviceCommand } from "./background-service.js";
+import { startVisualisation, exportVisualisation } from "./visualisation.js";
 import { loadManagedWorkspace, withManagedWorkspace, manageWorkspace, ignoreLocalState, authorizedMember, authorizeWorkspaceOwner } from "./managed-workspaces.js";
 import { routeWorkspaceOperation, workspaceSupport } from "./workspace-dispatch.js";
 
@@ -30,6 +36,7 @@ import * as workflow from "./workflow.js";
 const string = { type: "string", minLength: 1 } as const;
 const strings = { type: "array", items: string, minItems: 1 } as const;
 const optionalStrings = { type: "array", items: string } as const;
+const projectView={private:{type:"boolean"},persistent:{type:"boolean"},bundle:string,knowledgeBundle:string,viewRoot:string,name:string,exclude:optionalStrings,excludeFrom:string};
 function schema(properties:Record<string,unknown>,required:string[]=[]):JsonObject{return{type:"object",properties,required,additionalProperties:false} as JsonObject;}
 function value<T>(args:Record<string,unknown>,name:string,fallback?:T):T{const result=args[name]??fallback;if(result===undefined)throw new RkeError("invalid_operation_arguments",`Argument '${name}' is required.`);return result as T;}
 function stringsValue(args:Record<string,unknown>,name:string):string[]{return value<string[]>(args,name,[]);}
@@ -51,6 +58,8 @@ async function readerProjection(root:string,args:Record<string,unknown>){
   return engine(root,e=>projectReader(root,{...request,bundle:args.bundle as string|undefined},e));
 }
 const definitions:Array<[string,JsonObject,boolean,boolean,Handler]> = [
+  ["repo_visualisation_export",schema({...projectView,output:string,html:string,markdown:string,mermaid:string,check:{type:"boolean"},expectedDigest:string,expectedMermaidDigest:string}),false,false,async(root,args)=>{const result=await withProjectLocation(root,args,()=>exportVisualisation(root,args));return ok(result,result.valid===false?3:0);}],
+  ["repo_visualisation_serve",schema(projectView),false,false,async(root,args,context)=>{if(Object.keys(args).length===0){const existing=await serviceCommand(root,"status",{},context);if(existing.state==="running")return ok({result:"visualisation-reused",url:existing.url,background:true});}const session=await startVisualisation(root,args,context??{},(name,request)=>invokeOperation(root,name,request,{...context,taskActor:"human"}),async(selection,comparison)=>readerProjection(root,{bundle:projectLocation(root,args).project?.knowledgeBundle??args.knowledgeBundle??"docs/knowledge",selection,...comparison?{comparison}:{}}));return ok({result:"visualisation-started",url:session.url,storage:"selected local project",sync:"ordinary local Git",idleTimeoutMs:args.persistent?null:1800000});}],
   ["repo_state_ignore",schema({}),false,true,r=>ignoreLocalState(r)],
   ["workspace_create",schema({name:string,directory:string,members:{type:"array",items:{type:"object",properties:{alias:string,path:string,scopes:optionalStrings},required:["alias","path"],additionalProperties:false},minItems:2,maxItems:8}},["name","members"]),false,false,(r,a,c)=>manageWorkspace(r,"create",a,c??{})],
   ["workspace_list",schema({}),true,true,(r,a,c)=>manageWorkspace(r,"list",a,c??{})],
@@ -111,7 +120,7 @@ const definitions:Array<[string,JsonObject,boolean,boolean,Handler]> = [
   ["repo_documentation_bootstrap",schema({bundle:string,manifest:string}),true,true,(r,a)=>surfaces.documentationBootstrap(r,value(a,"bundle","docs/knowledge"),a.manifest)],
   ["repo_documentation_assess",schema({base:string,manifest:string},["base"]),true,true,(r,a)=>surfaces.documentationAssess(r,value(a,"base"),a.manifest)],
   ["repo_documentation_disposition",schema({base:string,reviewedPaths:strings,reviewedDocuments:optionalStrings,evidence:string},["base","reviewedPaths","evidence"]),false,false,(r,a)=>surfaces.documentationDisposition(r,value(a,"base"),stringsValue(a,"reviewedPaths"),value(a,"evidence"),value(a,"reviewedDocuments",[]))],
-  ["repo_documentation_apply",schema({base:string,bundle:string,knowledgePaths:strings,reviewedDocuments:optionalStrings,evidence:string,readerQueries:strings,manifest:string},["base","bundle","knowledgePaths","evidence","readerQueries"]),false,false,(r,a)=>surfaces.documentationApply(r,a)],
+  ["repo_documentation_apply",schema({base:string,bundle:string,knowledgePaths:strings,reviewedDocuments:optionalStrings,evidence:string,readerQueries:strings,scopes:optionalStrings,manifest:string},["base","bundle","knowledgePaths","evidence","readerQueries"]),false,false,(r,a)=>surfaces.documentationApply(r,a)],
   ["repo_file_api",schema({path:string},["path"]),true,true,async(r,a)=>ok({result:"file-api",...await engine(r,e=>e.fileApi(value(a,"path")))})],
   ["repo_resolve_language_server",schema({path:string,serverProfile:string},["path","serverProfile"]),false,true,async(r,a)=>ok(await engine(r,e=>e.resolveSemantic(value(a,"path"),value(a,"serverProfile"))))],
   ["repo_prepare_code_review",schema({path:string},["path"]),true,true,prepareReview],
@@ -161,8 +170,8 @@ const DESCRIPTIONS:Record<string,string>={
   workflow_gate_add:"Register concrete unresolved obligations in the active workflow. Gates require evidence from their owning truth surface.",
   workflow_gate_resolve:"Record concise owning-surface evidence for one outstanding gate. A receipt does not replace tests, task records or source review.",
   workflow_journey_enter:"Persist an understand, design or close transition when workflow state is active. Preserves existing gates.",
-  workflow_task_configure:"Set none, lightweight or full task tracking and a repository-local task reference. Durable modes delegate truth to OKF Tasks.",
-  workflow_task_check:"Run the authoritative OKF Tasks strict validator for the configured bundle. None mode is a deterministic no-op.",
+  workflow_task_configure:"Set none, lightweight or full task tracking and a repository-local task reference. Durable modes reference OKF execution truth managed by the native task module.",
+  workflow_task_check:"Run native OKF Tasks strict validation for the configured bundle. None mode is a deterministic no-op.",
   workflow_capability_enable:"Enable a justified optional workflow capability and its evidence gates. Availability alone grants no external authority.",
   workflow_closure_assess:"Inspect independent closure lanes against an explicit Git base. Reports current blockers without closing state.",
   repo_host_recipe:"Preview repository-specific host integration steps and hook commands. Read-only; output is not installation authority.",
@@ -202,13 +211,15 @@ const DESCRIPTIONS:Record<string,string>={
   repo_structure_benchmark:"Run a repository-local structural corpus against file API, trace and impact. Reports expected-string evidence only.",
 };
 function description(name:string):string{
+  if(name==="repo_visualisation_export")return "Export standalone read-only task Board/Graph/Reader HTML and paired Mermaid with explicit output digests and bounded reader coverage.";
+  if(name==="repo_visualisation_serve")return "Open the integrated repository-local task board and knowledge reader. Authenticated fixed-root UI mutations use shared CLI/MCP task operations; no external sync or private storage.";
   if(name==="repo_state_ignore")return "Add repository-local runtime state ignore entries, preserving existing rules and tracked files.";
   if(["workspace_create","workspace_list","workspace_inspect","workspace_resolve","workspace_update","workspace_retire"].includes(name))return "Manage named user-area multi-repository workspaces. Membership never grants caller filesystem authority.";
   const result=DESCRIPTIONS[name];
   if(!result)throw new Error(`Missing MCP discovery description for ${name}`);
   return result;
 }
-export const OPERATIONS:OperationDefinition[]=definitions.map(([name,inputSchema,readOnly,idempotent,handler])=>({name,title:name.replaceAll("_"," "),description:description(name)+` Managed workspace support: ${workspaceSupport(name)}.`,inputSchema,readOnly,idempotent,handler}));
+export const OPERATIONS:OperationDefinition[]=[...definitions.map(([name,inputSchema,readOnly,idempotent,handler])=>({name,title:name.replaceAll("_"," "),description:description(name)+` Managed workspace support: ${workspaceSupport(name)}.`,inputSchema,readOnly,idempotent,handler})),...TASK_OPERATIONS,...EXTENSION_OPERATIONS];
 export const OPERATION_BY_NAME=new Map(OPERATIONS.map(operation=>[operation.name,operation]));
 
 function validate(value:unknown,schemaValue:Record<string,unknown>,path="arguments"):void{
@@ -224,6 +235,8 @@ function validate(value:unknown,schemaValue:Record<string,unknown>,path="argumen
     for(const [key,item] of Object.entries(object))if(Object.hasOwn(properties,key))validate(item,properties[key]!,`${path}.${key}`);
   }else if(schemaValue.type==="string"){
     if(typeof value!=="string"||!value.trim())throw new RkeError("invalid_operation_arguments",`${path} must be a non-empty string.`);
+  }else if(schemaValue.type==="number"){
+    if(typeof value!=="number"||!Number.isFinite(value)||typeof schemaValue.minimum==="number"&&value<schemaValue.minimum)throw new RkeError("invalid_operation_arguments",`${path} must be a finite number within its bounds.`);
   }else if(schemaValue.type==="integer"){
     if(!Number.isSafeInteger(value))throw new RkeError("invalid_operation_arguments",`${path} must be a safe integer.`);
     if(typeof schemaValue.minimum==="number"&&(value as number)<schemaValue.minimum)throw new RkeError("invalid_operation_arguments",`${path} must be at least ${schemaValue.minimum}.`);
@@ -239,6 +252,7 @@ function validate(value:unknown,schemaValue:Record<string,unknown>,path="argumen
   if(Array.isArray(schemaValue.enum)&&!schemaValue.enum.includes(value))throw new RkeError("invalid_operation_arguments",`${path} must be one of: ${schemaValue.enum.join(", ")}.`);
 }
 export async function invokeOperation(root:string,name:string,args:unknown,context:OperationContext={}):Promise<OperationOutcome>{
+  args=bindTaskAgentOperation(root,name,args);if(taskAgentJob())context={...context,taskActor:"agent"};
   const operation=OPERATION_BY_NAME.get(name);if(!operation)throw new RkeError("unknown_operation",`Unknown operation: ${name}`);
   const registered=!context.workspaceMemberDispatch?loadManagedWorkspace(root):undefined;
   const workspace=registered&&(context.selectedWorkspace===registered.id||git(root,"rev-parse","--is-inside-work-tree").code!==0)?registered:undefined;
